@@ -55,7 +55,11 @@ case class Bye[F[_] : NConsole : Temporal]() extends Slide[F] {
       }
     }
 
-    NConsole[F].writeString(text) >> Temporal[F].sleep(2.seconds) >> distort(0.01, text)
+    NConsole[F].writeString(text) >>
+      Temporal[F].sleep(2.seconds) >>
+      distort(0.01, text) >>
+      Temporal[F].sleep(500.milli) >>
+      NConsole[F].clear()
   }
 
   private def distortTheText(distortionRate: Double, text: String): String = {

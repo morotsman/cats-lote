@@ -81,9 +81,7 @@ object PresentationExecutorInterpreter {
                 case Key(k) if k == SpecialKey.Esc =>
                   currentSat.slide.stopShow() >>
                     NConsole[F].clear() >>
-                    Bye[F].startShow() >>
-                    Temporal[F].sleep(500.milli) >>
-                    NConsole[F].clear().as(Either.right(currentSlideIndex, currentWork))
+                    presentation.exitSlide.fold(Monad[F].unit)(_.startShow()).as(Either.right(currentSlideIndex, currentWork))
                 case _ =>
                   currentSat.slide.userInput(input) >>
                     Monad[F].pure(Either.left(currentSlideIndex, currentWork))
