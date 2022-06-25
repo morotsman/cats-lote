@@ -5,13 +5,10 @@ import cats.effect.implicits._
 import cats.implicits._
 import lote.algebra.{NConsole, PresentationExecutor}
 import lote.model.{Key, Presentation, SpecialKey}
-import lote.slides.Bye
 import lote.interpreter.transition.Nothing
 
 import cats.Monad
 import cats.effect.{Fiber, Temporal}
-
-import scala.concurrent.duration.DurationInt
 
 object PresentationExecutorInterpreter {
   def make[F[_] : Temporal : NConsole]
