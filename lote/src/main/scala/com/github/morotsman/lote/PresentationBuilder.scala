@@ -7,6 +7,7 @@ import cats.effect.{Sync, Temporal}
 import lote.algebra.{NConsole, Slide, Transition}
 import lote.model.{Presentation, SlideSpecification}
 
+// trigger build
 case class PresentationBuilder[F[_] : Temporal : NConsole : Sync, State <: BuildState](
                                                                                         slideSpecifications: List[SlideSpecification[F]],
                                                                                         exitSlide: Option[Slide[F]]
