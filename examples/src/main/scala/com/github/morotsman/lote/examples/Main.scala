@@ -1,10 +1,12 @@
-package com.github.morotsman.lote
+package com.github.morotsman.lote.examples
 
 import cats.effect._
-import com.github.morotsman.lote.slides.{Agenda, Bye, DistributedSystem, Start}
 import com.github.morotsman.lote.interpreter.NConsoleInstances.IONConsole
+import com.github.morotsman.lote.PresentationBuilder
+import com.github.morotsman.lote.examples.slides._
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
 import com.github.morotsman.lote.interpreter.transition.{MorphTransition, ReplaceTransition}
+
 
 object Main extends IOApp.Simple {
 

@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.slides
+package com.github.morotsman.lote.examples.slides
 
 import cats.implicits._
 import cats.Monad

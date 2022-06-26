@@ -1,7 +1,7 @@
 package com.github.morotsman
 package lote.algebra
 
-import com.github.morotsman.lote.model.UserInput
+import lote.model.UserInput
 
 trait NConsole[F[_]] {
   def read(): F[UserInput]

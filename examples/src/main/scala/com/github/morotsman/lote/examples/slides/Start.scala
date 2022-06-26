@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.slides
+package com.github.morotsman.lote.examples.slides
 
 object Start {
   def apply(): String =

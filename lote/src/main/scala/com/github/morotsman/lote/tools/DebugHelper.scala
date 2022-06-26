@@ -1,4 +1,5 @@
-package com.github.morotsman.lote.tools
+package com.github.morotsman
+package lote.tools
 
 import cats.implicits._
 import cats.FlatMap

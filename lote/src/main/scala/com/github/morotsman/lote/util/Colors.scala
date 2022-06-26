@@ -1,4 +1,5 @@
-package com.github.morotsman.lote.util
+package com.github.morotsman
+package lote.util
 
 object Colors {
   val BLACK_BOLD = "\u001b[30;1m"

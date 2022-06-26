@@ -1,9 +1,11 @@
-package com.github.morotsman.lote.interpreter.transition
+package com.github.morotsman
+package lote.interpreter.transition
 
 import cats.effect.kernel.Temporal
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
-import com.github.morotsman.lote.interpreter.NConsole
+import com.github.morotsman.lote.algebra.NConsole
+import lote.algebra.{NConsole, Slide, Transition}
+import lote.interpreter.NConsole
 
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
