@@ -1,33 +1,33 @@
 package com.github.morotsman
 package lote
 
-import lote.PresentationBuilder._
-import lote.interpreter.SimpleSlide.ToSimpleSlide
 import cats.effect.{Sync, Temporal}
-import lote.algebra.{NConsole, Slide, Transition}
-import lote.model.{Presentation, SlideSpecification}
+import com.github.morotsman.lote.PresentationBuilder._
+import com.github.morotsman.lote.SlideBuilder.{WithContentSlide, WithoutSlide}
+import com.github.morotsman.lote.TextSlideBuilder.{WithContent, WithoutContent}
+import com.github.morotsman.lote.algebra.{NConsole, Slide}
+import com.github.morotsman.lote.interpreter.SimpleSlide.ToSimpleSlide
+import com.github.morotsman.lote.model.{Presentation, SlideSpecification}
 
-// trigger build
 case class PresentationBuilder[F[_] : Temporal : NConsole : Sync, State <: BuildState](
                                                                                         slideSpecifications: List[SlideSpecification[F]],
                                                                                         exitSlide: Option[Slide[F]]
                                                                                       ) {
-  def addSlide(slide: Slide[F], slideSpecificationBuilder: SlideSpecificationBuilder[F] => SlideSpecificationBuilder[F])
-  : PresentationBuilder[F, State with SlideAdded] = {
-    val builder = SlideSpecificationBuilder(slide = slide, left = None, right = None)
-    val slideSpecification = slideSpecificationBuilder(builder).build()
+  def addSlide(
+                slideBuilder: SlideBuilder[F, WithoutSlide] => SlideBuilder[F, WithContentSlide]
+              ): PresentationBuilder[F, State with SlideAdded] = {
+    val builder: SlideBuilder[F, WithoutSlide] = SlideBuilder()
+    val slideSpecification = slideBuilder(builder).build()
     this.copy(slideSpecifications = slideSpecification :: slideSpecifications)
   }
 
-  def addSlide(s: String, slideSpecificationBuilder: SlideSpecificationBuilder[F] => SlideSpecificationBuilder[F])
-  : PresentationBuilder[F, State with SlideAdded] =
-    addSlide(s.toSlide, slideSpecificationBuilder)
-
-  def addSlide(s: String): PresentationBuilder[F, State with SlideAdded] =
-    addSlide(s.toSlide, identity)
-
-  def addSlide(slide: Slide[F]): PresentationBuilder[F, State with SlideAdded] =
-    addSlide(slide, identity)
+  def addTextSlide(
+                    textSlideBuilder: TextSlideBuilder[F, WithoutContent] => TextSlideBuilder[F, WithContent]
+                  ): PresentationBuilder[F, State with SlideAdded] = {
+    val builder = TextSlideBuilder()
+    val slideSpecification = textSlideBuilder(builder).build()
+    this.copy(slideSpecifications = slideSpecification :: slideSpecifications)
+  }
 
   def addExitSlide(slide: Slide[F]): PresentationBuilder[F, State] =
     this.copy(exitSlide = Option(slide))
