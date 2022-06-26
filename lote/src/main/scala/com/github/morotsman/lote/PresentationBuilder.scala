@@ -6,7 +6,7 @@ import com.github.morotsman.lote.PresentationBuilder._
 import com.github.morotsman.lote.SlideBuilder.{WithContentSlide, WithoutSlide}
 import com.github.morotsman.lote.TextSlideBuilder.{WithContent, WithoutContent}
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
-import com.github.morotsman.lote.interpreter.SimpleSlide.ToSimpleSlide
+import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
 import com.github.morotsman.lote.model.{Presentation, SlideSpecification}
 
 case class PresentationBuilder[F[_] : Temporal : NConsole : Sync, State <: BuildState](

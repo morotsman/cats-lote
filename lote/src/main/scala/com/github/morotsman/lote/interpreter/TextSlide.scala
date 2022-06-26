@@ -3,12 +3,11 @@ package lote.interpreter
 
 import cats.implicits._
 import lote.algebra.{NConsole, Slide}
-import lote.model.UserInput
-
+import lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
 import cats.effect.Sync
 
-object SimpleSlide {
-  def apply[F[_] : Sync : NConsole](slideContent: String): Slide[F] =
+object TextSlide {
+  def apply[F[_] : Sync : NConsole](slideContent: String, alignment: Alignment): Slide[F] =
     new Slide[F] {
       override def content: F[String] =
         Sync[F].pure(slideContent)
@@ -23,8 +22,9 @@ object SimpleSlide {
         Sync[F].unit
     }
 
-  implicit class ToSimpleSlide(val s: String) {
-    def toSlide[F[_] : Sync : NConsole]: Slide[F] = SimpleSlide[F](s)
+  implicit class ToTextSlide(val s: String) {
+    def toSlide[F[_] : Sync : NConsole]: Slide[F] =
+      TextSlide[F](s, Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
   }
 
 }

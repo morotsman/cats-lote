@@ -3,11 +3,11 @@ package com.github.morotsman.lote
 import cats.effect.Sync
 import com.github.morotsman.lote.TextSlideBuilder._
 import com.github.morotsman.lote.algebra.{NConsole, Transition}
-import com.github.morotsman.lote.interpreter.SimpleSlide
-import com.github.morotsman.lote.model.{Alignment, SlideSpecification}
+import com.github.morotsman.lote.interpreter.TextSlide
+import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, SlideSpecification, VerticalAlignment}
 
 final case class TextSlideBuilder[F[_] : Sync : NConsole, State <: BuildState](
-                                                     alignment: Alignment,
+                                                     alignment: Option[Alignment],
                                                      content: String,
                                                      left: Transition[F],
                                                      right: Transition[F]
@@ -24,10 +24,10 @@ final case class TextSlideBuilder[F[_] : Sync : NConsole, State <: BuildState](
     this.copy(content = content)
 
   def alignment(alignment: Alignment): TextSlideBuilder[F, State] =
-    this.copy(alignment = alignment)
+    this.copy(alignment = Option(alignment))
 
   def build(): SlideSpecification[F] = SlideSpecification(
-    slide = SimpleSlide(content),
+    slide = TextSlide(content, alignment.getOrElse(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))),
     left = Option(left),
     right = Option(right)
   )
