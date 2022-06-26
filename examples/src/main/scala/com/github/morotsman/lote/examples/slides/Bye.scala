@@ -11,7 +11,7 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 case class Bye[F[_] : NConsole : Temporal]() extends Slide[F] {
-  val text =
+  private val text =
     """
       |
       |

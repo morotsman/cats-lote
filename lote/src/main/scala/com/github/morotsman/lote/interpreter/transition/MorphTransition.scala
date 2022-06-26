@@ -3,7 +3,6 @@ package lote.interpreter.transition
 
 import cats.effect.kernel.Temporal
 import cats.implicits._
-import com.github.morotsman.lote.algebra.NConsole
 import lote.algebra.{NConsole, Slide, Transition}
 import lote.interpreter.NConsole
 
