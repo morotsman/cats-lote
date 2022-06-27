@@ -30,12 +30,12 @@ object PresentationExecutorInterpreter {
               next = presentation.slideSpecifications(toIndex)
               work <- {
                 (for {
-                  _ <- current.out.fold(Nothing().transition(current.slide, next.slide)) { out =>
-                    out.transition(current.slide, next.slide)
+                  _ <- current.out.fold(Nothing().transition(current.slide, next.slide)) {
+                    _.transition(current.slide, next.slide)
                   }
                   _ <- NConsole[F].clear()
-                  _ <- next.in.fold(Nothing().transition(current.slide, next.slide)) { in =>
-                    in.transition(current.slide, next.slide)
+                  _ <- next.in.fold(Nothing().transition(current.slide, next.slide)) {
+                    _.transition(current.slide, next.slide)
                   }
                   _ <- NConsole[F].clear()
                   _ <- next.slide.startShow().start
