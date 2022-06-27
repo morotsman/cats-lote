@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.interpreter.nconcole
+package com.github.morotsman.lote.interpreter.nconsole
 
 import com.github.morotsman.lote.model.HorizontalAlignment.HorizontalAlignment
 import com.github.morotsman.lote.model.VerticalAlignment.VerticalAlignment

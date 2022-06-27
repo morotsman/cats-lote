@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.interpreter.nconcole
+package com.github.morotsman.lote.interpreter.nconsole
 
 import cats.effect.{IO, Sync}
 import cats.implicits._

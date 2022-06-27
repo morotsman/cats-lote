@@ -4,7 +4,7 @@ package lote.interpreter.transition
 import cats.implicits._
 import cats.effect.kernel.Temporal
 import com.github.morotsman.lote.algebra.NConsole
-import com.github.morotsman.lote.interpreter.nconcole.NConsole
+import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import lote.algebra.{NConsole, Slide, Transition}
 
 import scala.concurrent.duration.DurationInt

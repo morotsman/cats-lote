@@ -8,7 +8,7 @@ import lote.model.{Key, Presentation, SpecialKey}
 import lote.interpreter.transition.Nothing
 import cats.Monad
 import cats.effect.{Fiber, Temporal}
-import com.github.morotsman.lote.interpreter.nconcole.NConsole
+import com.github.morotsman.lote.interpreter.nconsole.NConsole
 
 object PresentationExecutorInterpreter {
   def make[F[_] : Temporal : NConsole]
