@@ -35,9 +35,8 @@ object Aligner {
 
   def alignVertical(s: String, verticalAlignment: VerticalAlignment, width: Int, height: Int): String = {
     val splitByNewLine = s.split("\n")
-    val numberOfRows = splitByNewLine.size
     val emptyRow = Array.fill(width)(SPACE).mkString("")
-    val rowsToAdd = height - numberOfRows - 1
+    val rowsToAdd = height - splitByNewLine.size - 1
     val pad = Array.fill(rowsToAdd)(emptyRow)
     val rows = verticalAlignment match {
       case VerticalAlignment.Up =>
