@@ -1,7 +1,7 @@
 package com.github.morotsman.lote.examples
 
 import cats.effect._
-import com.github.morotsman.lote.PresentationBuilder
+import com.github.morotsman.lote.builders.PresentationBuilder
 import com.github.morotsman.lote.examples.slides._
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
 import com.github.morotsman.lote.interpreter.nconsole.NConsoleInstances.IONConsole

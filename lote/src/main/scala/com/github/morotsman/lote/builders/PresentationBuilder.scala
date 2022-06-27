@@ -1,11 +1,10 @@
-package com.github.morotsman
-package lote
+package com.github.morotsman.lote.builders
 
 import cats.effect.{Sync, Temporal}
-import com.github.morotsman.lote.PresentationBuilder._
-import com.github.morotsman.lote.SlideBuilder.{WithContentSlide, WithoutSlide}
-import com.github.morotsman.lote.TextSlideBuilder.{WithContent, WithoutContent}
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
+import com.github.morotsman.lote.builders.PresentationBuilder.{BuildState, Buildable, SlideAdded}
+import com.github.morotsman.lote.builders.SlideBuilder.{WithContentSlide, WithoutSlide}
+import com.github.morotsman.lote.builders.TextSlideBuilder.{WithContent, WithoutContent}
 import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
 import com.github.morotsman.lote.model.{Presentation, SlideSpecification}
 

@@ -1,9 +1,9 @@
-package com.github.morotsman
-package lote
+package com.github.morotsman.lote.builders
 
-import com.github.morotsman.lote.SlideBuilder.{BuildState, SlideAdded}
-import lote.algebra.{Slide, Transition}
-import lote.model.SlideSpecification
+import com.github.morotsman.lote.algebra.{Slide, Transition}
+import com.github.morotsman.lote.builders
+import com.github.morotsman.lote.builders.SlideBuilder.{BuildState, SlideAdded}
+import com.github.morotsman.lote.model.SlideSpecification
 
 final case class SlideBuilder[F[_], State <: BuildState](
                                             slide: Slide[F],
@@ -38,6 +38,6 @@ object SlideBuilder {
   type WithContentSlide = WithoutSlide with SlideAdded
 
   def apply[F[_]](): SlideBuilder[F, WithoutSlide] =
-    SlideBuilder(null, None, None)
+    builders.SlideBuilder(null, None, None)
 }
 

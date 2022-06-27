@@ -1,8 +1,8 @@
-package com.github.morotsman.lote
+package com.github.morotsman.lote.builders
 
 import cats.effect.Sync
-import com.github.morotsman.lote.TextSlideBuilder._
 import com.github.morotsman.lote.algebra.{NConsole, Transition}
+import com.github.morotsman.lote.builders.TextSlideBuilder.{BuildState, ContentAdded}
 import com.github.morotsman.lote.interpreter.TextSlide
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, SlideSpecification, VerticalAlignment}
 
