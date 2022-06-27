@@ -10,6 +10,13 @@ import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, Vertical
 
 object Main extends IOApp.Simple {
 
+  private val moving =
+    """
+      |this is the first row
+      |second row
+      |and this is finally the third row
+      |""".stripMargin
+
   override def run(): IO[Unit] = {
     val presentation = PresentationBuilder[IO]()
       .addTextSlide {
@@ -27,47 +34,47 @@ object Main extends IOApp.Simple {
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
       .addTextSlide {
-        _.content("kfhdfs ksdfhkjsdfh kdsfkjsdfh dfsjkdjshf")
+        _.content(moving)
           .transition(right = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
       }
       .addTextSlide {
-        _.content("kfhdfs ksdfhkjsdfh kdsfkjsdfh dfsjkdjshf")
+        _.content(moving)
           .transition(right = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
       .addTextSlide {
-        _.content("kfhdfs ksdfhkjsdfh kdsfkjsdfh dfsjkdjshf")
+        _.content(moving)
           .transition(right = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Right))
       }
       .addTextSlide {
-        _.content("kfhdfs ksdfhkjsdfh kdsfkjsdfh dfsjkdjshf")
+        _.content(moving)
           .transition(right = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Left))
       }
       .addTextSlide {
-        _.content("kfhdfs ksdfhkjsdfh kdsfkjsdfh dfsjkdjshf")
+        _.content(moving)
           .transition(right = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
       }
       .addTextSlide {
-        _.content("kfhdfs ksdfhkjsdfh kdsfkjsdfh dfsjkdjshf")
+        _.content(moving)
           .transition(right = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Right))
       }
       .addTextSlide {
-        _.content("kfhdfs ksdfhkjsdfh kdsfkjsdfh dfsjkdjshf")
+        _.content(moving)
           .transition(right = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Left))
       }
       .addTextSlide {
-        _.content("kfhdfs ksdfhkjsdfh kdsfkjsdfh dfsjkdjshf")
+        _.content(moving)
           .transition(right = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Center))
       }
       .addTextSlide {
-        _.content("kfhdfs ksdfhkjsdfh kdsfkjsdfh dfsjkdjshf")
+        _.content(moving)
           .transition(right = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
       }

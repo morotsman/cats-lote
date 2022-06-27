@@ -29,9 +29,11 @@ object Aligner {
           leftPadding + line + rightPadding
         }
       case HorizontalAlignment.Right =>
+        val padding = splitByNewLine.map(line => width - line.length - 1).min
         splitByNewLine.map { line =>
-          val leftPadding = SPACE * (width - line.length)
-          leftPadding + line
+          val leftPadding = SPACE * padding
+          val rightPadding = SPACE * (width - padding - line.length)
+          leftPadding + line + rightPadding
         }
     }).mkString("\n")
   }

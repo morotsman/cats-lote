@@ -37,8 +37,13 @@ object MorphTransition {
   private def morphTheText(distortionRate: Double, from: String, to: String): String = {
     println(from.length)
     println(from.split("\n").length)
+    println(from.split("\n").map(_.length).max)
+    println(from.split("\n").map(_.length).min)
+    println("**********")
     println(to.length)
     println(to.split("\n").length)
+    println(to.split("\n").map(_.length).max)
+    println(to.split("\n").map(_.length).min)
     val number = (from.length * distortionRate).toInt
     val numbers = Array.fill(number)(Random.nextInt(from.length)).toSet
     from.zipWithIndex.map { case (c, index) => if (numbers.contains(index))
