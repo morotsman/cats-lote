@@ -9,11 +9,11 @@ object Aligner {
   final val SPACE = " "
 
   def alignText(s: String, alignment: Alignment, width: Int, height: Int): String = {
-    val alignedHorizontal = alignTextHorizontal(s, alignment.horizontalAlignment, width, height)
+    val alignedHorizontal = alignTextHorizontal(s, alignment.horizontalAlignment, width)
     alignVertical(alignedHorizontal, alignment.verticalAlignment, width, height)
   }
 
-  def alignTextHorizontal(s: String, horizontalAlignment: HorizontalAlignment, width: Int, height: Int): String = {
+  def alignTextHorizontal(s: String, horizontalAlignment: HorizontalAlignment, width: Int): String = {
     val splitByNewLine = s.split("\n")
     (horizontalAlignment match {
       case HorizontalAlignment.Left =>
