@@ -25,7 +25,7 @@ object TextSlide {
 
   implicit class ToTextSlide(val s: String) {
     def toSlide[F[_] : Sync : NConsole]: Slide[F] =
-      TextSlide[F](s, Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+      TextSlide[F](s, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
   }
 
 }
