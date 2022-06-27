@@ -18,24 +18,27 @@ object Aligner {
     (horizontalAlignment match {
       case HorizontalAlignment.Left =>
         splitByNewLine.map { line =>
-          line + Array.fill(width - line.length)(SPACE).mkString("")
+          val padding = SPACE * (width - line.length)
+          line + padding
         }
       case HorizontalAlignment.Center =>
-        val padFactor = splitByNewLine.map(line => (width - line.length) / 2).min
-        val padding = Array.fill(padFactor)(SPACE).mkString("")
+        val minLeftPad = splitByNewLine.map(line => (width - line.length) / 2).min
+        val leftPadding = SPACE * minLeftPad
         splitByNewLine.map { line =>
-          padding + line + Array.fill(width - padding.length - line.length)(SPACE).mkString("")
+          val rightPadding = SPACE * (width - minLeftPad - line.length)
+          leftPadding + line + rightPadding
         }
       case HorizontalAlignment.Right =>
         splitByNewLine.map { line =>
-          Array.fill(width - line.length)(SPACE).mkString("") + line
+          val padding = SPACE * (width - line.length)
+          padding + line
         }
     }).mkString("\n")
   }
 
   def alignVertical(s: String, verticalAlignment: VerticalAlignment, width: Int, height: Int): String = {
     val splitByNewLine = s.split("\n")
-    val emptyRow = Array.fill(width)(SPACE).mkString("")
+    val emptyRow = SPACE * width
     val rowsToAdd = height - splitByNewLine.size - 1
     val pad = Array.fill(rowsToAdd)(emptyRow)
     val rows = verticalAlignment match {
