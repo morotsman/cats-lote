@@ -22,8 +22,8 @@ final case class SlideBuilder[F[_], State <: BuildState](
 
   def build(): SlideSpecification[F] = SlideSpecification(
     slide = slide,
-    left = left,
-    right = right
+    in = left,
+    out = right
   )
 
 }

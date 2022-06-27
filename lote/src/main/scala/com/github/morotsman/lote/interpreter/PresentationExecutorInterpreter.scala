@@ -30,11 +30,11 @@ object PresentationExecutorInterpreter {
               nextSat = presentation.slideSpecifications(toIndex)
               work <- {
                 (for {
-                  _ <- current.right.fold(Nothing().transition(current.slide, nextSat.slide)) { right =>
+                  _ <- current.out.fold(Nothing().transition(current.slide, nextSat.slide)) { right =>
                     right.transition(current.slide, nextSat.slide)
                   }
                   _ <- NConsole[F].clear()
-                  _ <- nextSat.left.fold(Nothing().transition(current.slide, nextSat.slide)) { right =>
+                  _ <- nextSat.in.fold(Nothing().transition(current.slide, nextSat.slide)) { right =>
                     right.transition(current.slide, nextSat.slide)
                   }
                   _ <- NConsole[F].clear()
