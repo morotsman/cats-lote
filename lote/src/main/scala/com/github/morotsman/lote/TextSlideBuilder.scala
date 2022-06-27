@@ -9,15 +9,15 @@ import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, SlideSpe
 final case class TextSlideBuilder[F[_] : Sync : NConsole, State <: BuildState](
                                                      alignment: Option[Alignment],
                                                      content: String,
-                                                     left: Transition[F],
-                                                     right: Transition[F]
+                                                     left: Option[Transition[F]],
+                                                     right: Option[Transition[F]]
                                                    ) {
 
   def transition(
                      left: Transition[F] = null,
                      right: Transition[F] = null
                    ): TextSlideBuilder[F, State] =
-    this.copy(left = left, right = right)
+    this.copy(left = Option(left), right = Option(right))
 
 
   def content(content: String): TextSlideBuilder[F, State with ContentAdded] =
@@ -28,8 +28,8 @@ final case class TextSlideBuilder[F[_] : Sync : NConsole, State <: BuildState](
 
   def build(): SlideSpecification[F] = SlideSpecification(
     slide = TextSlide(content, alignment.getOrElse(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))),
-    left = Option(left),
-    right = Option(right)
+    left = left,
+    right = right
   )
 
 }
@@ -44,6 +44,6 @@ object TextSlideBuilder {
   type WithContent = WithoutContent with ContentAdded
 
   def apply[F[_] : NConsole : Sync](): TextSlideBuilder[F, WithoutContent] =
-    TextSlideBuilder(null, null, null, null)
+    TextSlideBuilder(None, null, None, None)
 }
 

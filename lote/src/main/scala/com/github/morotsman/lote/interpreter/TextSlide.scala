@@ -10,10 +10,10 @@ object TextSlide {
   def apply[F[_] : Sync : NConsole](slideContent: String, alignment: Alignment): Slide[F] =
     new Slide[F] {
       override def content: F[String] =
-        Sync[F].pure(slideContent)
+        NConsole[F].alignText(slideContent, alignment)
 
       override def startShow(): F[Unit] =
-        content >>= (NConsole[F].writeStringCenterAligned(_))
+        content >>= (NConsole[F].writeString(_))
 
       override def stopShow(): F[Unit] =
         Sync[F].unit

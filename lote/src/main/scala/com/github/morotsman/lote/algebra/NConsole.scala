@@ -1,14 +1,15 @@
 package com.github.morotsman
 package lote.algebra
 
-import lote.model.UserInput
+import lote.model.{Alignment, UserInput}
+
 
 trait NConsole[F[_]] {
   def read(): F[UserInput]
 
-  def centerAlignText(s: String): F[String]
+  def alignText(s: String, alignment: Alignment): F[String]
 
-  def writeStringCenterAligned(s: String): F[Unit]
+  def writeString(s: String, alignment: Alignment): F[Unit]
 
   def writeString(s: String): F[Unit]
 

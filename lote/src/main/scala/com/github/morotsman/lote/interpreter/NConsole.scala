@@ -2,8 +2,7 @@ package com.github.morotsman
 package lote.interpreter
 
 import lote.algebra.NConsole
-import lote.model.{Character, Key, SpecialKey, UserInput}
-
+import lote.model.{Alignment, Character, Key, SpecialKey, UserInput}
 import cats.effect.{IO, Sync}
 import cats.implicits._
 import org.jline.terminal.TerminalBuilder
@@ -43,7 +42,7 @@ object NConsole {
           }
         }
 
-        override def centerAlignText(s: String): F[String] = Sync[F].blocking {
+        override def alignText(s: String, alignment: Alignment): F[String] = Sync[F].blocking {
           val splitByNewLine = s.split("\n")
           val padFactor = splitByNewLine.map(line => (width - line.length) / 2).min
           val padding = Array.fill(padFactor)(" ").mkString("")
@@ -63,8 +62,8 @@ object NConsole {
           centerAligned + "\n" + pad
         }
 
-        override def writeStringCenterAligned(s: String): F[Unit] =
-          centerAlignText(s).map(println)
+        override def writeString(s: String, alignment: Alignment): F[Unit] =
+          alignText(s, alignment).map(println)
 
         override def writeString(s: String): F[Unit] = Sync[F].blocking {
           println(s)
@@ -87,16 +86,16 @@ object NConsoleInstances {
 
     override def read(): IO[UserInput] = console.flatMap(_.read())
 
-    override def writeStringCenterAligned(s: String): IO[Unit] =
-      console.flatMap(_.writeStringCenterAligned(s))
+    override def writeString(s: String): IO[Unit] =
+      console.flatMap(_.writeString(s))
 
     override def clear(): IO[Unit] =
       console.flatMap(_.clear())
 
-    override def writeString(s: String): IO[Unit] =
-      console.flatMap(_.writeString(s))
+    override def writeString(s: String, alignment: Alignment): IO[Unit] =
+      console.flatMap(_.writeString(s, alignment))
 
-    override def centerAlignText(s: String): IO[String] =
-      console.flatMap(_.centerAlignText(s))
+    override def alignText(s: String, alignment: Alignment): IO[String] =
+      console.flatMap(_.alignText(s, alignment))
   }
 }
