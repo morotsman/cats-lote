@@ -27,18 +27,18 @@ object PresentationExecutorInterpreter {
               _ <- current.slide.stopShow()
               _ <- currentWork.cancel
               _ <- NConsole[F].clear()
-              nextSat = presentation.slideSpecifications(toIndex)
+              next = presentation.slideSpecifications(toIndex)
               work <- {
                 (for {
-                  _ <- current.out.fold(Nothing().transition(current.slide, nextSat.slide)) { right =>
-                    right.transition(current.slide, nextSat.slide)
+                  _ <- current.out.fold(Nothing().transition(current.slide, next.slide)) { right =>
+                    right.transition(current.slide, next.slide)
                   }
                   _ <- NConsole[F].clear()
-                  _ <- nextSat.in.fold(Nothing().transition(current.slide, nextSat.slide)) { right =>
-                    right.transition(current.slide, nextSat.slide)
+                  _ <- next.in.fold(Nothing().transition(current.slide, next.slide)) { right =>
+                    right.transition(current.slide, next.slide)
                   }
                   _ <- NConsole[F].clear()
-                  _ <- nextSat.slide.startShow().start
+                  _ <- next.slide.startShow().start
                 } yield ()).start
               }
             } yield Either.left(toIndex, work)
