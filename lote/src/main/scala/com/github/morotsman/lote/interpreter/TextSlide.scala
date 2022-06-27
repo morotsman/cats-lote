@@ -5,6 +5,7 @@ import cats.implicits._
 import lote.algebra.{NConsole, Slide}
 import lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
 import cats.effect.Sync
+import com.github.morotsman.lote.interpreter.nconcole.NConsole
 
 object TextSlide {
   def apply[F[_] : Sync : NConsole](slideContent: String, alignment: Alignment): Slide[F] =

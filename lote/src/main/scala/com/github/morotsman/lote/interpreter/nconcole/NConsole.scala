@@ -1,10 +1,9 @@
-package com.github.morotsman
-package lote.interpreter
+package com.github.morotsman.lote.interpreter.nconcole
 
-import lote.algebra.NConsole
-import lote.model.{Alignment, Character, Key, SpecialKey, UserInput}
 import cats.effect.{IO, Sync}
 import cats.implicits._
+import com.github.morotsman.lote.algebra.NConsole
+import com.github.morotsman.lote.model._
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp.Capability
 
@@ -13,6 +12,7 @@ object NConsole {
 
   private val terminal = TerminalBuilder.terminal()
   terminal.enterRawMode()
+  terminal.puts(Capability.clear_screen)
   private val reader = terminal.reader()
 
   private val width = terminal.getWidth
@@ -43,23 +43,7 @@ object NConsole {
         }
 
         override def alignText(s: String, alignment: Alignment): F[String] = Sync[F].blocking {
-          val splitByNewLine = s.split("\n")
-          val padFactor = splitByNewLine.map(line => (width - line.length) / 2).min
-          val padding = Array.fill(padFactor)(" ").mkString("")
-          val centerAligned = splitByNewLine.map { line =>
-            if (padFactor >= 0) {
-              padding + line + Array.fill(width - padding.length - line.length)(" ").mkString("")
-            } else {
-              ???
-            }
-          }.mkString("\n")
-
-          val numberOfRows = splitByNewLine.size
-          val emptyRow = Array.fill(width)(" ").mkString("")
-          val rowsToAdd = height - numberOfRows - 1
-          val pad = Array.fill(rowsToAdd)(emptyRow).mkString("\n")
-
-          centerAligned + "\n" + pad
+          Aligner.alignText(s, alignment, width = width, height = height)
         }
 
         override def writeString(s: String, alignment: Alignment): F[Unit] =
@@ -70,7 +54,6 @@ object NConsole {
         }
 
         override def clear(): F[Unit] = Sync[F].blocking {
-          terminal.puts(Capability.clear_screen)
           terminal.flush()
         }
 

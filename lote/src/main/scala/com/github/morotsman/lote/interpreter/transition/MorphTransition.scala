@@ -3,8 +3,8 @@ package lote.interpreter.transition
 
 import cats.effect.kernel.Temporal
 import cats.implicits._
+import com.github.morotsman.lote.interpreter.nconcole.NConsole
 import lote.algebra.{NConsole, Slide, Transition}
-import lote.interpreter.NConsole
 
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
@@ -35,6 +35,10 @@ object MorphTransition {
   }
 
   private def morphTheText(distortionRate: Double, from: String, to: String): String = {
+    println(from.length)
+    println(from.split("\n").length)
+    println(to.length)
+    println(to.split("\n").length)
     val number = (from.length * distortionRate).toInt
     val numbers = Array.fill(number)(Random.nextInt(from.length)).toSet
     from.zipWithIndex.map { case (c, index) => if (numbers.contains(index))

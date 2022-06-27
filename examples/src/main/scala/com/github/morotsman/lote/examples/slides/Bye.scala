@@ -4,7 +4,7 @@ import cats.implicits._
 import cats.Monad
 import cats.effect.kernel.Temporal
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
-import com.github.morotsman.lote.interpreter.NConsole
+import com.github.morotsman.lote.interpreter.nconcole.NConsole
 import com.github.morotsman.lote.model.UserInput
 
 import scala.concurrent.duration.DurationInt
