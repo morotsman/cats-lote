@@ -7,7 +7,6 @@ import cats.effect.{Fiber, Temporal}
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, PresentationExecutor}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
-import com.github.morotsman.lote.interpreter.transition.Nothing
 import com.github.morotsman.lote.model.{Key, Presentation, SpecialKey}
 
 object PresentationExecutorInterpreter {
@@ -30,11 +29,11 @@ object PresentationExecutorInterpreter {
                 next = presentation.slideSpecifications(toIndex)
                 work <- {
                   (for {
-                    _ <- current.out.fold(Nothing().transition(current.slide, next.slide)) {
+                    _ <- current.out.fold(Monad[F].unit) {
                       _.transition(current.slide, next.slide)
                     }
                     _ <- NConsole[F].clear()
-                    _ <- next.in.fold(Nothing().transition(current.slide, next.slide)) {
+                    _ <- next.in.fold(Monad[F].unit) {
                       _.transition(current.slide, next.slide)
                     }
                     _ <- NConsole[F].clear()
