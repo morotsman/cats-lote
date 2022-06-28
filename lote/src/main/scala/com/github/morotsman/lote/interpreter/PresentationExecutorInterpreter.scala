@@ -20,9 +20,9 @@ object PresentationExecutorInterpreter {
 
       def executionLoop(): F[(Int, Fiber[F, Throwable, Unit])] =
         presentation.slideSpecifications.head.slide.startShow().start >>=
-          (Monad[F].tailRecM(0, _) { case (currentSlideIndex, currentWork) =>
-            def shiftSlide(toIndex: Int) = {
-              val current = presentation.slideSpecifications(currentSlideIndex)
+          (Monad[F].tailRecM(0, _) { case (currentIndex, currentWork) =>
+            def shiftSlide(toIndex: Int): F[Fiber[F, Throwable, Unit]] = {
+              val current = presentation.slideSpecifications(currentIndex)
               for {
                 _ <- current.slide.stopShow()
                 _ <- currentWork.cancel
@@ -41,7 +41,7 @@ object PresentationExecutorInterpreter {
                     _ <- next.slide.startShow().start
                   } yield ()).start
                 }
-              } yield Either.left(toIndex, work)
+              } yield work
             }
 
             for {
@@ -49,26 +49,28 @@ object PresentationExecutorInterpreter {
               result <- {
                 input match {
                   case Key(k) if k == SpecialKey.Right =>
-                    if (currentSlideIndex < presentation.slideSpecifications.length - 1) {
-                      shiftSlide(currentSlideIndex + 1)
+                    if (currentIndex < presentation.slideSpecifications.length - 1) {
+                      val nextIndex = currentIndex + 1
+                      shiftSlide(nextIndex).map(Either.left(nextIndex, _))
                     } else {
-                      Monad[F].pure(Either.left(currentSlideIndex, currentWork))
+                      Monad[F].pure(Either.left(currentIndex, currentWork))
                     }
                   case Key(k) if k == SpecialKey.Left =>
-                    if (currentSlideIndex > 0) {
-                      shiftSlide(currentSlideIndex - 1)
+                    if (currentIndex > 0) {
+                      val nextIndex = currentIndex - 1
+                      shiftSlide(nextIndex).map(Either.left(nextIndex, _))
                     } else {
-                      Monad[F].pure(Either.left(currentSlideIndex, currentWork))
+                      Monad[F].pure(Either.left(currentIndex, currentWork))
                     }
                   case Key(k) if k == SpecialKey.Esc =>
-                    val current = presentation.slideSpecifications(currentSlideIndex)
+                    val current = presentation.slideSpecifications(currentIndex)
                     current.slide.stopShow() >>
                       NConsole[F].clear() >>
-                      presentation.exitSlide.fold(Monad[F].unit)(_.startShow()).as(Either.right(currentSlideIndex, currentWork))
+                      presentation.exitSlide.fold(Monad[F].unit)(_.startShow()).as(Either.right(currentIndex, currentWork))
                   case _ =>
-                    val current = presentation.slideSpecifications(currentSlideIndex)
+                    val current = presentation.slideSpecifications(currentIndex)
                     current.slide.userInput(input) >>
-                      Monad[F].pure(Either.left(currentSlideIndex, currentWork))
+                      Monad[F].pure(Either.left(currentIndex, currentWork))
                 }
               }
             } yield result
