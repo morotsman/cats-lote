@@ -2,8 +2,7 @@ package com.github.morotsman.lote.builders
 
 import cats.Functor
 import cats.effect.Sync
-import cats.implicits._
-import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay, Slide}
+import com.github.morotsman.lote.algebra.{NConsole, Overlay, Slide}
 import com.github.morotsman.lote.builders.PresentationBuilder.{BuildState, Buildable, SlideAdded}
 import com.github.morotsman.lote.builders.SlideBuilder.{WithContentSlide, WithoutSlide}
 import com.github.morotsman.lote.builders.TextSlideBuilder.{WithContent, WithoutContent}
@@ -12,7 +11,6 @@ import com.github.morotsman.lote.model.{Presentation, SlideSpecification}
 
 case class PresentationBuilder[F[_] : Sync : Functor, State <: BuildState](
                                                                             console: NConsole[F],
-                                                                            middleware: Middleware[F],
                                                                             slideSpecifications: List[SlideSpecification[F]],
                                                                             exitSlide: Option[Slide[F]],
                                                                             overlays: List[Overlay[F]]
@@ -43,9 +41,7 @@ case class PresentationBuilder[F[_] : Sync : Functor, State <: BuildState](
     this.copy(overlays = overlay :: overlays)
   }
 
-  def build()(implicit ev: State =:= Buildable): F[Presentation[F]] = for {
-    _ <- middleware.addOverlays(overlays)
-  } yield Presentation(
+  def build()(implicit ev: State =:= Buildable): Presentation[F] = Presentation(
     slideSpecifications = slideSpecifications.reverse,
     exitSlide = exitSlide
   )
@@ -61,7 +57,7 @@ object PresentationBuilder {
 
   type Buildable = Empty with SlideAdded
 
-  def apply[F[_] : Sync](console: NConsole[F], middleware: Middleware[F]): PresentationBuilder[F, Empty] =
-    PresentationBuilder[F, Empty](console, middleware, List.empty, None, List.empty)
+  def apply[F[_] : Sync](console: NConsole[F]): PresentationBuilder[F, Empty] =
+    PresentationBuilder[F, Empty](console, List.empty, None, List.empty)
 }
 
