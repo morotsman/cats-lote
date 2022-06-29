@@ -84,7 +84,6 @@ object Main extends IOApp.Simple {
             .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
         }
         .addExitSlide(Bye(console))
-        //.addOverlay(Timer.make[IO]())
         .build()
       executor <- PresentationExecutorInterpreter.make[IO](console, presentation)
       _ <- executor.start()
