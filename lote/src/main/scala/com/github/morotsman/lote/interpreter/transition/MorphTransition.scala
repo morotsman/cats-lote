@@ -11,8 +11,8 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 object MorphTransition {
-  def apply[F[_] : Temporal](console: NConsole[F]): Transition[F] = new Transition[F] {
-    override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
+  def apply[F[_] : Temporal](): Transition[F] = new Transition[F] {
+    override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
 
       def morph(distortionRate: Double, from: ScreenAdjusted, to: ScreenAdjusted): F[Unit] = {
         if (distortionRate > 2) {

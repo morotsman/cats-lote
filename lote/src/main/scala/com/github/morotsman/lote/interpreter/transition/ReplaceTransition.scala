@@ -13,8 +13,9 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 object ReplaceTransition {
-  def apply[F[_] : Temporal](console: NConsole[F], replace: Char): Transition[F] = new Transition[F] {
-    override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
+  def apply[F[_] : Temporal](replace: Char): Transition[F] = new Transition[F] {
+
+    override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
       def distort(distortionRate: Double, text: ScreenAdjusted): F[Unit] = {
         if (distortionRate > 10) {
           Monad[F].unit

@@ -30,11 +30,11 @@ object PresentationExecutorInterpreter {
                 work <- {
                   (for {
                     _ <- current.out.fold(Monad[F].unit) {
-                      _.transition(current.slide, next.slide)
+                      _.transition(current.slide, next.slide)(console)
                     }
                     _ <- console.clear()
                     _ <- next.in.fold(Monad[F].unit) {
-                      _.transition(current.slide, next.slide)
+                      _.transition(current.slide, next.slide)(console)
                     }
                     _ <- console.clear()
                     _ <- next.slide.startShow().start
