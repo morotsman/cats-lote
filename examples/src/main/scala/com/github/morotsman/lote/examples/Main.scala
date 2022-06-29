@@ -21,8 +21,8 @@ object Main extends IOApp.Simple {
   override def run(): IO[Unit] = {
     for {
       middleware <- Ref[IO].of(MiddlewareState[IO](List.empty)).map(s => Middleware.make[IO](s))
-      console <- NConsole.make[IO](middleware)
       _ <- middleware.addOverlays(List(Timer.make[IO]()))
+      console <- NConsole.make[IO](middleware)
       presentation = PresentationBuilder[IO](console)
         .addTextSlide {
           _.content(Start())
