@@ -13,15 +13,15 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 object ReplaceTransition {
-  def apply[F[_] : Temporal : NConsole](replace: Char): Transition[F] = new Transition[F] {
+  def apply[F[_] : Temporal](console: NConsole[F], replace: Char): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
       def distort(distortionRate: Double, text: ScreenAdjusted): F[Unit] = {
         if (distortionRate > 10) {
           Monad[F].unit
         } else {
           val distortedText = distortTheText(distortionRate, text, replace)
-          NConsole[F].clear() >>
-            NConsole[F].writeString(distortedText) >>
+          console.clear() >>
+            console.writeString(distortedText) >>
             Temporal[F].sleep(150.milli) >>
             distort(distortionRate * 2, distortedText)
         }
@@ -29,7 +29,7 @@ object ReplaceTransition {
 
       for {
         slide1 <- from.content
-        _ <- NConsole[F].writeString(slide1)  >> distort(0.01, slide1) >> Temporal[F].sleep(200.milli)
+        _ <- console.writeString(slide1)  >> distort(0.01, slide1) >> Temporal[F].sleep(200.milli)
       } yield ()
     }
   }

@@ -10,10 +10,10 @@ import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.model.{Key, Presentation, SpecialKey}
 
 object PresentationExecutorInterpreter {
-  def make[F[_] : Temporal : NConsole](presentation: Presentation[F]): F[PresentationExecutor[F]] = Monad[F].pure(
+  def make[F[_] : Temporal](console: NConsole[F], presentation: Presentation[F]): F[PresentationExecutor[F]] = Monad[F].pure(
     new PresentationExecutor[F] {
       override def start(): F[Unit] = for {
-        _ <- NConsole[F].clear()
+        _ <- console.clear()
         _ <- executionLoop()
       } yield ()
 
@@ -25,18 +25,18 @@ object PresentationExecutorInterpreter {
               for {
                 _ <- current.slide.stopShow()
                 _ <- currentWork.cancel
-                _ <- NConsole[F].clear()
+                _ <- console.clear()
                 next = presentation.slideSpecifications(toIndex)
                 work <- {
                   (for {
                     _ <- current.out.fold(Monad[F].unit) {
                       _.transition(current.slide, next.slide)
                     }
-                    _ <- NConsole[F].clear()
+                    _ <- console.clear()
                     _ <- next.in.fold(Monad[F].unit) {
                       _.transition(current.slide, next.slide)
                     }
-                    _ <- NConsole[F].clear()
+                    _ <- console.clear()
                     _ <- next.slide.startShow().start
                   } yield ()).start
                 }
@@ -44,7 +44,7 @@ object PresentationExecutorInterpreter {
             }
 
             for {
-              input <- NConsole[F].read()
+              input <- console.read()
               result <- {
                 input match {
                   case Key(k) if k == SpecialKey.Right =>
@@ -64,9 +64,9 @@ object PresentationExecutorInterpreter {
                   case Key(k) if k == SpecialKey.Esc =>
                     val current = presentation.slideSpecifications(currentIndex)
                     current.slide.stopShow() >>
-                      NConsole[F].clear() >>
+                      console.clear() >>
                       presentation.exitSlide.fold(Monad[F].unit)(_.startShow()) >>
-                      NConsole[F].clear().as(Either.right(currentIndex, currentWork))
+                      console.clear().as(Either.right(currentIndex, currentWork))
                   case _ =>
                     val current = presentation.slideSpecifications(currentIndex)
                     current.slide.userInput(input) >>

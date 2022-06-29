@@ -2,7 +2,7 @@ package com.github.morotsman.lote.interpreter.nconsole
 
 import cats.effect.{IO, Sync}
 import cats.implicits._
-import com.github.morotsman.lote.algebra.NConsole
+import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model._
 import org.jline.terminal.TerminalBuilder
@@ -22,7 +22,7 @@ object NConsole {
   private val width = terminal.getWidth
   private val height = terminal.getHeight
 
-  def make[F[_] : Sync](): F[NConsole[F]] = {
+  def make[F[_] : Sync](middleware: Middleware[F]): F[NConsole[F]] = {
     Sync[F].delay(
       new NConsole[F] {
         override def read(): F[UserInput] = Sync[F].blocking {
@@ -53,9 +53,12 @@ object NConsole {
         override def writeString(s: String, alignment: Alignment): F[Unit] =
           alignText(s, alignment).map(println)
 
-        override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = Sync[F].blocking {
-          println(screenAdjusted.content)
-        }
+        override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = for {
+          withOverlay <- middleware.applyMiddleware(screenAdjusted)
+          _ <- Sync[F].blocking {
+            println(withOverlay.content)
+          }
+        } yield ()
 
         override def clear(): F[Unit] = Sync[F].blocking {
           terminal.flush()
@@ -67,8 +70,9 @@ object NConsole {
   }
 }
 
+/*
 object NConsoleInstances {
-  implicit val IONConsole: NConsole[IO] = new NConsole[IO] {
+  implicit def IONConsole(implicit o: Middleware[IO]) : NConsole[IO] = new NConsole[IO] {
     private val console = NConsole.make[IO]()
 
     override def read(): IO[UserInput] = console.flatMap(_.read())
@@ -86,3 +90,4 @@ object NConsoleInstances {
       console.flatMap(_.alignText(s, alignment))
   }
 }
+*/

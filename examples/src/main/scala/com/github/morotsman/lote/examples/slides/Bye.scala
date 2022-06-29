@@ -11,7 +11,7 @@ import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, UserInpu
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
-case class Bye[F[_] : NConsole : Temporal]() extends Slide[F] {
+case class Bye[F[_]: Temporal](console: NConsole[F]) extends Slide[F] {
   private val text =
     """
       |
@@ -38,8 +38,8 @@ case class Bye[F[_] : NConsole : Temporal]() extends Slide[F] {
         Monad[F].unit
       } else {
         val distortedText = distortTheText(distortionRate, text)
-        NConsole[F].clear() >>
-          NConsole[F].writeString(distortedText) >>
+        console.clear() >>
+          console.writeString(distortedText) >>
           Temporal[F].sleep(200.milli) >>
           distort(distortionRate * 2, distortedText)
       }
@@ -47,11 +47,11 @@ case class Bye[F[_] : NConsole : Temporal]() extends Slide[F] {
 
     for {
       adjustedText <- content
-      _ <- NConsole[F].writeString(adjustedText)
+      _ <- console.writeString(adjustedText)
       _ <- Temporal[F].sleep(1.seconds)
       _ <- distort(0.01, adjustedText)
       _ <- Temporal[F].sleep(500.milli)
-      _ <- NConsole[F].clear()
+      _ <- console.clear()
     } yield ()
 
   }
@@ -72,6 +72,6 @@ case class Bye[F[_] : NConsole : Temporal]() extends Slide[F] {
   override def stopShow(): F[Unit] = Monad[F].unit
 
   override def content: F[ScreenAdjusted] = {
-    NConsole[F].alignText(text, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+    console.alignText(text, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
   }
 }

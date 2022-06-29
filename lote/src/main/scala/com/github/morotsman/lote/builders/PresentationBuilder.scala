@@ -1,17 +1,22 @@
 package com.github.morotsman.lote.builders
 
-import cats.effect.{Sync, Temporal}
-import com.github.morotsman.lote.algebra.{NConsole, Slide}
+import cats.Functor
+import cats.effect.Sync
+import cats.implicits._
+import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay, Slide}
 import com.github.morotsman.lote.builders.PresentationBuilder.{BuildState, Buildable, SlideAdded}
 import com.github.morotsman.lote.builders.SlideBuilder.{WithContentSlide, WithoutSlide}
 import com.github.morotsman.lote.builders.TextSlideBuilder.{WithContent, WithoutContent}
 import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
 import com.github.morotsman.lote.model.{Presentation, SlideSpecification}
 
-case class PresentationBuilder[F[_] : Temporal : NConsole : Sync, State <: BuildState](
-                                                                                        slideSpecifications: List[SlideSpecification[F]],
-                                                                                        exitSlide: Option[Slide[F]]
-                                                                                      ) {
+case class PresentationBuilder[F[_] : Sync : Functor, State <: BuildState](
+                                                                            console: NConsole[F],
+                                                                            middleware: Middleware[F],
+                                                                            slideSpecifications: List[SlideSpecification[F]],
+                                                                            exitSlide: Option[Slide[F]],
+                                                                            overlays: List[Overlay[F]]
+                                                                          ) {
   def addSlide(
                 slideBuilder: SlideBuilder[F, WithoutSlide] => SlideBuilder[F, WithContentSlide]
               ): PresentationBuilder[F, State with SlideAdded] = {
@@ -23,7 +28,7 @@ case class PresentationBuilder[F[_] : Temporal : NConsole : Sync, State <: Build
   def addTextSlide(
                     textSlideBuilder: TextSlideBuilder[F, WithoutContent] => TextSlideBuilder[F, WithContent]
                   ): PresentationBuilder[F, State with SlideAdded] = {
-    val builder = TextSlideBuilder()
+    val builder = TextSlideBuilder(console)
     val slideSpecification = textSlideBuilder(builder).build()
     this.copy(slideSpecifications = slideSpecification :: slideSpecifications)
   }
@@ -32,13 +37,19 @@ case class PresentationBuilder[F[_] : Temporal : NConsole : Sync, State <: Build
     this.copy(exitSlide = Option(slide))
 
   def addExitSlide(s: String): PresentationBuilder[F, State] =
-    this.copy(exitSlide = Option(s.toSlide))
+    this.copy(exitSlide = Option(s.toSlide(console)))
 
-  def build()(implicit ev: State =:= Buildable): Presentation[F] =
-    Presentation(
-      slideSpecifications = slideSpecifications.reverse,
-      exitSlide = exitSlide
-    )
+  def addOverlay(overlay: Overlay[F]): PresentationBuilder[F, State] = {
+    this.copy(overlays = overlay :: overlays)
+  }
+
+  def build()(implicit ev: State =:= Buildable): F[Presentation[F]] = for {
+    _ <- middleware.addOverlays(overlays)
+  } yield Presentation(
+    slideSpecifications = slideSpecifications.reverse,
+    exitSlide = exitSlide
+  )
+
 }
 
 object PresentationBuilder {
@@ -50,7 +61,7 @@ object PresentationBuilder {
 
   type Buildable = Empty with SlideAdded
 
-  def apply[F[_] : Temporal : NConsole : Sync](): PresentationBuilder[F, Empty] =
-    PresentationBuilder[F, Empty](List.empty, None)
+  def apply[F[_] : Sync](console: NConsole[F], middleware: Middleware[F]): PresentationBuilder[F, Empty] =
+    PresentationBuilder[F, Empty](console, middleware, List.empty, None, List.empty)
 }
 

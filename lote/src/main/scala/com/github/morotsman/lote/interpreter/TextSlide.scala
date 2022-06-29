@@ -5,17 +5,16 @@ import cats.implicits._
 import lote.algebra.{NConsole, Slide}
 import lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
 import cats.effect.Sync
-import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 
 object TextSlide {
-  def apply[F[_] : Sync : NConsole](slideContent: String, alignment: Alignment): Slide[F] =
+  def apply[F[_] : Sync](console: NConsole[F], slideContent: String, alignment: Alignment): Slide[F] =
     new Slide[F] {
       override def content: F[ScreenAdjusted] =
-        NConsole[F].alignText(slideContent, alignment)
+        console.alignText(slideContent, alignment)
 
       override def startShow(): F[Unit] =
-        content >>= (NConsole[F].writeString(_))
+        content >>= (c => console.writeString(c))
 
       override def stopShow(): F[Unit] =
         Sync[F].unit
@@ -25,8 +24,8 @@ object TextSlide {
     }
 
   implicit class ToTextSlide(val s: String) {
-    def toSlide[F[_] : Sync : NConsole]: Slide[F] =
-      TextSlide[F](s, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+    def toSlide[F[_] : Sync](console: NConsole[F]): Slide[F] =
+      TextSlide[F](console, s, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
   }
 
 }
