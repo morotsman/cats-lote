@@ -6,11 +6,12 @@ import lote.algebra.{NConsole, Slide}
 import lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
 import cats.effect.Sync
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
+import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 
 object TextSlide {
   def apply[F[_] : Sync : NConsole](slideContent: String, alignment: Alignment): Slide[F] =
     new Slide[F] {
-      override def content: F[String] =
+      override def content: F[ScreenAdjusted] =
         NConsole[F].alignText(slideContent, alignment)
 
       override def startShow(): F[Unit] =

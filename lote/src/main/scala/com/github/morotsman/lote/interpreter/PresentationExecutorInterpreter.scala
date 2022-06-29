@@ -65,7 +65,8 @@ object PresentationExecutorInterpreter {
                     val current = presentation.slideSpecifications(currentIndex)
                     current.slide.stopShow() >>
                       NConsole[F].clear() >>
-                      presentation.exitSlide.fold(Monad[F].unit)(_.startShow()).as(Either.right(currentIndex, currentWork))
+                      presentation.exitSlide.fold(Monad[F].unit)(_.startShow()) >>
+                      NConsole[F].clear().as(Either.right(currentIndex, currentWork))
                   case _ =>
                     val current = presentation.slideSpecifications(currentIndex)
                     current.slide.userInput(input) >>

@@ -5,7 +5,8 @@ import cats.Monad
 import cats.effect.kernel.Temporal
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
-import com.github.morotsman.lote.model.UserInput
+import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
+import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
 
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
@@ -20,32 +21,21 @@ case class Bye[F[_] : NConsole : Temporal]() extends Slide[F] {
       |
       |
       |
-      |                                                       /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$  /$$     /$$ /$$$$$$$$ /$$
-      |                                                      /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$__  $$|  $$   /$$/| $$_____/| $$
-      |                                                     | $$  \__/| $$  \ $$| $$  \ $$| $$  \ $$| $$  \ $$ \  $$ /$$/ | $$      | $$
-      |                                                     | $$ /$$$$| $$  | $$| $$  | $$| $$  | $$| $$$$$$$   \  $$$$/  | $$$$$   | $$
-      |                                                     | $$|_  $$| $$  | $$| $$  | $$| $$  | $$| $$__  $$   \  $$/   | $$__/   |__/
-      |                                                     | $$  \ $$| $$  | $$| $$  | $$| $$  | $$| $$  \ $$    | $$    | $$
-      |                                                     |  $$$$$$/|  $$$$$$/|  $$$$$$/| $$$$$$$/| $$$$$$$/    | $$    | $$$$$$$$ /$$
-      |                                                      \______/  \______/  \______/ |_______/ |_______/     |__/    |________/|__/
-      |
-      |
-      |
-      |
-      |
-      |
-      |
-      |
-      |
-      |
-      |
+      |  /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$  /$$     /$$ /$$$$$$$$ /$$
+      | /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$__  $$|  $$   /$$/| $$_____/| $$
+      || $$  \__/| $$  \ $$| $$  \ $$| $$  \ $$| $$  \ $$ \  $$ /$$/ | $$      | $$
+      || $$ /$$$$| $$  | $$| $$  | $$| $$  | $$| $$$$$$$   \  $$$$/  | $$$$$   | $$
+      || $$|_  $$| $$  | $$| $$  | $$| $$  | $$| $$__  $$   \  $$/   | $$__/   |__/
+      || $$  \ $$| $$  | $$| $$  | $$| $$  | $$| $$  \ $$    | $$    | $$
+      ||  $$$$$$/|  $$$$$$/|  $$$$$$/| $$$$$$$/| $$$$$$$/    | $$    | $$$$$$$$ /$$
+      | \______/  \______/  \______/ |_______/ |_______/     |__/    |________/|__/
       |""".stripMargin
 
   override def startShow(): F[Unit] = {
 
-    def distort(distortionRate: Double, text: String): F[Unit] = {
-      if (distortionRate > 2) {
-        NConsole[F].clear()
+    def distort(distortionRate: Double, text: ScreenAdjusted): F[Unit] = {
+      if (distortionRate > 10) {
+        Monad[F].unit
       } else {
         val distortedText = distortTheText(distortionRate, text)
         NConsole[F].clear() >>
@@ -55,20 +45,25 @@ case class Bye[F[_] : NConsole : Temporal]() extends Slide[F] {
       }
     }
 
-    NConsole[F].writeString(text) >>
-      Temporal[F].sleep(2.seconds) >>
-      distort(0.01, text) >>
-      Temporal[F].sleep(500.milli) >>
-      NConsole[F].clear()
+    for {
+      adjustedText <- content
+      _ <- NConsole[F].writeString(adjustedText)
+      _ <- Temporal[F].sleep(1.seconds)
+      _ <- distort(0.01, adjustedText)
+      _ <- Temporal[F].sleep(500.milli)
+      _ <- NConsole[F].clear()
+    } yield ()
+
   }
 
-  private def distortTheText(distortionRate: Double, text: String): String = {
-    val number = (text.length * distortionRate).toInt
-    val numbers = Array.fill(number)(Random.nextInt(text.length))
-    text.zipWithIndex.map { case (c, index) => if (numbers.contains(index) && c != '\n') {
+  private def distortTheText(distortionRate: Double, text: ScreenAdjusted): ScreenAdjusted = {
+    val number = (text.content.length * distortionRate).toInt
+    val numbers = Array.fill(number)(Random.nextInt(text.content.length))
+    val result = text.content.zipWithIndex.map { case (c, index) => if (numbers.contains(index) && c != '\n') {
       ' '
     } else c
     }.mkString("")
+    ScreenAdjusted(result)
   }
 
 
@@ -76,5 +71,7 @@ case class Bye[F[_] : NConsole : Temporal]() extends Slide[F] {
 
   override def stopShow(): F[Unit] = Monad[F].unit
 
-  override def content: F[String] = Temporal[F].pure(text)
+  override def content: F[ScreenAdjusted] = {
+    NConsole[F].alignText(text, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+  }
 }

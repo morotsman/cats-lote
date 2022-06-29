@@ -4,6 +4,7 @@ package lote.interpreter.transition
 import cats.effect.kernel.Temporal
 import cats.implicits._
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
+import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import lote.algebra.{NConsole, Slide, Transition}
 
 import scala.concurrent.duration.DurationInt
@@ -13,7 +14,7 @@ object MorphTransition {
   def apply[F[_] : Temporal : NConsole](): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
 
-      def morph(distortionRate: Double, from: String, to: String): F[Unit] = {
+      def morph(distortionRate: Double, from: ScreenAdjusted, to: ScreenAdjusted): F[Unit] = {
         if (distortionRate > 2) {
           NConsole[F].clear()
         } else {
@@ -34,22 +35,14 @@ object MorphTransition {
     }
   }
 
-  private def morphTheText(distortionRate: Double, from: String, to: String): String = {
-    println(from.length)
-    println(from.split("\n").length)
-    println(from.split("\n").map(_.length).max)
-    println(from.split("\n").map(_.length).min)
-    println("**********")
-    println(to.length)
-    println(to.split("\n").length)
-    println(to.split("\n").map(_.length).max)
-    println(to.split("\n").map(_.length).min)
-    val number = (from.length * distortionRate).toInt
-    val numbers = Array.fill(number)(Random.nextInt(from.length)).toSet
-    from.zipWithIndex.map { case (c, index) => if (numbers.contains(index))
-      to.charAt(index)
+  private def morphTheText(distortionRate: Double, from: ScreenAdjusted, to: ScreenAdjusted): ScreenAdjusted = {
+    val number = (from.content.length * distortionRate).toInt
+    val numbers = Array.fill(number)(Random.nextInt(from.content.length)).toSet
+    val morphed = from.content.zipWithIndex.map { case (c, index) => if (numbers.contains(index))
+      to.content.charAt(index)
     else c
     }.mkString("")
+    ScreenAdjusted(morphed)
   }
 
 }

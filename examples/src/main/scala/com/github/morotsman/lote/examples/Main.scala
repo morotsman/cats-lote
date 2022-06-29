@@ -78,7 +78,7 @@ object Main extends IOApp.Simple {
           .transition(out = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
       }
-      //.addExitSlide(Bye())
+      .addExitSlide(Bye())
       .build()
 
     for {

@@ -3,11 +3,15 @@ package com.github.morotsman.lote.interpreter.nconsole
 import cats.effect.{IO, Sync}
 import cats.implicits._
 import com.github.morotsman.lote.algebra.NConsole
+import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model._
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp.Capability
 
 object NConsole {
+  case class ScreenAdjusted(content: String)
+
+
   @inline def apply[F[_]](implicit instance: NConsole[F]): NConsole[F] = instance
 
   private val terminal = TerminalBuilder.terminal()
@@ -42,15 +46,15 @@ object NConsole {
           }
         }
 
-        override def alignText(s: String, alignment: Alignment): F[String] = Sync[F].blocking {
-          Aligner.alignText(s, alignment, width = width, height = height)
+        override def alignText(s: String, alignment: Alignment): F[ScreenAdjusted] = Sync[F].blocking {
+          ScreenAdjusted(Aligner.alignText(s, alignment, width = width, height = height))
         }
 
         override def writeString(s: String, alignment: Alignment): F[Unit] =
           alignText(s, alignment).map(println)
 
-        override def writeString(s: String): F[Unit] = Sync[F].blocking {
-          println(s)
+        override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = Sync[F].blocking {
+          println(screenAdjusted.content)
         }
 
         override def clear(): F[Unit] = Sync[F].blocking {
@@ -69,7 +73,7 @@ object NConsoleInstances {
 
     override def read(): IO[UserInput] = console.flatMap(_.read())
 
-    override def writeString(s: String): IO[Unit] =
+    override def writeString(s: ScreenAdjusted): IO[Unit] =
       console.flatMap(_.writeString(s))
 
     override def clear(): IO[Unit] =
@@ -78,7 +82,7 @@ object NConsoleInstances {
     override def writeString(s: String, alignment: Alignment): IO[Unit] =
       console.flatMap(_.writeString(s, alignment))
 
-    override def alignText(s: String, alignment: Alignment): IO[String] =
+    override def alignText(s: String, alignment: Alignment): IO[ScreenAdjusted] =
       console.flatMap(_.alignText(s, alignment))
   }
 }
