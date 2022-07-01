@@ -83,10 +83,10 @@ object Main extends IOApp.Simple {
       .build()
 
     for {
-      middleware <- Ref[IO].of(MiddlewareState[IO](List.empty)).map(s => Middleware.make[IO](s))
+      console <- NConsole.make[IO]()
+      middleware <- Ref[IO].of(MiddlewareState[IO](List.empty)).map(state => Middleware.make[IO](state, console))
       //_ <- middleware.addOverlays(List(Timer.make[IO]()))
-      console <- NConsole.make[IO](middleware)
-      executor <- PresentationExecutorInterpreter.make[IO](console, presentation)
+      executor <- PresentationExecutorInterpreter.make[IO](middleware, presentation)
       _ <- executor.start()
     } yield ()
   }

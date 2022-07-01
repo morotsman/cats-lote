@@ -21,7 +21,7 @@ object NConsole {
   private val width = terminal.getWidth
   private val height = terminal.getHeight
 
-  def make[F[_] : Sync](middleware: Middleware[F]): F[NConsole[F]] = {
+  def make[F[_] : Sync](): F[NConsole[F]] = {
     Sync[F].delay(
       new NConsole[F] {
         override def read(): F[UserInput] = Sync[F].blocking {
@@ -52,12 +52,9 @@ object NConsole {
         override def writeString(s: String, alignment: Alignment): F[Unit] =
           alignText(s, alignment).map(println)
 
-        override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = for {
-          withOverlay <- middleware.applyMiddleware(screenAdjusted)
-          _ <- Sync[F].blocking {
-            println(withOverlay.content)
+        override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = Sync[F].blocking {
+            println(screenAdjusted.content)
           }
-        } yield ()
 
         override def clear(): F[Unit] = Sync[F].blocking {
           terminal.flush()
