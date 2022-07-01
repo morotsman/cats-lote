@@ -2,7 +2,7 @@ package com.github.morotsman
 package lote.algebra
 
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
-import lote.model.{Alignment, UserInput}
+import lote.model.{Alignment, Context, UserInput}
 
 
 trait NConsole[F[_]] {
@@ -13,4 +13,6 @@ trait NConsole[F[_]] {
   def writeString(s: ScreenAdjusted): F[Unit]
 
   def clear(): F[Unit]
+
+  def context: F[Context]
 }

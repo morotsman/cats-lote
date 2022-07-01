@@ -1,8 +1,7 @@
 package com.github.morotsman.lote.interpreter.nconsole
 
 import cats.effect.Sync
-import cats.implicits._
-import com.github.morotsman.lote.algebra.{Middleware, NConsole}
+import com.github.morotsman.lote.algebra.NConsole
 import com.github.morotsman.lote.model._
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp.Capability
@@ -50,13 +49,17 @@ object NConsole {
         }
 
         override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = Sync[F].blocking {
-            println(screenAdjusted.content)
-          }
+          println(screenAdjusted.content)
+        }
 
         override def clear(): F[Unit] = Sync[F].blocking {
           terminal.flush()
         }
 
+        override def context: F[Context] = Sync[F].delay(Context(
+          screenWidth = width,
+          screenHeight = height
+        ))
       }
 
     )

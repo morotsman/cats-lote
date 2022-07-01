@@ -5,7 +5,7 @@ import cats.effect.Ref
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
-import com.github.morotsman.lote.model.{Alignment, UserInput}
+import com.github.morotsman.lote.model.{Alignment, Context, UserInput}
 
 case class MiddlewareState[F[_]](
                                   overlays: List[Overlay[F]]
@@ -22,9 +22,10 @@ object Middleware {
 
         override def applyMiddleware(screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
           middleWare <- state.get
+          c <- context
           result <- {
             middleWare.overlays.foldLeft(Monad[F].pure(screenAdjusted)) { case (fsa, o) =>
-              fsa.flatMap(sa => o.applyOverlay(sa))
+              fsa.flatMap(sa => o.applyOverlay(c, sa))
             }
           }
         } yield result
@@ -42,6 +43,8 @@ object Middleware {
 
         override def clear(): F[Unit] =
           console.clear()
+
+        override def context: F[Context] = console.context
       }
     }
 

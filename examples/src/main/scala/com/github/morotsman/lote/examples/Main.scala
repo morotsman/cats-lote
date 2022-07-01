@@ -4,7 +4,7 @@ import cats.effect._
 import com.github.morotsman.lote.builders.PresentationBuilder
 import com.github.morotsman.lote.examples.slides._
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
-import com.github.morotsman.lote.interpreter.middleware.{Middleware, MiddlewareState, Timer}
+import com.github.morotsman.lote.interpreter.middleware.{Middleware, Timer}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.transition.{MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
