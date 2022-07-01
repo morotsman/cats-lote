@@ -1,9 +1,8 @@
 package com.github.morotsman.lote.interpreter.nconsole
 
-import cats.effect.{IO, Sync}
+import cats.effect.Sync
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay}
-import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
+import com.github.morotsman.lote.algebra.{Middleware, NConsole}
 import com.github.morotsman.lote.model._
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp.Capability
@@ -69,25 +68,3 @@ object NConsole {
     )
   }
 }
-
-/*
-object NConsoleInstances {
-  implicit def IONConsole(implicit o: Middleware[IO]) : NConsole[IO] = new NConsole[IO] {
-    private val console = NConsole.make[IO]()
-
-    override def read(): IO[UserInput] = console.flatMap(_.read())
-
-    override def writeString(s: ScreenAdjusted): IO[Unit] =
-      console.flatMap(_.writeString(s))
-
-    override def clear(): IO[Unit] =
-      console.flatMap(_.clear())
-
-    override def writeString(s: String, alignment: Alignment): IO[Unit] =
-      console.flatMap(_.writeString(s, alignment))
-
-    override def alignText(s: String, alignment: Alignment): IO[ScreenAdjusted] =
-      console.flatMap(_.alignText(s, alignment))
-  }
-}
-*/

@@ -4,7 +4,6 @@ import cats.implicits._
 import cats.Monad
 import cats.effect.kernel.Temporal
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
-import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
 
