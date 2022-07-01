@@ -9,6 +9,8 @@ import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.transition.{MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
 
+import scala.concurrent.duration.DurationInt
+
 object Main extends IOApp.Simple {
 
   private val moving =
@@ -85,7 +87,9 @@ object Main extends IOApp.Simple {
     for {
       console <- NConsole.make[IO]()
       middleware <- Middleware.make[IO](console)
-      //_ <- middleware.addOverlays(List(Timer.make[IO]()))
+      _ <- middleware.addOverlays(List(
+        Timer.make[IO](30.minutes)
+      ))
       executor <- PresentationExecutorInterpreter.make[IO](middleware, presentation)
       _ <- executor.start()
     } yield ()
