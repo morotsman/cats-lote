@@ -10,8 +10,6 @@ trait NConsole[F[_]] {
 
   def alignText(s: String, alignment: Alignment): F[ScreenAdjusted]
 
-  def writeString(s: String, alignment: Alignment): F[Unit]
-
   def writeString(s: ScreenAdjusted): F[Unit]
 
   def clear(): F[Unit]

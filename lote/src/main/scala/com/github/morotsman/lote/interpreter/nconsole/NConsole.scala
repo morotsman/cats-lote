@@ -49,9 +49,6 @@ object NConsole {
           ScreenAdjusted(Aligner.alignText(s, alignment, width = width, height = height))
         }
 
-        override def writeString(s: String, alignment: Alignment): F[Unit] =
-          alignText(s, alignment).map(println)
-
         override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = Sync[F].blocking {
             println(screenAdjusted.content)
           }
