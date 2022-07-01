@@ -19,72 +19,73 @@ object Main extends IOApp.Simple {
       |""".stripMargin
 
   override def run(): IO[Unit] = {
+    val presentation = PresentationBuilder[IO]()
+      .addTextSlide {
+        _.content(Start())
+          .transition(out = ReplaceTransition(' '))
+          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+      }
+      .addTextSlide {
+        _.content(Agenda())
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+      }
+      .addTextSlide {
+        _.content(DistributedSystem())
+          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+      }
+      .addTextSlide {
+        _.content(moving)
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+      }
+      .addTextSlide {
+        _.content(moving)
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+      }
+      .addTextSlide {
+        _.content(moving)
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Right))
+      }
+      .addTextSlide {
+        _.content(moving)
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Left))
+      }
+      .addTextSlide {
+        _.content(moving)
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+      }
+      .addTextSlide {
+        _.content(moving)
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Right))
+      }
+      .addTextSlide {
+        _.content(moving)
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Left))
+      }
+      .addTextSlide {
+        _.content(moving)
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Center))
+      }
+      .addTextSlide {
+        _.content(moving)
+          .transition(out = MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
+      }
+      .addExitSlide(Bye[IO]())
+      .build()
+
     for {
       middleware <- Ref[IO].of(MiddlewareState[IO](List.empty)).map(s => Middleware.make[IO](s))
       //_ <- middleware.addOverlays(List(Timer.make[IO]()))
       console <- NConsole.make[IO](middleware)
-      presentation = PresentationBuilder[IO](console)
-        .addTextSlide {
-          _.content(Start())
-            .transition(out = ReplaceTransition(' '))
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
-        }
-        .addTextSlide {
-          _.content(Agenda())
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
-        }
-        .addTextSlide {
-          _.content(DistributedSystem())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
-        }
-        .addTextSlide {
-          _.content(moving)
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-        }
-        .addTextSlide {
-          _.content(moving)
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
-        }
-        .addTextSlide {
-          _.content(moving)
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Right))
-        }
-        .addTextSlide {
-          _.content(moving)
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Left))
-        }
-        .addTextSlide {
-          _.content(moving)
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
-        }
-        .addTextSlide {
-          _.content(moving)
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Right))
-        }
-        .addTextSlide {
-          _.content(moving)
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Left))
-        }
-        .addTextSlide {
-          _.content(moving)
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Center))
-        }
-        .addTextSlide {
-          _.content(moving)
-            .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
-        }
-        .addExitSlide(Bye(console))
-        .build()
       executor <- PresentationExecutorInterpreter.make[IO](console, presentation)
       _ <- executor.start()
     } yield ()

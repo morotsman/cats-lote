@@ -8,7 +8,7 @@ import cats.effect.Sync
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 
 object TextSlide {
-  def apply[F[_] : Sync](console: NConsole[F], slideContent: String, alignment: Alignment): Slide[F] =
+  def apply[F[_] : Sync](slideContent: String, alignment: Alignment): Slide[F] =
     new Slide[F] {
       override def content: NConsole[F] => F[ScreenAdjusted] =
         console => console.alignText(slideContent, alignment)
@@ -24,8 +24,8 @@ object TextSlide {
     }
 
   implicit class ToTextSlide(val s: String) {
-    def toSlide[F[_] : Sync](console: NConsole[F]): Slide[F] =
-      TextSlide[F](console, s, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+    def toSlide[F[_] : Sync](): Slide[F] =
+      TextSlide[F](s, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
   }
 
 }

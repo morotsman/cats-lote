@@ -2,7 +2,7 @@ package com.github.morotsman.lote.examples.slides
 
 import cats.implicits._
 import cats.Monad
-import cats.effect.kernel.Temporal
+import cats.effect.Temporal
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
@@ -10,7 +10,7 @@ import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, UserInpu
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
-case class Bye[F[_]: Temporal](console: NConsole[F]) extends Slide[F] {
+case class Bye[F[_]: Temporal]() extends Slide[F] {
   private val text =
     """
       |
