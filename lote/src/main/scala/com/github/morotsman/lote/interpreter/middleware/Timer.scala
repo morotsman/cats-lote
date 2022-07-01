@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 case class TimerState[F[_]](
-                ongoing: Option[Fiber[F, Throwable, ScreenAdjusted]] = None
+                ongoing: Option[Fiber[F, Throwable, Unit]] = None
                 )
 
 object Timer {
@@ -37,12 +37,12 @@ object Timer {
         } yield result
 
 
-        def loop(): F[ScreenAdjusted] = for {
+        def loop(): F[Unit] = for {
           _ <- Temporal[F].sleep(1.second)
           r <- addTimeLeft()
           _ <- console.writeString(r)
           _ <- loop()
-        } yield r
+        } yield ()
 
 
         for {
