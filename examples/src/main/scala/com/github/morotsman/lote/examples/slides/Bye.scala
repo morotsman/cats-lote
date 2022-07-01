@@ -31,7 +31,7 @@ case class Bye[F[_]: Temporal](console: NConsole[F]) extends Slide[F] {
       | \______/  \______/  \______/ |_______/ |_______/     |__/    |________/|__/
       |""".stripMargin
 
-  override def startShow(): F[Unit] = {
+  override def startShow: NConsole[F] => F[Unit] = console => {
 
     def distort(distortionRate: Double, text: ScreenAdjusted): F[Unit] = {
       if (distortionRate > 10) {
@@ -46,7 +46,7 @@ case class Bye[F[_]: Temporal](console: NConsole[F]) extends Slide[F] {
     }
 
     for {
-      adjustedText <- content
+      adjustedText <- content(console)
       _ <- console.writeString(adjustedText)
       _ <- Temporal[F].sleep(1.seconds)
       _ <- distort(0.01, adjustedText)
@@ -69,9 +69,9 @@ case class Bye[F[_]: Temporal](console: NConsole[F]) extends Slide[F] {
 
   override def userInput(input: UserInput): F[Unit] = Monad[F].unit
 
-  override def stopShow(): F[Unit] = Monad[F].unit
+  override def stopShow: F[Unit] = Monad[F].unit
 
-  override def content: F[ScreenAdjusted] = {
+  override def content: NConsole[F] => F[ScreenAdjusted] = console => {
     console.alignText(text, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
   }
 }

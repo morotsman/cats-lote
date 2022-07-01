@@ -29,7 +29,7 @@ object ReplaceTransition {
       }
 
       for {
-        slide1 <- from.content
+        slide1 <- from.content(console)
         _ <- console.writeString(slide1)  >> distort(0.01, slide1) >> Temporal[F].sleep(200.milli)
       } yield ()
     }

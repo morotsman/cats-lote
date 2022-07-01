@@ -10,13 +10,13 @@ import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 object TextSlide {
   def apply[F[_] : Sync](console: NConsole[F], slideContent: String, alignment: Alignment): Slide[F] =
     new Slide[F] {
-      override def content: F[ScreenAdjusted] =
-        console.alignText(slideContent, alignment)
+      override def content: NConsole[F] => F[ScreenAdjusted] =
+        console => console.alignText(slideContent, alignment)
 
-      override def startShow(): F[Unit] =
-        content >>= (c => console.writeString(c))
+      override def startShow: NConsole[F] => F[Unit] =
+        console => content(console) >>= (c => console.writeString(c))
 
-      override def stopShow(): F[Unit] =
+      override def stopShow: F[Unit] =
         Sync[F].unit
 
       override def userInput(input: UserInput): F[Unit] =

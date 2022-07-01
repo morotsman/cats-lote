@@ -27,8 +27,8 @@ object MorphTransition {
       }
 
       for {
-        slide1 <- from.content
-        slide2 <- to.content
+        slide1 <- from.content(console)
+        slide2 <- to.content(console)
         _ <- console.writeString(slide1) >> morph(0.01, slide1, slide2)
       } yield ()
 
