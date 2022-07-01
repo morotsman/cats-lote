@@ -87,8 +87,9 @@ object Main extends IOApp.Simple {
     for {
       console <- NConsole.make[IO]()
       middleware <- Middleware.make[IO](console)
+      timer <- Timer.make[IO](30.minutes, console)
       _ <- middleware.addOverlays(List(
-        Timer.make[IO](30.minutes)
+        timer
       ))
       executor <- PresentationExecutorInterpreter.make[IO](middleware, presentation)
       _ <- executor.start()
