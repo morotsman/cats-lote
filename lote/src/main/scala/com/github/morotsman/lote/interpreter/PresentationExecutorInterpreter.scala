@@ -10,41 +10,41 @@ import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.model.{Key, Presentation, SpecialKey}
 
 object PresentationExecutorInterpreter {
-  def make[F[_] : Temporal : NConsole](presentation: Presentation[F]): F[PresentationExecutor[F]] = Monad[F].pure(
+  def make[F[_] : Temporal](console: NConsole[F], presentation: Presentation[F]): F[PresentationExecutor[F]] = Monad[F].pure(
     new PresentationExecutor[F] {
       override def start(): F[Unit] = for {
-        _ <- NConsole[F].clear()
+        _ <- console.clear()
         _ <- executionLoop()
       } yield ()
 
       def executionLoop(): F[(Int, Fiber[F, Throwable, Unit])] =
-        presentation.slideSpecifications.head.slide.startShow().start >>=
+        presentation.slideSpecifications.head.slide.startShow(console).start >>=
           (Monad[F].tailRecM(0, _) { case (currentIndex, currentWork) =>
             def shiftSlide(toIndex: Int): F[Fiber[F, Throwable, Unit]] = {
               val current = presentation.slideSpecifications(currentIndex)
               for {
-                _ <- current.slide.stopShow()
+                _ <- current.slide.stopShow
                 _ <- currentWork.cancel
-                _ <- NConsole[F].clear()
+                _ <- console.clear()
                 next = presentation.slideSpecifications(toIndex)
                 work <- {
                   (for {
                     _ <- current.out.fold(Monad[F].unit) {
-                      _.transition(current.slide, next.slide)
+                      _.transition(current.slide, next.slide)(console)
                     }
-                    _ <- NConsole[F].clear()
+                    _ <- console.clear()
                     _ <- next.in.fold(Monad[F].unit) {
-                      _.transition(current.slide, next.slide)
+                      _.transition(current.slide, next.slide)(console)
                     }
-                    _ <- NConsole[F].clear()
-                    _ <- next.slide.startShow().start
+                    _ <- console.clear()
+                    _ <- next.slide.startShow(console).start
                   } yield ()).start
                 }
               } yield work
             }
 
             for {
-              input <- NConsole[F].read()
+              input <- console.read()
               result <- {
                 input match {
                   case Key(k) if k == SpecialKey.Right =>
@@ -63,9 +63,10 @@ object PresentationExecutorInterpreter {
                     }
                   case Key(k) if k == SpecialKey.Esc =>
                     val current = presentation.slideSpecifications(currentIndex)
-                    current.slide.stopShow() >>
-                      NConsole[F].clear() >>
-                      presentation.exitSlide.fold(Monad[F].unit)(_.startShow()).as(Either.right(currentIndex, currentWork))
+                    current.slide.stopShow >>
+                      console.clear() >>
+                      presentation.exitSlide.fold(Monad[F].unit)(_.startShow(console)) >>
+                      console.clear().as(Either.right(currentIndex, currentWork))
                   case _ =>
                     val current = presentation.slideSpecifications(currentIndex)
                     current.slide.userInput(input) >>

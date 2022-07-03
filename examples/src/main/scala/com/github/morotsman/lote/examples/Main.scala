@@ -4,9 +4,12 @@ import cats.effect._
 import com.github.morotsman.lote.builders.PresentationBuilder
 import com.github.morotsman.lote.examples.slides._
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
-import com.github.morotsman.lote.interpreter.nconsole.NConsoleInstances.IONConsole
+import com.github.morotsman.lote.interpreter.middleware.{Middleware, Timer}
+import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.transition.{MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
+
+import scala.concurrent.duration.DurationInt
 
 object Main extends IOApp.Simple {
 
@@ -78,11 +81,17 @@ object Main extends IOApp.Simple {
           .transition(out = MorphTransition())
           .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
       }
-      //.addExitSlide(Bye())
+      .addExitSlide(Bye[IO]())
       .build()
 
     for {
-      executor <- PresentationExecutorInterpreter.make[IO](presentation)
+      console <- NConsole.make[IO]()
+      middleware <- Middleware.make[IO](console)
+      timer <- Timer.make[IO](30.minutes, console)
+      _ <- middleware.addOverlays(List(
+        timer
+      ))
+      executor <- PresentationExecutorInterpreter.make[IO](middleware, presentation)
       _ <- executor.start()
     } yield ()
   }
