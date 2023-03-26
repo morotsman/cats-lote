@@ -13,7 +13,7 @@ case class CharacterPosition(character: Char, accelerator: Double, moving: Boole
 case class Position(characters: List[CharacterPosition])
 
 object FallingCharactersTransition {
-  def apply[F[_] : Temporal](): Transition[F] = new Transition[F] {
+  def apply[F[_] : Temporal](gravity: Double = 1.2, selectAccelerator: Double = 1.1): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
 
       def getCharacterPositions(from: ScreenAdjusted): List[Position] =
@@ -45,7 +45,7 @@ object FallingCharactersTransition {
         // Move all falling characters
         val falling: Array[(Position, Int)] = toChange.zipWithIndex.filter(pi => pi._1.characters.exists(_.moving))
         falling.foreach { pi =>
-          val toMove = pi._1.characters.filter(_.moving).map(cp => cp.copy(accelerator = cp.accelerator * 1.2)) // TODO get from outside?
+          val toMove = pi._1.characters.filter(_.moving).map(cp => cp.copy(accelerator = cp.accelerator * gravity)) // TODO get from outside?
           // take them away from the old position
           toChange(pi._2) = toChange(pi._2).copy(characters = toChange(pi._2).characters.filter(!_.moving))
           // move to new position
@@ -69,7 +69,7 @@ object FallingCharactersTransition {
             //TODO snygga till .head
             console.writeString(ScreenAdjusted(newPositions.map(_.characters.head.character).mkString(""), screenWidth, screenHeight)) >>
             Temporal[F].sleep(40.milli) >>
-            fall(screenHeight, screenWidth, newPositions, numberOfFalling * 1.1, newNotFalling)
+            fall(screenHeight, screenWidth, newPositions, numberOfFalling * selectAccelerator, newNotFalling)
         }
       }
 
