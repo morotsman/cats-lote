@@ -42,7 +42,7 @@ object MorphTransition {
       to.content.charAt(index)
     else c
     }.mkString("")
-    ScreenAdjusted(morphed)
+    ScreenAdjusted(morphed, from.width, from.height)
   }
 
 }

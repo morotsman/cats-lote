@@ -42,7 +42,7 @@ object ReplaceTransition {
       replace
     } else c
     }.mkString("")
-    ScreenAdjusted(distorted)
+    ScreenAdjusted(distorted, text.width, text.height)
   }
 
 }

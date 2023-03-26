@@ -7,8 +7,7 @@ import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp.Capability
 
 object NConsole {
-  case class ScreenAdjusted(content: String)
-
+  case class ScreenAdjusted(content: String, width: Int, height: Int)
 
   @inline def apply[F[_]](implicit instance: NConsole[F]): NConsole[F] = instance
 
@@ -45,7 +44,7 @@ object NConsole {
         }
 
         override def alignText(s: String, alignment: Alignment): F[ScreenAdjusted] = Sync[F].blocking {
-          ScreenAdjusted(Aligner.alignText(s, alignment, width = width, height = height))
+          ScreenAdjusted(Aligner.alignText(s, alignment, width = width, height = height), width, height)
         }
 
         override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = Sync[F].blocking {
@@ -60,6 +59,7 @@ object NConsole {
           screenWidth = width,
           screenHeight = height
         ))
+
       }
 
     )

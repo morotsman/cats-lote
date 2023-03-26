@@ -62,7 +62,7 @@ case class Bye[F[_]: Temporal]() extends Slide[F] {
       ' '
     } else c
     }.mkString("")
-    ScreenAdjusted(result)
+    ScreenAdjusted(result, text.width, text.height)
   }
 
 

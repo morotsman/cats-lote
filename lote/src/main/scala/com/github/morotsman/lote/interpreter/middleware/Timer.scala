@@ -33,7 +33,7 @@ object Timer {
           timeLeft = allocatedTime.minus(FiniteDuration(time.toMillis - startTime, TimeUnit.MILLISECONDS))
           seconds = timeLeft.toSeconds % (timeLeft.toMinutes * 60)
           output = s"${timeLeft.toMinutes}:${if (seconds < 10) "0" + seconds else seconds}"
-          result = ScreenAdjusted(output + screenAdjusted.content.drop(output.length))
+          result = screenAdjusted.copy(content = output + screenAdjusted.content.drop(output.length))
         } yield result
 
 
