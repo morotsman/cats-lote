@@ -7,7 +7,7 @@ import com.github.morotsman.lote.interpreter.middleware.{Middleware, Timer}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, FallingTransition, MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
-import kubernetes.session1.slides.{Agenda, Bye, Start}
+import kubernetes.session1.slides.{Agenda, Bye, Start, Test}
 
 
 object Session1 extends IOApp.Simple {
@@ -67,7 +67,7 @@ object Session1 extends IOApp.Simple {
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
       .addTextSlide {
-        _.content(Agenda())
+        _.content(Test())
           .transition(out = FallingCharactersTransition(1.4, 1.3))
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }

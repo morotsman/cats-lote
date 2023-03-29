@@ -32,46 +32,44 @@ object FallingCharactersTransition {
         }).toList
 
       def transformPositions(
-                              characterPositions: List[Position],
                               screenWidth: Int,
-                              numberOfFalling: Int,
-                              randomPositions: List[Int]
-                            ): (List[Position], List[Int]) = {
-        val toChange = characterPositions.toArray
+                              currentCharacterPositions: List[Position],
+                              positionsToUpdate: List[Int]
+                            ): List[Position] = {
+        val toUpdate = currentCharacterPositions.toArray
 
-        // select characters to fall
-        if (randomPositions.nonEmpty) {
-          randomPositions.take(numberOfFalling).foreach { randomPosition =>
-            characterPositions.get(randomPosition).foreach { position =>
+        // mark positions to transform
+        if (positionsToUpdate.nonEmpty) {
+          positionsToUpdate.foreach { randomPosition =>
+            currentCharacterPositions.get(randomPosition).foreach { position =>
               val tmp: Position = position.copy(characters = position.characters.map(cp => if (cp.meta.movable) {
                 cp.copy(meta = cp.meta.copy(moving = true))
               } else {
                 cp
               }
               ))
-              toChange(randomPosition) = tmp
+              toUpdate(randomPosition) = tmp
             }
           }
         }
 
-        // Move all falling characters
-        val falling: Array[(Position, Int)] = toChange.zipWithIndex.filter(pi => pi._1.characters.exists(_.meta.moving))
-        falling.foreach { pi =>
+        // transform positions
+        currentCharacterPositions.zipWithIndex.filter(pi => pi._1.characters.exists(_.meta.moving)).foreach { pi =>
           val toMove = pi._1.characters.filter(_.meta.moving).map {
             cp => cp.copy(meta = cp.meta.copy(accelerator = cp.meta.accelerator * gravity))
           }
           // take them away from the old position
-          toChange(pi._2) = toChange(pi._2).copy(characters = toChange(pi._2).characters.filter(!_.meta.moving))
+          toUpdate(pi._2) = toUpdate(pi._2).copy(characters = toUpdate(pi._2).characters.filter(!_.meta.moving))
           // move to new position
           toMove.foreach { cp =>
             val newIndex = pi._2 + (screenWidth + 1) * cp.meta.accelerator.toInt
-            if (newIndex < toChange.length) {
-              toChange(newIndex) = toChange(newIndex).copy(characters = cp :: toChange(newIndex).characters)
+            if (newIndex < toUpdate.length) {
+              toUpdate(newIndex) = toUpdate(newIndex).copy(characters = cp :: toUpdate(newIndex).characters)
             }
           }
         }
 
-        (toChange.toList, randomPositions.drop(numberOfFalling))
+        toUpdate.toList
       }
 
       def transformSlides(
@@ -84,16 +82,18 @@ object FallingCharactersTransition {
         if (positions.forall(_.characters.forall(c => c.character == ' ' || c.character == '\n'))) {
           console.clear()
         } else {
-          val (newPositions, newRandomPositions) = transformPositions(positions, screenWidth, nrUnderTransformation.toInt, randomPositions)
+          val positionsToUpdate = randomPositions.take(nrUnderTransformation.toInt);
+          val newRandomPositions = randomPositions.drop(nrUnderTransformation.toInt)
+          val updatedPositions = transformPositions(screenWidth, positions, positionsToUpdate)
           console.clear() >>
             console.writeString(
-              ScreenAdjusted(newPositions.map(_.characters.headOption.map(_.character).getOrElse("")).mkString(""),
+              ScreenAdjusted(updatedPositions.map(_.characters.headOption.map(_.character).getOrElse("")).mkString(""),
                 screenWidth,
                 screenHeight
               )
             ) >>
             Temporal[F].sleep(40.milli) >>
-            transformSlides(screenHeight, screenWidth, newPositions, newRandomPositions, nrUnderTransformation * selectAccelerator)
+            transformSlides(screenHeight, screenWidth, updatedPositions, newRandomPositions, nrUnderTransformation * selectAccelerator)
         }
       }
 
