@@ -17,7 +17,7 @@ object FallingCharactersTransition {
     override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
 
       def getCharacterPositions(from: ScreenAdjusted): List[Position] =
-        from.content.map(c => if (c == '\n' || c == ' ') {
+        from.content.map(c => if (c == '\n') {
           Position(List(
             CharacterPosition(c, accelerator = 1.0, moving = false, movable = false)
           ))
@@ -45,7 +45,7 @@ object FallingCharactersTransition {
         // Move all falling characters
         val falling: Array[(Position, Int)] = toChange.zipWithIndex.filter(pi => pi._1.characters.exists(_.moving))
         falling.foreach { pi =>
-          val toMove = pi._1.characters.filter(_.moving).map(cp => cp.copy(accelerator = cp.accelerator * gravity)) // TODO get from outside?
+          val toMove = pi._1.characters.filter(_.moving).map(cp => cp.copy(accelerator = cp.accelerator * gravity))
           // take them away from the old position
           toChange(pi._2) = toChange(pi._2).copy(characters = toChange(pi._2).characters.filter(!_.moving))
           // move to new position
@@ -66,8 +66,12 @@ object FallingCharactersTransition {
         } else {
           val (newPositions, newNotFalling) = falling(positions, screenWidth, numberOfFalling.toInt, notFalling)
           console.clear() >>
-            //TODO snygga till .head
-            console.writeString(ScreenAdjusted(newPositions.map(_.characters.head.character).mkString(""), screenWidth, screenHeight)) >>
+            console.writeString(
+              ScreenAdjusted(newPositions.map(_.characters.headOption.map(_.character).getOrElse("")).mkString(""),
+                screenWidth,
+                screenHeight
+              )
+            ) >>
             Temporal[F].sleep(40.milli) >>
             fall(screenHeight, screenWidth, newPositions, numberOfFalling * selectAccelerator, newNotFalling)
         }

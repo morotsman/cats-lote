@@ -68,7 +68,7 @@ object Session1 extends IOApp.Simple {
       }
       .addTextSlide {
         _.content(Agenda())
-          .transition(out = FallingCharactersTransition(1.2, 1.1))
+          .transition(out = FallingCharactersTransition(1.4, 1.3))
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
       .addTextSlide {
