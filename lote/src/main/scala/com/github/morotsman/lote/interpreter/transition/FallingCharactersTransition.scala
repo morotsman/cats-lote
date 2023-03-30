@@ -33,6 +33,14 @@ object FallingCharactersTransition {
         }
         }.toList
 
+      // TODO should be provided
+      def updateCharacterPosition(screenWidth: Int, currentIndex: Int, cp: CharacterPosition[Falling]): (Int, CharacterPosition[Falling]) = {
+        val acceleration = cp.meta.accelerator * gravity
+        val newIndex = currentIndex + (screenWidth + 1) * acceleration.toInt
+        (newIndex, cp.copy(meta = cp.meta.copy(accelerator = acceleration)))
+      }
+
+
       def transformPositions(
                               screenWidth: Int,
                               currentCharacterPositions: List[Position],
@@ -65,13 +73,11 @@ object FallingCharactersTransition {
             toUpdate(index) = toUpdate(index).copy(characters = toUpdate(index).characters.filter(!_.moving))
 
             // move to new position
-            val toMove = position.characters.filter(_.moving).map {
-              cp => cp.copy(meta = cp.meta.copy(accelerator = cp.meta.accelerator * gravity))
-            }
+            val toMove = position.characters.filter(_.moving)
             toMove.foreach { cp =>
-              val newIndex = index + (screenWidth + 1) * cp.meta.accelerator.toInt
+              val (newIndex, updatedPosition) = updateCharacterPosition(screenWidth, index, cp);
               if (newIndex < toUpdate.length) {
-                toUpdate(newIndex) = toUpdate(newIndex).copy(characters = cp :: toUpdate(newIndex).characters)
+                toUpdate(newIndex) = toUpdate(newIndex).copy(characters = updatedPosition :: toUpdate(newIndex).characters)
               }
             }
           }
