@@ -55,7 +55,7 @@ object NConsole {
           terminal.flush()
         }
 
-        override def context: F[Context] = Sync[F].delay(Context(
+        override def context: F[Screen] = Sync[F].delay(Screen(
           screenWidth = width,
           screenHeight = height
         ))

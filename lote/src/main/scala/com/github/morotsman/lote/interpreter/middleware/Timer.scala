@@ -8,7 +8,7 @@ import cats.implicits._
 import cats.effect.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Overlay}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
-import com.github.morotsman.lote.model.Context
+import com.github.morotsman.lote.model.Screen
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -27,7 +27,7 @@ object Timer {
     new Overlay[F] {
 
       // TODO refactor
-      override def applyOverlay(context: Context, screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = {
+      override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = {
         def addTimeLeft() = for {
           time <- Clock[F].realTime
           timeLeft = allocatedTime.minus(FiniteDuration(time.toMillis - startTime, TimeUnit.MILLISECONDS))
