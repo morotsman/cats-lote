@@ -9,7 +9,7 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random
 
 
-case class CharacterPosition(character: Char, inTransition: Boolean, canTransform: Boolean, tick: Int)
+case class CharacterPosition(character: Char, inTransition: Boolean, canTransform: Boolean, tick: Int = 0)
 
 case class Position(characters: List[CharacterPosition])
 
@@ -22,19 +22,12 @@ object FallingCharactersTransition {
                             ): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
 
+
       // TODO should be provided
-      def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[Position] =
-        from.content.zip(to.content).map { case (from, to) => if (from == '\n') {
-          Position(List(
-            CharacterPosition(from, inTransition = false, canTransform = false, tick = 0)
-          ))
-        } else {
-          Position(List(
-            CharacterPosition(from, inTransition = false, canTransform = true, tick = 0),
-            CharacterPosition(' ', inTransition = false, canTransform = false, tick = 0)
-          ))
-        }
-        }.toList
+      def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
+        CharacterPosition(fromCharacter, inTransition = false, canTransform = true),
+        CharacterPosition(' ', inTransition = false, canTransform = false)
+      )
 
       // TODO should be provided
       def getNewIndex(screenWidth: Int, screenHeight: Int, currentIndex: Int, cp: CharacterPosition): Int = {
@@ -42,7 +35,16 @@ object FallingCharactersTransition {
         currentIndex + (screenWidth + 1) * acceleration.toInt
       }
 
-
+      def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[Position] =
+        from.content.zip(to.content).map { case (from, to) => if (from == '\n') {
+          Position(List(
+            CharacterPosition(from, inTransition = false, canTransform = false)
+          ))
+        } else {
+          Position(setupPosition(from, to))
+        }
+        }.toList
+      
       def transformPositions(
                               screenWidth: Int,
                               screenHeight: Int,
