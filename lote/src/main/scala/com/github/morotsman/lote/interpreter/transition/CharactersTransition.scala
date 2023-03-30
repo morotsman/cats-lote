@@ -21,7 +21,7 @@ object CharactersTransition {
                               selectAccelerator: Double = 1.1,
                               timeBetweenTicks: FiniteDuration = 40.milli,
                               setupPosition: (Char, Char) => List[CharacterPosition],
-                              getNewIndex: (Screen, Int, CharacterPosition) => Int
+                              getNewIndex: (Screen, Int, CharacterPosition) => Option[Int]
                             ): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
 
@@ -70,13 +70,16 @@ object CharactersTransition {
             val toMove = position.characters.filter(_.inTransition)
             toMove.foreach { cp =>
               val newIndex = getNewIndex(screen, index, cp);
-              val updatedPosition = cp.copy(tick = cp.tick + 1)
-              if (
-                newIndex < toUpdate.length &&
-                  newIndex >=  0 &&
-                  !toUpdate(newIndex).characters.exists(_.character == '\n')) {
-                toUpdate(newIndex) = toUpdate(newIndex).copy(characters = updatedPosition :: toUpdate(newIndex).characters)
+              newIndex.foreach { index =>
+                val updatedPosition = cp.copy(tick = cp.tick + 1)
+                if (
+                  index < toUpdate.length &&
+                    index >= 0 &&
+                    !toUpdate(index).characters.exists(_.character == '\n')) {
+                  toUpdate(index) = toUpdate(index).copy(characters = updatedPosition :: toUpdate(index).characters)
+                }
               }
+
             }
           }
 
