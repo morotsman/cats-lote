@@ -8,11 +8,10 @@ import com.github.morotsman.lote.interpreter.nconsole.NConsole.{ScreenAdjusted, 
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
-case class Falling(accelerator: Double)
 
-case class CharacterPosition[A](character: Char, inTransition: Boolean, canTransform: Boolean, meta: A)
+case class CharacterPosition(character: Char, inTransition: Boolean, canTransform: Boolean, tick: Int)
 
-case class Position(characters: List[CharacterPosition[Falling]])
+case class Position(characters: List[CharacterPosition])
 
 object FallingCharactersTransition {
 
@@ -23,26 +22,26 @@ object FallingCharactersTransition {
       def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[Position] =
         from.content.zip(to.content).map { case (from, to) => if (from == '\n') {
           Position(List(
-            CharacterPosition(from, inTransition = false, canTransform = false, Falling(accelerator = 1.0))
+            CharacterPosition(from, inTransition = false, canTransform = false, tick = 0)
           ))
         } else {
           Position(List(
-            CharacterPosition(from, inTransition = false, canTransform = true, Falling(accelerator = 1.0)),
-            CharacterPosition(' ', inTransition = false, canTransform = false, Falling(accelerator = 1.0))
+            CharacterPosition(from, inTransition = false, canTransform = true, tick = 0),
+            CharacterPosition(' ', inTransition = false, canTransform = false, tick = 0)
           ))
         }
         }.toList
 
       // TODO should be provided
-      def updateCharacterPosition(screenWidth: Int, currentIndex: Int, cp: CharacterPosition[Falling]): (Int, CharacterPosition[Falling]) = {
-        val acceleration = cp.meta.accelerator * gravity
-        val newIndex = currentIndex + (screenWidth + 1) * acceleration.toInt
-        (newIndex, cp.copy(meta = cp.meta.copy(accelerator = acceleration)))
+      def getNewIndex(screenWidth: Int, screenHeight: Int, currentIndex: Int, cp: CharacterPosition): Int = {
+        val acceleration = cp.tick * gravity
+        currentIndex + (screenWidth + 1) * acceleration.toInt
       }
 
 
       def transformPositions(
                               screenWidth: Int,
+                              screenHeight: Int,
                               currentCharacterPositions: List[Position],
                               positionsToUpdate: List[Int]
                             ): List[Position] = {
@@ -75,7 +74,8 @@ object FallingCharactersTransition {
             // move to new position
             val toMove = position.characters.filter(_.inTransition)
             toMove.foreach { cp =>
-              val (newIndex, updatedPosition) = updateCharacterPosition(screenWidth, index, cp);
+              val newIndex = getNewIndex(screenWidth, screenHeight, index, cp);
+              val updatedPosition = cp.copy(tick = cp.tick + 1)
               if (newIndex < toUpdate.length) {
                 toUpdate(newIndex) = toUpdate(newIndex).copy(characters = updatedPosition :: toUpdate(newIndex).characters)
               }
@@ -97,7 +97,7 @@ object FallingCharactersTransition {
         } else {
           val positionsToUpdate = randomPositions.take(nrUnderTransformation.toInt);
           val newRandomPositions = randomPositions.drop(nrUnderTransformation.toInt)
-          val updatedPositions = transformPositions(screenWidth, positions, positionsToUpdate)
+          val updatedPositions = transformPositions(screenWidth, screenHeight, positions, positionsToUpdate)
           console.clear() >>
             console.writeString(
               ScreenAdjusted(updatedPositions.map(_.characters.headOption.map(_.character).getOrElse("")).mkString(""),
