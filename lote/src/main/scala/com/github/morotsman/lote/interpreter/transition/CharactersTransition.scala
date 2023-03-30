@@ -118,6 +118,7 @@ object CharactersTransition {
         randomPositions = Random.shuffle(positions.indices.toList)
         _ <- console.writeString(slide1) >>
           transformSlides(Screen(slide1.width, slide1.height), positions, randomPositions) >>
+          Temporal[F].sleep(200.milli) >>
           console.writeString(slide2)
       } yield ()
     }
