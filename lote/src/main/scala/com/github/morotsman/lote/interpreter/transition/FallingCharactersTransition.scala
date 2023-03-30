@@ -10,7 +10,7 @@ import scala.util.Random
 
 case class Falling(accelerator: Double)
 
-case class CharacterPosition[A](character: Char, moving: Boolean, movable: Boolean, meta: A)
+case class CharacterPosition[A](character: Char, inTransition: Boolean, canTransform: Boolean, meta: A)
 
 case class Position(characters: List[CharacterPosition[Falling]])
 
@@ -23,12 +23,12 @@ object FallingCharactersTransition {
       def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[Position] =
         from.content.zip(to.content).map { case (from, to) => if (from == '\n') {
           Position(List(
-            CharacterPosition(from, moving = false, movable = false, Falling(accelerator = 1.0))
+            CharacterPosition(from, inTransition = false, canTransform = false, Falling(accelerator = 1.0))
           ))
         } else {
           Position(List(
-            CharacterPosition(from, moving = false, movable = true, Falling(accelerator = 1.0)),
-            CharacterPosition(' ', moving = false, movable = false, Falling(accelerator = 1.0))
+            CharacterPosition(from, inTransition = false, canTransform = true, Falling(accelerator = 1.0)),
+            CharacterPosition(' ', inTransition = false, canTransform = false, Falling(accelerator = 1.0))
           ))
         }
         }.toList
@@ -52,8 +52,8 @@ object FallingCharactersTransition {
         if (positionsToUpdate.nonEmpty) {
           positionsToUpdate.foreach { randomPosition =>
             currentCharacterPositions.get(randomPosition).foreach { position =>
-              val markedAsMoving = position.copy(characters = position.characters.map(cp => if (cp.movable) {
-                cp.copy(moving = true)
+              val markedAsMoving = position.copy(characters = position.characters.map(cp => if (cp.canTransform) {
+                cp.copy(inTransition = true)
               } else {
                 cp
               }
@@ -66,14 +66,14 @@ object FallingCharactersTransition {
         // transform positions
         currentCharacterPositions.zipWithIndex
           .filter { case (position, _) =>
-            position.characters.exists(_.moving)
+            position.characters.exists(_.inTransition)
           }
           .foreach { case (position, index) =>
             // take them away from the old position
-            toUpdate(index) = toUpdate(index).copy(characters = toUpdate(index).characters.filter(!_.moving))
+            toUpdate(index) = toUpdate(index).copy(characters = toUpdate(index).characters.filter(!_.inTransition))
 
             // move to new position
-            val toMove = position.characters.filter(_.moving)
+            val toMove = position.characters.filter(_.inTransition)
             toMove.foreach { cp =>
               val (newIndex, updatedPosition) = updateCharacterPosition(screenWidth, index, cp);
               if (newIndex < toUpdate.length) {
@@ -92,7 +92,7 @@ object FallingCharactersTransition {
                            randomPositions: List[Int],
                            nrUnderTransformation: Double = 1.0
                          ): F[Unit] = {
-        if (positions.forall(_.characters.forall(_.movable == false))) {
+        if (positions.forall(_.characters.forall(_.canTransform == false))) {
           console.clear()
         } else {
           val positionsToUpdate = randomPositions.take(nrUnderTransformation.toInt);
