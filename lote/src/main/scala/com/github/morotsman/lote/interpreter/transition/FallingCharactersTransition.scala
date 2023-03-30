@@ -5,7 +5,7 @@ import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.{ScreenAdjusted, make}
 
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random
 
 
@@ -15,7 +15,11 @@ case class Position(characters: List[CharacterPosition])
 
 object FallingCharactersTransition {
 
-  def apply[F[_] : Temporal](gravity: Double = 1.2, selectAccelerator: Double = 1.1): Transition[F] = new Transition[F] {
+  def apply[F[_] : Temporal](
+                              gravity: Double = 1.2,
+                              selectAccelerator: Double = 1.1,
+                              timeBetweenTicks: FiniteDuration = 40.milli
+                            ): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
 
       // TODO should be provided
@@ -105,7 +109,7 @@ object FallingCharactersTransition {
                 screenHeight
               )
             ) >>
-            Temporal[F].sleep(40.milli) >>
+            Temporal[F].sleep(timeBetweenTicks) >>
             transformSlides(screenHeight, screenWidth, updatedPositions, newRandomPositions, nrUnderTransformation * selectAccelerator)
         }
       }
