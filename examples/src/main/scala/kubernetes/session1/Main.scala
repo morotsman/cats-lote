@@ -3,9 +3,9 @@ package kubernetes.session1
 import cats.effect.{IO, IOApp}
 import com.github.morotsman.lote.builders.PresentationBuilder
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
-import com.github.morotsman.lote.interpreter.middleware.{Middleware, Timer}
+import com.github.morotsman.lote.interpreter.middleware.{Middleware}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
-import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition, ReplaceTransition2}
+import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
 import kubernetes.session1.slides.{Agenda, Bye, Start, Test}
 
@@ -63,7 +63,7 @@ object Session1 extends IOApp.Simple {
     val presentation = PresentationBuilder[IO]()
       .addTextSlide {
         _.content(Start())
-          .transition(out = ReplaceTransition2(' '))
+          .transition(out = ReplaceTransition(' '))
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
       .addTextSlide {
