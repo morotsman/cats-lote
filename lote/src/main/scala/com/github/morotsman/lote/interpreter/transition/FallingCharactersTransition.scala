@@ -20,10 +20,13 @@ object FallingCharactersTransition {
       CharacterPosition(' ', inTransition = false, canTransform = false)
     )
 
-    def getNewIndex(screen: Screen, currentIndex: Int, cp: CharacterPosition): Option[Int] = {
-      val acceleration = cp.tick * gravity
-      Some(currentIndex + (screen.screenWidth + 1) * acceleration.toInt)
-    }
+    def getNewIndex(screen: Screen, currentIndex: Int, cp: CharacterPosition): Option[Int] = 
+      if (cp.character == ' ') {
+        None
+      } else {
+        val acceleration = cp.tick * gravity
+        Some(currentIndex + (screen.screenWidth + 1) * acceleration.toInt)
+      }
 
     override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
       CharactersTransition(
