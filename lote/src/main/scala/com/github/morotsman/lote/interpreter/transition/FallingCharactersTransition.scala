@@ -8,9 +8,9 @@ import com.github.morotsman.lote.interpreter.nconsole.NConsole.{ScreenAdjusted, 
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
-case class Falling(accelerator: Double, moving: Boolean, movable: Boolean)
+case class Falling(accelerator: Double)
 
-case class CharacterPosition[A](character: Char, meta: A)
+case class CharacterPosition[A](character: Char, moving: Boolean, movable: Boolean, meta: A)
 
 case class Position(characters: List[CharacterPosition[Falling]])
 
@@ -19,17 +19,19 @@ object FallingCharactersTransition {
   def apply[F[_] : Temporal](gravity: Double = 1.2, selectAccelerator: Double = 1.1): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
 
-      def getCharacterPositions(from: ScreenAdjusted): List[Position] =
-        from.content.map(c => if (c == '\n') {
+      // TODO should be provided
+      def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[Position] =
+        from.content.zip(to.content).map { case (from, to) => if (from == '\n') {
           Position(List(
-            CharacterPosition(c, Falling(accelerator = 1.0, moving = false, movable = false))
+            CharacterPosition(from, moving = false, movable = false, Falling(accelerator = 1.0))
           ))
         } else {
           Position(List(
-            CharacterPosition(c, Falling(accelerator = 1.0, moving = false, movable = true)),
-            CharacterPosition(' ', Falling(accelerator = 1.0, moving = false, movable = false))
+            CharacterPosition(from, moving = false, movable = true, Falling(accelerator = 1.0)),
+            CharacterPosition(' ', moving = false, movable = false, Falling(accelerator = 1.0))
           ))
-        }).toList
+        }
+        }.toList
 
       def transformPositions(
                               screenWidth: Int,
@@ -42,32 +44,37 @@ object FallingCharactersTransition {
         if (positionsToUpdate.nonEmpty) {
           positionsToUpdate.foreach { randomPosition =>
             currentCharacterPositions.get(randomPosition).foreach { position =>
-              val tmp: Position = position.copy(characters = position.characters.map(cp => if (cp.meta.movable) {
-                cp.copy(meta = cp.meta.copy(moving = true))
+              val markedAsMoving = position.copy(characters = position.characters.map(cp => if (cp.movable) {
+                cp.copy(moving = true)
               } else {
                 cp
               }
               ))
-              toUpdate(randomPosition) = tmp
+              toUpdate(randomPosition) = markedAsMoving
             }
           }
         }
 
         // transform positions
-        currentCharacterPositions.zipWithIndex.filter(pi => pi._1.characters.exists(_.meta.moving)).foreach { pi =>
-          val toMove = pi._1.characters.filter(_.meta.moving).map {
-            cp => cp.copy(meta = cp.meta.copy(accelerator = cp.meta.accelerator * gravity))
+        currentCharacterPositions.zipWithIndex
+          .filter { case (position, _) =>
+            position.characters.exists(_.moving)
           }
-          // take them away from the old position
-          toUpdate(pi._2) = toUpdate(pi._2).copy(characters = toUpdate(pi._2).characters.filter(!_.meta.moving))
-          // move to new position
-          toMove.foreach { cp =>
-            val newIndex = pi._2 + (screenWidth + 1) * cp.meta.accelerator.toInt
-            if (newIndex < toUpdate.length) {
-              toUpdate(newIndex) = toUpdate(newIndex).copy(characters = cp :: toUpdate(newIndex).characters)
+          .foreach { case (position, index) =>
+            // take them away from the old position
+            toUpdate(index) = toUpdate(index).copy(characters = toUpdate(index).characters.filter(!_.moving))
+
+            // move to new position
+            val toMove = position.characters.filter(_.moving).map {
+              cp => cp.copy(meta = cp.meta.copy(accelerator = cp.meta.accelerator * gravity))
+            }
+            toMove.foreach { cp =>
+              val newIndex = index + (screenWidth + 1) * cp.meta.accelerator.toInt
+              if (newIndex < toUpdate.length) {
+                toUpdate(newIndex) = toUpdate(newIndex).copy(characters = cp :: toUpdate(newIndex).characters)
+              }
             }
           }
-        }
 
         toUpdate.toList
       }
@@ -79,7 +86,7 @@ object FallingCharactersTransition {
                            randomPositions: List[Int],
                            nrUnderTransformation: Double = 1.0
                          ): F[Unit] = {
-        if (positions.forall(_.characters.forall(c => c.character == ' ' || c.character == '\n'))) {
+        if (positions.forall(_.characters.forall(_.movable == false))) {
           console.clear()
         } else {
           val positionsToUpdate = randomPositions.take(nrUnderTransformation.toInt);
@@ -100,10 +107,10 @@ object FallingCharactersTransition {
       for {
         slide1 <- from.content(console)
         slide2 <- to.content(console)
-        characterPositions = getCharacterPositions(slide1)
-        randomPositions = Random.shuffle(characterPositions.indices.toList)
+        positions = setupPositions(slide1, slide2)
+        randomPositions = Random.shuffle(positions.indices.toList)
         _ <- console.writeString(slide1) >>
-          transformSlides(slide1.height, slide1.width, characterPositions, randomPositions) >>
+          transformSlides(slide1.height, slide1.width, positions, randomPositions) >>
           console.writeString(slide2)
       } yield ()
     }
