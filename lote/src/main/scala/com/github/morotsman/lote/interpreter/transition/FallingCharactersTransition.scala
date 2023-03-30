@@ -44,7 +44,7 @@ object FallingCharactersTransition {
           Position(setupPosition(from, to))
         }
         }.toList
-      
+
       def transformPositions(
                               screenWidth: Int,
                               screenHeight: Int,
@@ -82,7 +82,7 @@ object FallingCharactersTransition {
             toMove.foreach { cp =>
               val newIndex = getNewIndex(screenWidth, screenHeight, index, cp);
               val updatedPosition = cp.copy(tick = cp.tick + 1)
-              if (newIndex < toUpdate.length) {
+              if (newIndex < toUpdate.length && !toUpdate(newIndex).characters.exists(_.character == '\n')) {
                 toUpdate(newIndex) = toUpdate(newIndex).copy(characters = updatedPosition :: toUpdate(newIndex).characters)
               }
             }
