@@ -82,7 +82,10 @@ object FallingCharactersTransition {
             toMove.foreach { cp =>
               val newIndex = getNewIndex(screenWidth, screenHeight, index, cp);
               val updatedPosition = cp.copy(tick = cp.tick + 1)
-              if (newIndex < toUpdate.length && !toUpdate(newIndex).characters.exists(_.character == '\n')) {
+              if (
+                newIndex < toUpdate.length &&
+                  newIndex >=  0 &&
+                  !toUpdate(newIndex).characters.exists(_.character == '\n')) {
                 toUpdate(newIndex) = toUpdate(newIndex).copy(characters = updatedPosition :: toUpdate(newIndex).characters)
               }
             }
