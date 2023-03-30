@@ -15,13 +15,11 @@ object FallingCharactersTransition {
                               timeBetweenTicks: FiniteDuration = 40.milli
                             ): Transition[F] = new Transition[F] {
 
-    // TODO should be provided
     def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
       CharacterPosition(fromCharacter, inTransition = false, canTransform = true),
       CharacterPosition(' ', inTransition = false, canTransform = false)
     )
 
-    // TODO should be provided
     def getNewIndex(screen: Screen, currentIndex: Int, cp: CharacterPosition): Int = {
       val acceleration = cp.tick * gravity
       currentIndex + (screen.screenWidth + 1) * acceleration.toInt
