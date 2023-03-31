@@ -1,6 +1,6 @@
 package com.github.morotsman.lote.tools
 
-case class XY(row: Int, column: Int)
+case class XY(x: Int, y: Int)
 
 object ScreenHelper {
 
@@ -8,6 +8,6 @@ object ScreenHelper {
     XY(index/screenWidth, index % screenWidth)
 
   def xyToIndex(screenWidth: Int, xy: XY): Int =
-    xy.row * screenWidth + xy.column
+    xy.x * screenWidth + xy.y
 
 }

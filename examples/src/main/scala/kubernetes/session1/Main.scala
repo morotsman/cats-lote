@@ -3,11 +3,11 @@ package kubernetes.session1
 import cats.effect.{IO, IOApp}
 import com.github.morotsman.lote.builders.PresentationBuilder
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
-import com.github.morotsman.lote.interpreter.middleware.{Middleware}
+import com.github.morotsman.lote.interpreter.middleware.Middleware
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
-import kubernetes.session1.slides.{Agenda, Bye, Start, Test}
+import kubernetes.session1.slides.{Agenda, Bye, Start}
 
 
 object Session1 extends IOApp.Simple {
@@ -67,7 +67,7 @@ object Session1 extends IOApp.Simple {
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
       .addTextSlide {
-        _.content(Test())
+        _.content(Agenda())
           .transition(out = FallingCharactersTransition(1.4, 1.3))
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
