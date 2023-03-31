@@ -20,7 +20,7 @@ object PresentationExecutorInterpreter {
       def executionLoop(): F[(Int, Fiber[F, Throwable, Unit])] =
         presentation.slideSpecifications.head.slide.startShow(console).start >>=
           (Monad[F].tailRecM(0, _) { case (currentIndex, currentWork) =>
-            def shiftSlide(toIndex: Int): F[Fiber[F, Throwable, Unit]] = {
+            def shiftSlide(toIndex: Int, forward: Boolean): F[Fiber[F, Throwable, Unit]] = {
               val current = presentation.slideSpecifications(currentIndex)
               for {
                 _ <- current.slide.stopShow
@@ -28,17 +28,21 @@ object PresentationExecutorInterpreter {
                 _ <- console.clear()
                 next = presentation.slideSpecifications(toIndex)
                 work <- {
-                  (for {
-                    _ <- current.out.fold(Monad[F].unit) {
-                      _.transition(current.slide, next.slide)(console)
-                    }
-                    _ <- console.clear()
-                    _ <- next.in.fold(Monad[F].unit) {
-                      _.transition(current.slide, next.slide)(console)
-                    }
-                    _ <- console.clear()
-                    _ <- next.slide.startShow(console).start
-                  } yield ()).start
+                  if (forward) {
+                    (for {
+                      _ <- current.out.fold(Monad[F].unit) {
+                        _.transition(current.slide, next.slide)(console)
+                      }
+                      _ <- console.clear()
+                      _ <- next.in.fold(Monad[F].unit) {
+                        _.transition(current.slide, next.slide)(console)
+                      }
+                      _ <- console.clear()
+                      _ <- next.slide.startShow(console).start
+                    } yield ()).start
+                  } else {
+                    next.slide.startShow(console).start
+                  }
                 }
               } yield work
             }
@@ -50,14 +54,14 @@ object PresentationExecutorInterpreter {
                   case Key(k) if k == SpecialKey.Right =>
                     if (currentIndex < presentation.slideSpecifications.length - 1) {
                       val nextIndex = currentIndex + 1
-                      shiftSlide(nextIndex).map(Either.left(nextIndex, _))
+                      shiftSlide(nextIndex, forward = true).map(Either.left(nextIndex, _))
                     } else {
                       Monad[F].pure(Either.left(currentIndex, currentWork))
                     }
                   case Key(k) if k == SpecialKey.Left =>
                     if (currentIndex > 0) {
                       val nextIndex = currentIndex - 1
-                      shiftSlide(nextIndex).map(Either.left(nextIndex, _))
+                      shiftSlide(nextIndex, forward = false).map(Either.left(nextIndex, _))
                     } else {
                       Monad[F].pure(Either.left(currentIndex, currentWork))
                     }
