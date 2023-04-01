@@ -20,6 +20,7 @@ object PresentationExecutorInterpreter {
       def executionLoop(): F[(Int, Fiber[F, Throwable, Unit])] =
         presentation.slideSpecifications.head.slide.startShow(console).start >>=
           (Monad[F].tailRecM(0, _) { case (currentIndex, currentWork) =>
+
             def shiftSlide(toIndex: Int, forward: Boolean): F[Fiber[F, Throwable, Unit]] = {
               val current = presentation.slideSpecifications(currentIndex)
               for {
