@@ -35,7 +35,6 @@ object PresentationExecutorInterpreter {
                         _.transition(current.slide, next.slide)(console)
                       }
                       _ <- console.clear()
-                      _ <- console.clear()
                       _ <- next.slide.startShow(console).start
                     } yield ()).start
                   } else {
