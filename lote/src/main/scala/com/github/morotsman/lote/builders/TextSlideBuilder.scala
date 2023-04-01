@@ -28,7 +28,6 @@ final case class TextSlideBuilder[F[_] : Sync, State <: BuildState](
 
   def build(): SlideSpecification[F] = SlideSpecification(
     slide = TextSlide(content, alignment.getOrElse(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))),
-    in = in,
     out = out
   )
 
