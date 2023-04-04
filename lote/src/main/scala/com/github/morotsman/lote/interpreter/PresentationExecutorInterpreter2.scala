@@ -18,7 +18,7 @@ object PresentationExecutorInterpreter2 {
 
       def executionLoop(): F[Int] = {
         Monad[F].pure(presentation.slideSpecifications.head) >>
-          Monad[F].tailRecM(0) { case currentIndex =>
+          Monad[F].tailRecM(0) { currentIndex =>
             val current = presentation.slideSpecifications(currentIndex)
 
             for {
