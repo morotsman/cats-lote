@@ -37,7 +37,9 @@ object PresentationExecutorInterpreter2 {
                         ).as(Monad[F].unit)
                       }.as(Either.left(currentIndex + 1))
                   } else {
-                    Monad[F].pure(Either.left(currentIndex))
+                    current.slide.stopShow >>
+                      currentWork.cancel >>
+                      console.clear().as(Either.left(currentIndex))
                   }
                 case Key(k) if k == SpecialKey.Left =>
                   if (currentIndex > 0) {
@@ -45,7 +47,9 @@ object PresentationExecutorInterpreter2 {
                       currentWork.cancel >>
                       console.clear().as(Either.left(currentIndex - 1))
                   } else {
-                    Monad[F].pure(Either.left(currentIndex))
+                    current.slide.stopShow >>
+                      currentWork.cancel >>
+                      console.clear().as(Either.left(currentIndex))
                   }
                 case Key(k) if k == SpecialKey.Esc =>
                   current.slide.stopShow >>
