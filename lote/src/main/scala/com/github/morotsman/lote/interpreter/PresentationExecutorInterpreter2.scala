@@ -41,12 +41,15 @@ object PresentationExecutorInterpreter2 {
                   }
                 case Key(k) if k == SpecialKey.Left =>
                   if (currentIndex > 0) {
-                    current.slide.stopShow >> currentWork.cancel >> console.clear().as(Either.left(currentIndex - 1))
+                    current.slide.stopShow >>
+                      currentWork.cancel >>
+                      console.clear().as(Either.left(currentIndex - 1))
                   } else {
                     Monad[F].pure(Either.left(currentIndex))
                   }
                 case Key(k) if k == SpecialKey.Esc =>
                   current.slide.stopShow >>
+                    currentWork.cancel >>
                     console.clear() >>
                     presentation.exitSlide.fold(Monad[F].unit)(_.startShow(console)) >>
                     console.clear().as(Either.right(currentIndex))
