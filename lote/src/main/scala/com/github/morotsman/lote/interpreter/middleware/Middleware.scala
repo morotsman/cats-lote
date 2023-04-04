@@ -30,8 +30,14 @@ object Middleware {
           }
         } yield result
 
-        override def read(): F[UserInput] =
+        override def read(timeoutInMillis: Long): F[UserInput] =
           console.read()
+
+        override def read(): F[UserInput] =
+          console.read(0L)
+
+        override def readInterruptible(): F[UserInput] =
+          console.readInterruptible()
 
         override def alignText(s: String, alignment: Alignment): F[ScreenAdjusted] =
           console.alignText(s: String, alignment: Alignment)

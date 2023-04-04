@@ -12,5 +12,5 @@ final case class Character(c: Char) extends UserInput
 
 object SpecialKey extends Enumeration {
   type SpecialKey = Value
-  val Up, Down, Left, Right, Esc, Unknown = Value
+  val Up, Down, Left, Right, Esc, Unknown, Timeout = Value
 }

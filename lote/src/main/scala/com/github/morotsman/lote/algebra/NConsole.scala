@@ -6,7 +6,11 @@ import lote.model.{Alignment, Screen, UserInput}
 
 
 trait NConsole[F[_]] {
+  def read(timeoutInMillis: Long): F[UserInput]
+
   def read(): F[UserInput]
+
+  def readInterruptible(): F[UserInput]
 
   def alignText(s: String, alignment: Alignment): F[ScreenAdjusted]
 

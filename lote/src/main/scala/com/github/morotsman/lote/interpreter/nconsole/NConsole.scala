@@ -1,10 +1,14 @@
 package com.github.morotsman.lote.interpreter.nconsole
 
+import cats.Monad
 import cats.effect.Sync
 import com.github.morotsman.lote.algebra.NConsole
 import com.github.morotsman.lote.model._
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp.Capability
+import cats.implicits._
+
+import scala.annotation.tailrec
 
 object NConsole {
   case class ScreenAdjusted(content: String, width: Int, height: Int)
@@ -22,8 +26,9 @@ object NConsole {
   def make[F[_] : Sync](): F[NConsole[F]] = {
     Sync[F].delay(
       new NConsole[F] {
-        override def read(): F[UserInput] = Sync[F].blocking {
-          val input = reader.read().toChar
+        override def read(timeoutInMillis: Long): F[UserInput] = Sync[F].blocking {
+          val input = reader.read(timeoutInMillis).toChar
+
           if (input == 27) {
             val input = reader.read().toChar
             if (input == '[') {
@@ -38,13 +43,29 @@ object NConsole {
             } else {
               Key(SpecialKey.Esc)
             }
+          } else if (input.toInt == 65534) {
+            Key(SpecialKey.Timeout)
           } else {
             Character(input)
           }
         }
 
+        override def readInterruptible(): F[UserInput] = {
+          Monad[F].tailRecM(()) { _ =>
+            for {
+              input <- read(5)
+              result <- input match {
+                case Key(k) if k == SpecialKey.Timeout =>
+                  Monad[F].pure(Either.left(()))
+                case _ =>
+                  Monad[F].pure(Either.right(input))
+              }
+            } yield result
+          }
+        }
+
         override def alignText(s: String, alignment: Alignment): F[ScreenAdjusted] = Sync[F].blocking {
-          val cutOverflow = s.split("\n").take(height-1).map(_.take(width)).mkString("\n")
+          val cutOverflow = s.split("\n").take(height - 1).map(_.take(width)).mkString("\n")
           ScreenAdjusted(Aligner.alignText(cutOverflow, alignment, width = width, height = height), width, height)
         }
 
@@ -61,6 +82,7 @@ object NConsole {
           screenHeight = height
         ))
 
+        override def read(): F[UserInput] = read(0L)
       }
 
     )

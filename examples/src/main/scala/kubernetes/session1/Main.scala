@@ -2,7 +2,7 @@ package kubernetes.session1
 
 import cats.effect.{IO, IOApp}
 import com.github.morotsman.lote.builders.PresentationBuilder
-import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
+import com.github.morotsman.lote.interpreter.{PresentationExecutorInterpreter, PresentationExecutorInterpreter2}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
@@ -113,7 +113,7 @@ object Session1 extends IOApp.Simple {
 
     for {
       console <- NConsole.make[IO]()
-      executor <- PresentationExecutorInterpreter.make[IO](console, presentation)
+      executor <- PresentationExecutorInterpreter2.make[IO](console, presentation)
       _ <- executor.start()
     } yield ()
   }
