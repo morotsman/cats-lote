@@ -15,7 +15,7 @@ final case class SlideBuilder[F[_], State <: BuildState](
                    ): SlideBuilder[F, State] =
     this.copy(right = Option(right))
 
-  def slide(slide: Slide[F]): SlideBuilder[F, State with SlideAdded] =
+  def addSlide(slide: Slide[F]): SlideBuilder[F, State with SlideAdded] =
     this.copy(slide = slide)
 
   def build(): SlideSpecification[F] = SlideSpecification(

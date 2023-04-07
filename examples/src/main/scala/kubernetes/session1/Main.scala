@@ -1,12 +1,14 @@
 package kubernetes.session1
 
 import cats.effect.{IO, IOApp}
+import com.github.morotsman.lote.algebra.Slide
 import com.github.morotsman.lote.builders.PresentationBuilder
-import com.github.morotsman.lote.interpreter.{PresentationExecutorInterpreter, PresentationExecutorInterpreter2}
+import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter2
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
+import com.github.morotsman.lote.interpreter.nconsole.NConsoleInstances.IONConsole
 import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition}
-import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
-import kubernetes.session1.slides.{Agenda, Bye, Start}
+import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, Presentation, VerticalAlignment}
+import kubernetes.session1.slides.{Agenda, Bye, ExampleInteractiveSlide, Start}
 
 
 object Session1 extends IOApp.Simple {
@@ -59,61 +61,67 @@ object Session1 extends IOApp.Simple {
       |""".stripMargin
 
   override def run(): IO[Unit] = {
-    val presentation = PresentationBuilder[IO]()
-      .addTextSlide {
-        _.content(Start())
-          .transition(out = ReplaceTransition(' '))
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
-      }
-      .addTextSlide {
-        _.content(Agenda())
-          .transition(out = FallingCharactersTransition(1.4, 1.3))
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
-      }
-      .addTextSlide {
-        _.content(instruction1)
-          .transition(out = MorphTransition())
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-      }
-      .addTextSlide {
-        _.content(instruction2)
-          .transition(out = MorphTransition())
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-      }
-      .addTextSlide {
-        _.content(instruction3)
-          .transition(out = MorphTransition())
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-      }
-      .addTextSlide {
-        _.content(instruction4)
-          .transition(out = MorphTransition())
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-      }
-      .addTextSlide {
-        _.content(instruction5)
-          .transition(out = MorphTransition())
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-      }
-      .addTextSlide {
-        _.content(instruction6)
-          .transition(out = MorphTransition())
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-      }
-      .addTextSlide {
-        _.content(Bye())
-          .transition(out = FallingCharactersTransition())
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
-      }
-      .addTextSlide {
-        _.content("")
-          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
-      }
-      .build()
+    def createPresentation(interactiveSlide: Slide[IO]): Presentation[IO] =
+      PresentationBuilder[IO]()
+        .addTextSlide {
+          _.content(Start())
+            .transition(out = ReplaceTransition(' '))
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+        }
+        .addSlide { builder =>
+          builder.addSlide(interactiveSlide)
+        }
+        .addTextSlide {
+          _.content(Agenda())
+            .transition(out = FallingCharactersTransition(1.4, 1.3))
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+        }
+        .addTextSlide {
+          _.content(instruction1)
+            .transition(out = MorphTransition())
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(instruction2)
+            .transition(out = MorphTransition())
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(instruction3)
+            .transition(out = MorphTransition())
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(instruction4)
+            .transition(out = MorphTransition())
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(instruction5)
+            .transition(out = MorphTransition())
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(instruction6)
+            .transition(out = MorphTransition())
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(Bye())
+            .transition(out = FallingCharactersTransition())
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+        }
+        .addTextSlide {
+          _.content("")
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+        }
+        .build()
+
 
     for {
       console <- NConsole.make[IO]()
-      executor <- PresentationExecutorInterpreter2.make[IO](console, presentation)
+      interactiveSlide <- ExampleInteractiveSlide.make[IO]()
+      executor <- PresentationExecutorInterpreter2.make[IO](console, createPresentation(interactiveSlide))
       _ <- executor.start()
     } yield ()
   }

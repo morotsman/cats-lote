@@ -1,7 +1,7 @@
 package com.github.morotsman.lote.interpreter.nconsole
 
 import cats.Monad
-import cats.effect.Sync
+import cats.effect.{IO, Sync}
 import com.github.morotsman.lote.algebra.NConsole
 import com.github.morotsman.lote.model._
 import org.jline.terminal.TerminalBuilder
@@ -86,5 +86,31 @@ object NConsole {
       }
 
     )
+  }
+}
+
+object NConsoleInstances {
+  implicit val IONConsole: NConsole[IO] = new NConsole[IO] {
+    private val console: IO[NConsole[IO]] = NConsole.make[IO]()
+
+    override def read(): IO[UserInput] = console.flatMap(_.read())
+
+    override def read(timeoutInMillis: Long): IO[UserInput] =
+      console.flatMap(_.read(timeoutInMillis))
+
+    override def readInterruptible(): IO[UserInput] =
+      console.flatMap(_.readInterruptible())
+
+    override def alignText(s: String, alignment: Alignment): IO[NConsole.ScreenAdjusted] =
+      console.flatMap(_.alignText(s, alignment))
+
+    override def writeString(s: NConsole.ScreenAdjusted): IO[Unit] =
+      console.flatMap(_.writeString(s))
+
+    override def clear(): IO[Unit] =
+      console.flatMap(_.clear())
+
+    override def context: IO[Screen] =
+      console.flatMap(_.context)
   }
 }
