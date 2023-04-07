@@ -24,7 +24,15 @@ object ExampleInteractiveSlide {
       override def stopShow: F[Unit] =
         Temporal[F].unit
 
-      override def userInput(input: UserInput): F[Unit] =
+      override def userInput(input: UserInput): F[Unit] = for {
+        input <- NConsole[F].alignText(input.toString, Alignment(
+          VerticalAlignment.Center,
+          HorizontalAlignment.Center
+        ))
+        _ <- {
+          NConsole[F].writeString(input)
+        }
+      } yield ()
         Temporal[F].unit
     }
 

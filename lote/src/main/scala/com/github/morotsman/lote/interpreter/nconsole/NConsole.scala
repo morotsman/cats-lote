@@ -2,13 +2,11 @@ package com.github.morotsman.lote.interpreter.nconsole
 
 import cats.Monad
 import cats.effect.{IO, Sync}
+import cats.implicits._
 import com.github.morotsman.lote.algebra.NConsole
 import com.github.morotsman.lote.model._
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp.Capability
-import cats.implicits._
-
-import scala.annotation.tailrec
 
 object NConsole {
   case class ScreenAdjusted(content: String, width: Int, height: Int)
