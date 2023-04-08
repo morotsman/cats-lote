@@ -8,7 +8,7 @@ import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.nconsole.NConsoleInstances.IONConsole
 import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, Presentation, VerticalAlignment}
-import kubernetes.session1.slides.{Agenda, Bye, ExampleInteractiveSlide, Start}
+import kubernetes.session1.slides.{Agenda, Animator, Bye, ExampleInteractiveSlide, Start}
 
 
 object Session1 extends IOApp.Simple {
@@ -120,7 +120,8 @@ object Session1 extends IOApp.Simple {
 
     for {
       console <- NConsole.make[IO]()
-      interactiveSlide <- ExampleInteractiveSlide.make[IO]()
+      animator <- Animator.make[IO]()
+      interactiveSlide <- ExampleInteractiveSlide.make[IO](animator)
       executor <- PresentationExecutorInterpreter2.make[IO](console, createPresentation(interactiveSlide))
       _ <- executor.start()
     } yield ()
