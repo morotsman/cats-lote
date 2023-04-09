@@ -17,7 +17,7 @@ object ExampleInteractiveSlide {
 
     Temporal[F].pure(new Slide[F] {
       override def content: NConsole[F] => F[NConsole.ScreenAdjusted] =
-        console => console.alignText("WASD is your friend", Alignment(
+        console => console.alignText("", Alignment(
           VerticalAlignment.Center,
           HorizontalAlignment.Center
         ))
@@ -63,13 +63,10 @@ object Animator {
         for {
           screen <- NConsole[F].context
           emptyScreen = Vector.fill(screen.screenWidth * screen.screenHeight)(' ')
-          _ <- loop(emptyScreen, Worm(Vector(
-            WormSegment(emptyScreen.length / 2, DirectionLeft(), '1'),
-            WormSegment(emptyScreen.length / 2 + 1, DirectionLeft(), '2'),
-            WormSegment(emptyScreen.length / 2 + 2, DirectionLeft(), '3'),
-            WormSegment(emptyScreen.length / 2 + 3, DirectionLeft(), '4'),
-            WormSegment(emptyScreen.length / 2 + 4, DirectionLeft(), '5')
-          )))
+          message = "WASD is your friend"
+          _ <- loop(emptyScreen, Worm(message.zipWithIndex.map { case (c, index) =>
+            WormSegment(emptyScreen.length / 2 + index, DirectionLeft(), c)
+          }.toVector))
         } yield ()
       }
 
