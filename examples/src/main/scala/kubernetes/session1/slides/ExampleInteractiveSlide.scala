@@ -1,14 +1,14 @@
 package kubernetes.session1.slides
 
-import cats.effect.{Temporal}
+import cats.effect.Temporal
+import cats.effect.std.Queue
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
-import com.github.morotsman.lote.model.{Alignment, Character, HorizontalAlignment, UserInput, VerticalAlignment}
-import cats.effect.std.Queue
+import com.github.morotsman.lote.model._
 
-import scala.concurrent.duration.{DurationInt}
+import scala.concurrent.duration.DurationInt
 
 
 object ExampleInteractiveSlide {
@@ -17,7 +17,7 @@ object ExampleInteractiveSlide {
 
     Temporal[F].pure(new Slide[F] {
       override def content: NConsole[F] => F[NConsole.ScreenAdjusted] =
-        console => console.alignText("AWSD is your friend", Alignment(
+        console => console.alignText("WASD is your friend", Alignment(
           VerticalAlignment.Center,
           HorizontalAlignment.Center
         ))
@@ -36,7 +36,7 @@ object ExampleInteractiveSlide {
         case Character(c) if c == 's' =>
           animator.changeDirection(DirectionDown())
         case Character(c) if c == 'd' =>
-          animator.changeDirection(DirectionDown())
+          animator.changeDirection(DirectionRight())
         case _ =>
           Temporal[F].unit
       }
@@ -46,35 +46,58 @@ object ExampleInteractiveSlide {
 
 trait Animator[F[_]] {
   def animate(): F[Unit]
+
   def changeDirection(input: Direction): F[Unit]
 }
 
+case class WormSegment(index: Int, direction: Direction, symbol: Char)
+
+case class Worm(segments: Vector[WormSegment])
+
 object Animator {
+
   def make[F[_] : Temporal : NConsole](): F[Animator[F]] = {
 
     def createAnimator(queue: Queue[F, Direction]): Animator[F] = new Animator[F] {
       override def animate(): F[Unit] = {
         for {
           screen <- NConsole[F].context
-          emptyScreen = Vector.fill(screen.screenWidth*screen.screenHeight)(' ')
-          _ <- loop(emptyScreen, Vector(
-            emptyScreen.length / 2,
-            emptyScreen.length / 2 + 1,
-            emptyScreen.length / 2 + 2,
-            emptyScreen.length / 2 + 3,
-            emptyScreen.length / 2 + 4,
-          ))
+          emptyScreen = Vector.fill(screen.screenWidth * screen.screenHeight)(' ')
+          _ <- loop(emptyScreen, Worm(Vector(
+            WormSegment(emptyScreen.length / 2, DirectionLeft(), '1'),
+            WormSegment(emptyScreen.length / 2 + 1, DirectionLeft(), '2'),
+            WormSegment(emptyScreen.length / 2 + 2, DirectionLeft(), '3'),
+            WormSegment(emptyScreen.length / 2 + 3, DirectionLeft(), '4'),
+            WormSegment(emptyScreen.length / 2 + 4, DirectionLeft(), '5')
+          )))
         } yield ()
       }
 
-      def loop(emptyScreen: Vector[Char], currentIndexes: Vector[Int]): F[Unit] = {
+      def loop(emptyScreen: Vector[Char], worm: Worm): F[Unit] = {
         for {
-          maybeUserInput <- queue.tryTake
           _ <- Temporal[F].sleep(100.milli)
+          maybeUserInput <- queue.tryTake
           screen <- NConsole[F].context
+          updatedWorm = {
+            maybeUserInput.orElse(worm.segments.headOption.map(_.direction)).fold(worm) { headDirection =>
+              worm.copy(segments = worm.segments.foldLeft((headDirection, Vector[WormSegment]())) {
+                case ((newDirection, acc), oldSegment) =>
+                  val newSegment = oldSegment.copy(
+                    direction = newDirection,
+                    index = oldSegment.direction match {
+                      case DirectionLeft() => oldSegment.index - 1
+                      case DirectionRight() => oldSegment.index + 1
+                      case DirectionUp() => oldSegment.index - screen.screenWidth
+                      case DirectionDown() => oldSegment.index + screen.screenWidth
+                    }
+                  )
+                  (oldSegment.direction, newSegment +: acc)
+              }._2.reverse)
+            }
+          }
           updatedScreen = {
-            currentIndexes.foldRight(emptyScreen) { case (index, updatedScreen) =>
-              updatedScreen.updated(index, '*')
+            updatedWorm.segments.foldRight(emptyScreen) { case (WormSegment(index, _, s), updatedScreen) =>
+              updatedScreen.updated(index, s)
             }
           }
           _ <- NConsole[F].writeString(ScreenAdjusted(
@@ -82,13 +105,14 @@ object Animator {
             screen.screenWidth,
             screen.screenHeight
           ))
-          _ <- loop(emptyScreen, currentIndexes.map(_ - 1))
+          _ <- loop(emptyScreen, updatedWorm)
         } yield ()
       }
 
       override def changeDirection(input: Direction): F[Unit] =
         queue.offer(input)
     }
+
     for {
       queue <- Queue.unbounded[F, Direction]
       animator = createAnimator(queue)
