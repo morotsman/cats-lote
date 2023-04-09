@@ -71,39 +71,43 @@ object Animator {
       }
 
       def loop(emptyScreen: Vector[Char], worm: Worm): F[Unit] = {
-        for {
-          _ <- Temporal[F].sleep(100.milli)
-          maybeUserInput <- queue.tryTake
-          screen <- NConsole[F].context
-          updatedWorm = {
-            maybeUserInput.orElse(worm.segments.headOption.map(_.direction)).fold(worm) { headDirection =>
-              worm.copy(segments = worm.segments.foldLeft((headDirection, Vector[WormSegment]())) {
-                case ((newDirection, acc), oldSegment) =>
-                  val newSegment = oldSegment.copy(
-                    direction = newDirection,
-                    index = oldSegment.direction match {
-                      case DirectionLeft() => oldSegment.index - 1
-                      case DirectionRight() => oldSegment.index + 1
-                      case DirectionUp() => oldSegment.index - screen.screenWidth
-                      case DirectionDown() => oldSegment.index + screen.screenWidth
-                    }
-                  )
-                  (oldSegment.direction, newSegment +: acc)
-              }._2.reverse)
+        if (worm.segments.map(_.index).size == worm.segments.map(_.index).toSet.size) {
+          for {
+            _ <- Temporal[F].sleep(100.milli)
+            maybeUserInput <- queue.tryTake
+            screen <- NConsole[F].context
+            updatedWorm = {
+              maybeUserInput.orElse(worm.segments.headOption.map(_.direction)).fold(worm) { headDirection =>
+                worm.copy(segments = worm.segments.foldLeft((headDirection, Vector[WormSegment]())) {
+                  case ((newDirection, acc), oldSegment) =>
+                    val newSegment = oldSegment.copy(
+                      direction = newDirection,
+                      index = oldSegment.direction match {
+                        case DirectionLeft() => oldSegment.index - 1
+                        case DirectionRight() => oldSegment.index + 1
+                        case DirectionUp() => oldSegment.index - screen.screenWidth
+                        case DirectionDown() => oldSegment.index + screen.screenWidth
+                      }
+                    )
+                    (oldSegment.direction, newSegment +: acc)
+                }._2.reverse)
+              }
             }
-          }
-          updatedScreen = {
-            updatedWorm.segments.foldRight(emptyScreen) { case (WormSegment(index, _, s), updatedScreen) =>
-              updatedScreen.updated(index, s)
+            updatedScreen = {
+              updatedWorm.segments.foldRight(emptyScreen) { case (WormSegment(index, _, s), updatedScreen) =>
+                updatedScreen.updated(index, s)
+              }
             }
-          }
-          _ <- NConsole[F].writeString(ScreenAdjusted(
-            updatedScreen.mkString,
-            screen.screenWidth,
-            screen.screenHeight
-          ))
-          _ <- loop(emptyScreen, updatedWorm)
-        } yield ()
+            _ <- NConsole[F].writeString(ScreenAdjusted(
+              updatedScreen.mkString,
+              screen.screenWidth,
+              screen.screenHeight
+            ))
+            _ <- loop(emptyScreen, updatedWorm)
+          } yield ()
+        } else {
+          Temporal[F].unit
+        }
       }
 
       override def changeDirection(input: Direction): F[Unit] =
