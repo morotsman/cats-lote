@@ -4,6 +4,7 @@ import cats._
 import cats.effect.Ref
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay}
+import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model.{Alignment, Screen, UserInput}
 
@@ -12,7 +13,7 @@ case class MiddlewareState[F[_]](
                                 )
 
 object Middleware {
-  def make[F[_] : Monad : Ref.Make](console: NConsole[F]): F[Middleware[F]] =
+  def make[F[_] : Monad : Ref.Make: NConsole](): F[Middleware[F]] =
     Ref[F].of(MiddlewareState[F](List.empty)).map { state =>
       new Middleware[F] {
 
@@ -31,26 +32,26 @@ object Middleware {
         } yield result
 
         override def read(timeoutInMillis: Long): F[UserInput] =
-          console.read()
+          NConsole[F].read()
 
         override def read(): F[UserInput] =
-          console.read(0L)
+          NConsole[F].read(0L)
 
         override def readInterruptible(): F[UserInput] =
-          console.readInterruptible()
+          NConsole[F].readInterruptible()
 
         override def alignText(s: String, alignment: Alignment): F[ScreenAdjusted] =
-          console.alignText(s: String, alignment: Alignment)
+          NConsole[F].alignText(s: String, alignment: Alignment)
 
         override def writeString(s: ScreenAdjusted): F[Unit] = for {
           withOverlay <- applyMiddleware(s)
-          _ <- console.writeString(withOverlay)
+          _ <- NConsole[F].writeString(withOverlay)
         } yield ()
 
         override def clear(): F[Unit] =
-          console.clear()
+          NConsole[F].clear()
 
-        override def context: F[Screen] = console.context
+        override def context: F[Screen] = NConsole[F].context
       }
     }
 

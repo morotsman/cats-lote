@@ -1,14 +1,16 @@
 package com.github.morotsman.examples
 
-import cats.effect.{IO, IOApp}
+import cats.effect._
 import com.github.morotsman.examples.slides.{Agenda, Animator, Bye, ExampleInteractiveSlide, Start}
 import com.github.morotsman.lote.algebra.Slide
 import com.github.morotsman.lote.builders.PresentationBuilder
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
-import com.github.morotsman.lote.interpreter.nconsole.NConsole
+import com.github.morotsman.lote.interpreter.middleware.{Middleware, Timer}
 import com.github.morotsman.lote.interpreter.nconsole.NConsoleInstances.IONConsole
 import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, Presentation, VerticalAlignment}
+
+import scala.concurrent.duration.DurationInt
 
 
 object Session1 extends IOApp.Simple {
@@ -92,10 +94,14 @@ object Session1 extends IOApp.Simple {
 
 
     for {
-      console <- NConsole.make[IO]()
+      middleware <- Middleware.make[IO]()
+      timer <- Timer.make[IO](30.minutes)
+      _ <- middleware.addOverlays(List(
+        timer
+      ))
       animator <- Animator.make[IO]()
       interactiveSlide <- ExampleInteractiveSlide.make[IO](animator)
-      executor <- PresentationExecutorInterpreter.make[IO](createPresentation(interactiveSlide))
+      executor <- PresentationExecutorInterpreter.make[IO](middleware, createPresentation(interactiveSlide))
       _ <- executor.start()
     } yield ()
   }

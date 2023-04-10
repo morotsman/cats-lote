@@ -7,6 +7,7 @@ import cats.effect.{Clock, Temporal}
 import cats.implicits._
 import cats.effect.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Overlay}
+import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model.Screen
 
@@ -19,9 +20,8 @@ case class TimerState[F[_]](
 
 object Timer {
 
-  def make[F[_] : Monad : Clock : Temporal : Ref.Make: Spawn](
+  def make[F[_] : Monad : Clock : Temporal : Ref.Make: Spawn: NConsole](
                                     allocatedTime: FiniteDuration,
-                                    console: NConsole[F],
                                     startTime: Long = System.currentTimeMillis()
                                   ): F[Overlay[F]] = Ref[F].of(TimerState[F]()).map { state =>
     new Overlay[F] {
@@ -40,7 +40,7 @@ object Timer {
         def loop(): F[Unit] = for {
           _ <- Temporal[F].sleep(1.second)
           r <- addTimeLeft()
-          _ <- console.writeString(r)
+          _ <- NConsole[F].writeString(r)
           _ <- loop()
         } yield ()
 
