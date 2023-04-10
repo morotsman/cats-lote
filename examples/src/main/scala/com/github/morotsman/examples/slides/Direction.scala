@@ -1,4 +1,4 @@
-package kubernetes.session1.slides
+package com.github.morotsman.examples.slides
 
 sealed trait Direction
 case class DirectionUp() extends Direction

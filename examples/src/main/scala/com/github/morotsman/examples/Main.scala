@@ -1,6 +1,7 @@
-package kubernetes.session1
+package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
+import com.github.morotsman.examples.slides.{Agenda, Animator, Bye, ExampleInteractiveSlide, Start}
 import com.github.morotsman.lote.algebra.Slide
 import com.github.morotsman.lote.builders.PresentationBuilder
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter2
@@ -8,7 +9,6 @@ import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.nconsole.NConsoleInstances.IONConsole
 import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, Presentation, VerticalAlignment}
-import kubernetes.session1.slides.{Agenda, Animator, Bye, ExampleInteractiveSlide, Start}
 
 
 object Session1 extends IOApp.Simple {

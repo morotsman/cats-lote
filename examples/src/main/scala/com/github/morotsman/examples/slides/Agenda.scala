@@ -1,4 +1,4 @@
-package kubernetes.session1.slides
+package com.github.morotsman.examples.slides
 
 object Agenda {
   def apply(): String =
