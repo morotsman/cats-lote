@@ -6,7 +6,7 @@ import com.github.morotsman.lote.builders.TextSlideBuilder.{BuildState, ContentA
 import com.github.morotsman.lote.interpreter.TextSlide
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, SlideSpecification, VerticalAlignment}
 
-final case class TextSlideBuilder[F[_] : Sync, State <: BuildState](
+final case class TextSlideBuilder[F[_] : Sync: NConsole, State <: BuildState](
                                                                      alignment: Option[Alignment],
                                                                      content: String,
                                                                      in: Option[Transition[F]],
@@ -42,7 +42,7 @@ object TextSlideBuilder {
 
   type WithContent = WithoutContent with ContentAdded
 
-  def apply[F[_] : Sync](): TextSlideBuilder[F, WithoutContent] =
+  def apply[F[_] : Sync: NConsole](): TextSlideBuilder[F, WithoutContent] =
     TextSlideBuilder(None, null, None, None)
 }
 

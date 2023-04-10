@@ -9,7 +9,7 @@ import com.github.morotsman.lote.builders.TextSlideBuilder.{WithContent, Without
 import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
 import com.github.morotsman.lote.model.{Presentation, SlideSpecification}
 
-case class PresentationBuilder[F[_] : Sync : Functor, State <: BuildState](
+case class PresentationBuilder[F[_] : Sync : Functor: NConsole, State <: BuildState](
                                                                             slideSpecifications: List[SlideSpecification[F]],
                                                                             exitSlide: Option[Slide[F]],
                                                                             overlays: List[Overlay[F]]
@@ -56,7 +56,7 @@ object PresentationBuilder {
 
   type Buildable = Empty with SlideAdded
 
-  def apply[F[_] : Sync](): PresentationBuilder[F, Empty] =
+  def apply[F[_] : Sync: NConsole](): PresentationBuilder[F, Empty] =
     PresentationBuilder[F, Empty](List.empty, None, List.empty)
 }
 

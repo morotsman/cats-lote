@@ -26,7 +26,7 @@ object PresentationExecutorInterpreter2 {
 
               for {
                 currentWork <- if (switchSlide) {
-                  current.slide.startShow(console).start
+                  current.slide.startShow.start
                 } else {
                   Monad[F].pure(work)
                 }
@@ -62,7 +62,7 @@ object PresentationExecutorInterpreter2 {
                     current.slide.stopShow >>
                       currentWork.cancel >>
                       console.clear() >>
-                      presentation.exitSlide.fold(Monad[F].unit)(_.startShow(console)) >>
+                      presentation.exitSlide.fold(Monad[F].unit)(_.startShow) >>
                       console.clear().as(Either.right(currentIndex, true, currentWork))
                   case _ =>
                     val current = presentation.slideSpecifications(currentIndex)

@@ -113,8 +113,8 @@ object CharactersTransition {
       }
 
       for {
-        slide1 <- from.content(NConsole[F])
-        slide2 <- to.content(NConsole[F])
+        slide1 <- from.content
+        slide2 <- to.content
         positions = setupPositions(slide1, slide2)
         randomPositions = Random.shuffle(positions.indices.toList)
         _ <- NConsole[F].writeString(slide1) >>

@@ -5,9 +5,9 @@ import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import lote.model.UserInput
 
 trait Slide[F[_]] {
-  def content: NConsole[F] => F[ScreenAdjusted]
+  def content: F[ScreenAdjusted]
 
-  def startShow: NConsole[F] => F[Unit]
+  def startShow: F[Unit]
 
   def stopShow: F[Unit]
 
