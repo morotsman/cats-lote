@@ -6,15 +6,16 @@ import cats.effect.implicits._
 import cats.effect.kernel.Fiber
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, PresentationExecutor}
+import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.model._
 
 
-object PresentationExecutorInterpreter2 {
+object PresentationExecutorInterpreter {
 
-  def make[F[_] : Temporal](console: NConsole[F], presentation: Presentation[F]): F[PresentationExecutor[F]] = Monad[F].pure(
+  def make[F[_] : Temporal: NConsole](presentation: Presentation[F]): F[PresentationExecutor[F]] = Monad[F].pure(
     new PresentationExecutor[F] {
       override def start(): F[Unit] = for {
-        _ <- console.clear()
+        _ <- NConsole[F].clear()
         _ <- executionLoop()
       } yield ()
 
@@ -30,40 +31,40 @@ object PresentationExecutorInterpreter2 {
                 } else {
                   Monad[F].pure(work)
                 }
-                userInput <- console.read()
+                userInput <- NConsole[F].read()
                 result <- userInput match {
                   case Key(k) if k == SpecialKey.Right =>
                     if (currentIndex < presentation.slideSpecifications.length - 1) {
                       current.slide.stopShow >>
                         currentWork.cancel >>
-                        console.clear() >>
+                        NConsole[F].clear() >>
                         current.out.fold(Monad[F].unit) { t =>
                           Temporal[F].race(
                             t.transition(current.slide, presentation.slideSpecifications(currentIndex + 1).slide),
-                            console.readInterruptible()
+                            NConsole[F].readInterruptible()
                           ).as(Monad[F].unit)
                         }.as(Either.left(currentIndex + 1, true, currentWork))
                     } else {
                       current.slide.stopShow >>
                         currentWork.cancel >>
-                        console.clear().as(Either.left(currentIndex, true, currentWork))
+                        NConsole[F].clear().as(Either.left(currentIndex, true, currentWork))
                     }
                   case Key(k) if k == SpecialKey.Left =>
                     if (currentIndex > 0) {
                       current.slide.stopShow >>
                         currentWork.cancel >>
-                        console.clear().as(Either.left(currentIndex - 1, true, currentWork))
+                        NConsole[F].clear().as(Either.left(currentIndex - 1, true, currentWork))
                     } else {
                       current.slide.stopShow >>
                         currentWork.cancel >>
-                        console.clear().as(Either.left(currentIndex, true, currentWork))
+                        NConsole[F].clear().as(Either.left(currentIndex, true, currentWork))
                     }
                   case Key(k) if k == SpecialKey.Esc =>
                     current.slide.stopShow >>
                       currentWork.cancel >>
-                      console.clear() >>
+                      NConsole[F].clear() >>
                       presentation.exitSlide.fold(Monad[F].unit)(_.startShow) >>
-                      console.clear().as(Either.right(currentIndex, true, currentWork))
+                      NConsole[F].clear().as(Either.right(currentIndex, true, currentWork))
                   case _ =>
                     val current = presentation.slideSpecifications(currentIndex)
                     current.slide.userInput(userInput) >>

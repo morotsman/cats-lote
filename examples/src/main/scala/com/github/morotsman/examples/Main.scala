@@ -4,7 +4,7 @@ import cats.effect.{IO, IOApp}
 import com.github.morotsman.examples.slides.{Agenda, Animator, Bye, ExampleInteractiveSlide, Start}
 import com.github.morotsman.lote.algebra.Slide
 import com.github.morotsman.lote.builders.PresentationBuilder
-import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter2
+import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.nconsole.NConsoleInstances.IONConsole
 import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition}
@@ -95,7 +95,7 @@ object Session1 extends IOApp.Simple {
       console <- NConsole.make[IO]()
       animator <- Animator.make[IO]()
       interactiveSlide <- ExampleInteractiveSlide.make[IO](animator)
-      executor <- PresentationExecutorInterpreter2.make[IO](console, createPresentation(interactiveSlide))
+      executor <- PresentationExecutorInterpreter.make[IO](createPresentation(interactiveSlide))
       _ <- executor.start()
     } yield ()
   }
