@@ -15,49 +15,7 @@ object Session1 extends IOApp.Simple {
 
   private val instruction1 =
     """
-      |Install kubectl: https://kubernetes.io/docs/tasks/tools/
-      |""".stripMargin
-
-  private val instruction2 =
-    """
-      |Install kubectl: https://kubernetes.io/docs/tasks/tools/
-      |Install kubectx (makes it easy to switch between contexts): https://github.com/ahmetb/kubectx
-      |""".stripMargin
-
-  private val instruction3 =
-    """
-      |Install kubectl: https://kubernetes.io/docs/tasks/tools/
-      |Install kubectx (makes it easy to switch between contexts): https://github.com/ahmetb/kubectx
-      |Create a ~/.kube folder if you don't already have it
-      |""".stripMargin
-
-  private val instruction4 =
-    """
-      |Install kubectl: https://kubernetes.io/docs/tasks/tools/
-      |Install kubectx (makes it easy to switch between contexts): https://github.com/ahmetb/kubectx
-      |Create a ~/.kube folder if you don't already have it
-      |Copy the ConfigurationManagement/kubectl/config file to ~/.kube
-      |""".stripMargin
-
-  private val instruction5 =
-    """
-      |Install kubectl: https://kubernetes.io/docs/tasks/tools/
-      |Install kubectx (makes it easy to switch between contexts): https://github.com/ahmetb/kubectx
-      |Create a ~/.kube folder if you don't already have it
-      |Copy the ConfigurationManagement/kubectl/config file to ~/.kube
-      |Copy the ConfigurationManagement/kubectl/verisure-kubeauth file to ~/.kube
-      |""".stripMargin
-
-  private val instruction6 =
-    """
-      |Install kubectl: https://kubernetes.io/docs/tasks/tools/
-      |Install kubectx (makes it easy to switch between contexts): https://github.com/ahmetb/kubectx
-      |Create a ~/.kube folder if you don't already have it
-      |Copy the ConfigurationManagement/kubectl/config file to ~/.kube
-      |Copy the ConfigurationManagement/kubectl/verisure-kubeauth file to ~/.kube
-      |
-      |Test by:
-      |kubectl get services
+      |Supports different alignments
       |""".stripMargin
 
   override def run(): IO[Unit] = {
@@ -67,9 +25,6 @@ object Session1 extends IOApp.Simple {
           _.content(Start())
             .transition(out = ReplaceTransition(' '))
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
-        }
-        .addSlide { builder =>
-          builder.addSlide(interactiveSlide)
         }
         .addTextSlide {
           _.content(Agenda())
@@ -82,29 +37,47 @@ object Session1 extends IOApp.Simple {
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
         }
         .addTextSlide {
-          _.content(instruction2)
+          _.content(instruction1)
             .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
         }
         .addTextSlide {
-          _.content(instruction3)
+          _.content(instruction1)
             .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Right))
         }
         .addTextSlide {
-          _.content(instruction4)
+          _.content(instruction1)
             .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Left))
         }
         .addTextSlide {
-          _.content(instruction5)
+          _.content(instruction1)
             .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
         }
         .addTextSlide {
-          _.content(instruction6)
+          _.content(instruction1)
             .transition(out = MorphTransition())
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Right))
+        }
+        .addTextSlide {
+          _.content(instruction1)
+            .transition(out = MorphTransition())
+            .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(instruction1)
+            .transition(out = MorphTransition())
+            .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Center))
+        }
+        .addTextSlide {
+          _.content(instruction1)
+            .transition(out = MorphTransition())
+            .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
+        }
+        .addSlide { builder =>
+          builder.addSlide(interactiveSlide)
         }
         .addTextSlide {
           _.content(Bye())
