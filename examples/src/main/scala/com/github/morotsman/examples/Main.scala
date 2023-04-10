@@ -94,6 +94,7 @@ object Session1 extends IOApp.Simple {
 
 
     for {
+      // TODO middleware is not working since I'm not injecting the console in the slides etc :-(
       middleware <- Middleware.make[IO]()
       timer <- Timer.make[IO](30.minutes)
       _ <- middleware.addOverlays(List(
