@@ -9,7 +9,7 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object FallingCharactersTransition {
 
-  def apply[F[_] : Temporal](
+  def apply[F[_] : Temporal : NConsole](
                               gravity: Double = 1.2,
                               selectAccelerator: Double = 1.1,
                               timeBetweenTicks: FiniteDuration = 40.milli
@@ -28,11 +28,11 @@ object FallingCharactersTransition {
         Some(currentIndex + (screen.screenWidth + 1) * acceleration.toInt)
       }
 
-    override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
+    override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
       CharactersTransition(
         setupPosition = setupPosition,
         getNewIndex = getNewIndex
-      ).transition(from, to)(console)
+      ).transition(from, to)
 
     }
 

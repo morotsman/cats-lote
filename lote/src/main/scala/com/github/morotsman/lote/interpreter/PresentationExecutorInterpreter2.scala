@@ -39,7 +39,7 @@ object PresentationExecutorInterpreter2 {
                         console.clear() >>
                         current.out.fold(Monad[F].unit) { t =>
                           Temporal[F].race(
-                            t.transition(current.slide, presentation.slideSpecifications(currentIndex + 1).slide)(console),
+                            t.transition(current.slide, presentation.slideSpecifications(currentIndex + 1).slide),
                             console.readInterruptible()
                           ).as(Monad[F].unit)
                         }.as(Either.left(currentIndex + 1, true, currentWork))

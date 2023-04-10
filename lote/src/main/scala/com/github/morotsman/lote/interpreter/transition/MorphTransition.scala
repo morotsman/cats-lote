@@ -9,7 +9,7 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object MorphTransition {
 
-  def apply[F[_] : Temporal](): Transition[F] = new Transition[F] {
+  def apply[F[_] : Temporal: NConsole](): Transition[F] = new Transition[F] {
 
     def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
       CharacterPosition(fromCharacter, inTransition = false, canTransform = true),
@@ -19,12 +19,12 @@ object MorphTransition {
     def getNewIndex(screen: Screen, currentIndex: Int, cp: CharacterPosition): Option[Int] =
       None
 
-    override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
+    override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
       CharactersTransition(
         selectAccelerator = 1.5,
         setupPosition = setupPosition,
         getNewIndex = getNewIndex
-      ).transition(from, to)(console)
+      ).transition(from, to)
 
     }
 

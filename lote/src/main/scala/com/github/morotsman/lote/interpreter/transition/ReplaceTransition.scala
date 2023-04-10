@@ -7,7 +7,7 @@ import com.github.morotsman.lote.model.Screen
 
 object ReplaceTransition {
 
-  def apply[F[_] : Temporal](replace: Char): Transition[F] = new Transition[F] {
+  def apply[F[_] : Temporal: NConsole](replace: Char): Transition[F] = new Transition[F] {
 
     def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
       CharacterPosition(fromCharacter, inTransition = false, canTransform = true),
@@ -17,12 +17,12 @@ object ReplaceTransition {
     def getNewIndex(screen: Screen, currentIndex: Int, cp: CharacterPosition): Option[Int] =
       None
 
-    override def transition(from: Slide[F], to: Slide[F]): NConsole[F] => F[Unit] = console => {
+    override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
       CharactersTransition(
         selectAccelerator = 1.3,
         setupPosition = setupPosition,
         getNewIndex = getNewIndex
-      ).transition(from, to)(console)
+      ).transition(from, to)
 
     }
 
