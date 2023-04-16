@@ -81,6 +81,4 @@ object NConsole {
 
   }
 
-  case class ScreenAdjusted(content: String, width: Int, height: Int)
 }
-

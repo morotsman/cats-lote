@@ -4,8 +4,7 @@ import cats.effect.kernel.Temporal
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
-import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
-import com.github.morotsman.lote.model.Screen
+import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random

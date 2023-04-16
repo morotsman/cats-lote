@@ -5,7 +5,6 @@ import cats.effect.std.Queue
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
-import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model._
 
 import scala.concurrent.duration.DurationInt
@@ -17,7 +16,7 @@ object ExampleInteractiveSlide {
   def make[F[_] : Temporal: NConsole](animator: Animator[F]): F[Slide[F]] = {
 
     Temporal[F].pure(new Slide[F] {
-      override def content: F[NConsole.ScreenAdjusted] =
+      override def content: F[ScreenAdjusted] =
         NConsole[F].alignText("", Alignment(
           VerticalAlignment.Center,
           HorizontalAlignment.Center

@@ -1,15 +1,15 @@
 package com.github.morotsman
 package lote.interpreter
 
-import cats.effect.{Temporal}
+import cats.Monad
+import cats.effect.Temporal
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
-import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
-import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, ScreenAdjusted, UserInput, VerticalAlignment}
 
 object TextSlide {
-  def apply[F[_] : Temporal: NConsole](slideContent: String, alignment: Alignment): Slide[F] =
+  def apply[F[_] : Monad: NConsole](slideContent: String, alignment: Alignment): Slide[F] =
     new Slide[F] {
       override def content: F[ScreenAdjusted] =
         NConsole[F].alignText(slideContent, alignment)
@@ -18,10 +18,10 @@ object TextSlide {
         content >>= (c => NConsole[F].writeString(c))
 
       override def stopShow: F[Unit] =
-        Temporal[F].unit
+        Monad[F].unit
 
       override def userInput(input: UserInput): F[Unit] =
-        Temporal[F].unit
+        Monad[F].unit
     }
 
   implicit class ToTextSlide(val s: String) {
