@@ -57,12 +57,12 @@ case class Worm(segments: Vector[WormSegment])
 
 object Animator {
 
-  def make[F[_] : Temporal]()(implicit console: NConsole[F]): F[Animator[F]] = {
+  def make[F[_] : Temporal: NConsole](): F[Animator[F]] = {
 
     def createAnimator(queue: Queue[F, Direction]): Animator[F] = new Animator[F] {
       override def animate(): F[Unit] = {
         for {
-          screen <- console.context
+          screen <- NConsole[F].context
           screenSize = screen.screenWidth * screen.screenHeight
           emptyScreen = Vector.fill(screenSize)(' ')
           heartIndexes = List.fill(500)(Random.nextInt(screenSize))
@@ -81,7 +81,7 @@ object Animator {
           for {
             _ <- Temporal[F].sleep(100.milli)
             maybeUserInput <- queue.tryTake
-            screen <- console.context
+            screen <- NConsole[F].context
             wormWithHearts = Worm(segments = if (collisions.nonEmpty) {
               originalWorm.segments :+ originalWorm.segments.last.copy(
                 index = originalWorm.segments.last.direction match {
@@ -133,7 +133,7 @@ object Animator {
 
               }
             }
-            _ <- console.writeString(ScreenAdjusted(
+            _ <- NConsole[F].writeString(ScreenAdjusted(
               updatedScreen.mkString,
               screen.screenWidth,
               screen.screenHeight
