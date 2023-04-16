@@ -21,7 +21,7 @@ object Middleware {
           state.set(MiddlewareState(overlays))
         }
 
-        override def applyMiddleware(screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
+        private def applyMiddleware(screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
           middleWare <- state.get
           c <- context
           result <- {
