@@ -61,7 +61,7 @@ object Animator {
       override def animate(): F[Unit] = {
         for {
           screen <- NConsole[F].context
-          screenSize = screen.screenWidth * screen.screenHeight
+          screenSize = screen.screenWidth * (screen.screenHeight - 1)
           emptyScreen = Vector.fill(screenSize)(' ')
           heartIndexes = List.fill(500)(Random.nextInt(screenSize))
           message = "WASD is your friend"
