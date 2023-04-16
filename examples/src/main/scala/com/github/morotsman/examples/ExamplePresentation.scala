@@ -15,7 +15,7 @@ object ExamplePresentation {
       |Supports different alignments
       |""".stripMargin
 
-  def apply[F[_]: Temporal](implicit C: NConsole[F]): F[Presentation[F]] = {
+  def make[F[_]: Temporal]()(implicit C: NConsole[F]): F[Presentation[F]] = {
     def createPresentation(): F[Presentation[F]] = {
       for {
         animator <- Animator.make[F]()

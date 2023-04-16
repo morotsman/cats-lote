@@ -1,7 +1,6 @@
 package com.github.morotsman.lote.builders
 
 import cats.Functor
-import cats.effect.Sync
 import cats.effect.Temporal
 import com.github.morotsman.lote.algebra.{NConsole, Overlay, Slide}
 import com.github.morotsman.lote.builders.PresentationBuilder.{BuildState, Buildable, SlideAdded}
