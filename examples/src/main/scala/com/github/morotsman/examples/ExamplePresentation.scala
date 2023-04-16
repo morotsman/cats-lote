@@ -23,57 +23,57 @@ object ExamplePresentation {
         presentation = PresentationBuilder[F]()
           .addTextSlide {
             _.content(Start())
-              .transition(out = ReplaceTransition(' '))
+              .transition(ReplaceTransition(' '))
               .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
           }
           .addTextSlide {
             _.content(Agenda())
-              .transition(out = FallingCharactersTransition(1.4, 1.3))
+              .transition(FallingCharactersTransition(1.4, 1.3))
               .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(out = MorphTransition())
+              .transition(MorphTransition())
               .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(out = MorphTransition())
+              .transition(MorphTransition())
               .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(out = MorphTransition())
+              .transition(MorphTransition())
               .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Right))
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(out = MorphTransition())
+              .transition(MorphTransition())
               .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Left))
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(out = MorphTransition())
+              .transition(MorphTransition())
               .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(out = MorphTransition())
+              .transition(MorphTransition())
               .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Right))
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(out = MorphTransition())
+              .transition(MorphTransition())
               .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Left))
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(out = MorphTransition())
+              .transition(MorphTransition())
               .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Center))
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(out = MorphTransition())
+              .transition(MorphTransition())
               .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
           }
           .addSlide { builder =>
@@ -81,7 +81,7 @@ object ExamplePresentation {
           }
           .addTextSlide {
             _.content(Bye())
-              .transition(out = FallingCharactersTransition())
+              .transition(FallingCharactersTransition())
               .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
           }
           .addTextSlide {

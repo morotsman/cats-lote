@@ -14,10 +14,9 @@ final case class TextSlideBuilder[F[_] : Temporal: NConsole, State <: BuildState
                                                                    ) {
 
   def transition(
-                  in: Transition[F] = null,
-                  out: Transition[F] = null
+                  transition: Transition[F] = null
                 ): TextSlideBuilder[F, State] =
-    this.copy(in = Option(in), out = Option(out))
+    this.copy(out = Option(transition))
 
 
   def content(content: String): TextSlideBuilder[F, State with ContentAdded] =
