@@ -6,12 +6,12 @@ import com.github.morotsman.lote.builders.TextSlideBuilder.{BuildState, ContentA
 import com.github.morotsman.lote.interpreter.TextSlide
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, SlideSpecification, VerticalAlignment}
 
-final case class TextSlideBuilder[F[_] : Temporal, State <: BuildState](
+final case class TextSlideBuilder[F[_] : Temporal: NConsole, State <: BuildState](
                                                                      alignment: Option[Alignment],
                                                                      content: String,
                                                                      in: Option[Transition[F]],
                                                                      out: Option[Transition[F]]
-                                                                   )(implicit console: NConsole[F]) {
+                                                                   ) {
 
   def transition(
                   in: Transition[F] = null,

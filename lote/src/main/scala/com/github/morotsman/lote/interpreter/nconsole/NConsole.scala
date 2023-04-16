@@ -1,7 +1,7 @@
 package com.github.morotsman.lote.interpreter.nconsole
 
 import cats.Monad
-import cats.effect.{Sync}
+import cats.effect.Sync
 import cats.implicits._
 import com.github.morotsman.lote.algebra.NConsole
 import com.github.morotsman.lote.model._
