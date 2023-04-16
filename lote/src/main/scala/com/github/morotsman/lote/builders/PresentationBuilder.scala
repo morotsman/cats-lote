@@ -10,11 +10,10 @@ import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
 import com.github.morotsman.lote.model.{Presentation, SlideSpecification}
 
 case class PresentationBuilder[F[_] : Sync : Functor, State <: BuildState](
-                                                                            console: NConsole[F],
                                                                             slideSpecifications: List[SlideSpecification[F]],
                                                                             exitSlide: Option[Slide[F]],
                                                                             overlays: List[Overlay[F]]
-                                                                          ) {
+                                                                          )(implicit console: NConsole[F]) {
   def addSlide(
                 slideBuilder: SlideBuilder[F, WithoutSlide] => SlideBuilder[F, WithContentSlide]
               ): PresentationBuilder[F, State with SlideAdded] = {
@@ -26,7 +25,7 @@ case class PresentationBuilder[F[_] : Sync : Functor, State <: BuildState](
   def addTextSlide(
                     textSlideBuilder: TextSlideBuilder[F, WithoutContent] => TextSlideBuilder[F, WithContent]
                   ): PresentationBuilder[F, State with SlideAdded] = {
-    val builder = TextSlideBuilder(console)
+    val builder = TextSlideBuilder()
     val slideSpecification = textSlideBuilder(builder).build()
     this.copy(slideSpecifications = slideSpecification :: slideSpecifications)
   }
@@ -34,8 +33,8 @@ case class PresentationBuilder[F[_] : Sync : Functor, State <: BuildState](
   def addExitSlide(slide: Slide[F]): PresentationBuilder[F, State] =
     this.copy(exitSlide = Option(slide))
 
-  def addExitSlide(console: NConsole[F], s: String): PresentationBuilder[F, State] =
-    this.copy(exitSlide = Option(s.toSlide(console)))
+  def addExitSlide(s: String): PresentationBuilder[F, State] =
+    this.copy(exitSlide = Option(s.toSlide()))
 
   def addOverlay(overlay: Overlay[F]): PresentationBuilder[F, State] = {
     this.copy(overlays = overlay :: overlays)
@@ -51,8 +50,8 @@ case class PresentationBuilder[F[_] : Sync : Functor, State <: BuildState](
 object PresentationBuilder {
   type Buildable = Empty with SlideAdded
 
-  def apply[F[_] : Sync](console: NConsole[F]): PresentationBuilder[F, Empty] =
-    PresentationBuilder[F, Empty](console, List.empty, None, List.empty)
+  def apply[F[_] : Sync]()(implicit console: NConsole[F]): PresentationBuilder[F, Empty] =
+    PresentationBuilder[F, Empty](List.empty, None, List.empty)
 
   sealed trait BuildState
 

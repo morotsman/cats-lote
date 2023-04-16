@@ -1,7 +1,7 @@
 package com.github.morotsman.lote.interpreter.nconsole
 
 import cats.Monad
-import cats.effect.{IO, Sync}
+import cats.effect.{Sync}
 import cats.implicits._
 import com.github.morotsman.lote.algebra.NConsole
 import com.github.morotsman.lote.model._
@@ -18,8 +18,7 @@ object NConsole {
 
   @inline def apply[F[_]](implicit instance: NConsole[F]): NConsole[F] = instance
 
-  def make[F[_] : Sync](): F[NConsole[F]] = {
-    Sync[F].delay(
+  def make[F[_] : Sync](): NConsole[F] = {
       new NConsole[F] {
         override def read(timeoutInMillis: Long): F[UserInput] = Sync[F].blocking {
           val input = reader.read(timeoutInMillis).toChar
@@ -80,34 +79,8 @@ object NConsole {
         override def read(): F[UserInput] = read(0L)
       }
 
-    )
   }
 
   case class ScreenAdjusted(content: String, width: Int, height: Int)
 }
 
-object NConsoleInstances {
-  implicit val IONConsole: NConsole[IO] = new NConsole[IO] {
-    private val console: IO[NConsole[IO]] = NConsole.make[IO]()
-
-    override def read(): IO[UserInput] = console.flatMap(_.read())
-
-    override def read(timeoutInMillis: Long): IO[UserInput] =
-      console.flatMap(_.read(timeoutInMillis))
-
-    override def readInterruptible(): IO[UserInput] =
-      console.flatMap(_.readInterruptible())
-
-    override def alignText(s: String, alignment: Alignment): IO[NConsole.ScreenAdjusted] =
-      console.flatMap(_.alignText(s, alignment))
-
-    override def writeString(s: NConsole.ScreenAdjusted): IO[Unit] =
-      console.flatMap(_.writeString(s))
-
-    override def clear(): IO[Unit] =
-      console.flatMap(_.clear())
-
-    override def context: IO[Screen] =
-      console.flatMap(_.context)
-  }
-}

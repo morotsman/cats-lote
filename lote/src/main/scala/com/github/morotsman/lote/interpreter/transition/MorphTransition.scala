@@ -6,7 +6,7 @@ import com.github.morotsman.lote.model.Screen
 
 object MorphTransition {
 
-  def apply[F[_] : Temporal](console: NConsole[F]): Transition[F] = new Transition[F] {
+  def apply[F[_] : Temporal]()(implicit console: NConsole[F]): Transition[F] = new Transition[F] {
 
     def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
       CharacterPosition(fromCharacter, inTransition = false, canTransform = true),
@@ -18,7 +18,6 @@ object MorphTransition {
 
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
       CharactersTransition(
-        console,
         selectAccelerator = 1.5,
         setupPosition = setupPosition,
         getNewIndex = getNewIndex

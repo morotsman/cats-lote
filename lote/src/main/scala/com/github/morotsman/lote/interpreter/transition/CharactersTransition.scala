@@ -18,13 +18,12 @@ case class Position(characters: List[CharacterPosition])
 object CharactersTransition {
 
   def apply[F[_] : Temporal](
-                              console: NConsole[F],
                               gravity: Double = 1.2,
                               selectAccelerator: Double = 1.1,
                               timeBetweenTicks: FiniteDuration = 40.milli,
                               setupPosition: (Char, Char) => List[CharacterPosition],
                               getNewIndex: (Screen, Int, CharacterPosition) => Option[Int]
-                            ): Transition[F] = new Transition[F] {
+                            )(implicit console: NConsole[F]): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
 
       def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[Position] =
