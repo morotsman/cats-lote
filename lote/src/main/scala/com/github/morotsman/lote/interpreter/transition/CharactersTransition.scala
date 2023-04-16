@@ -4,7 +4,7 @@ import cats.effect.kernel.Temporal
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole
-import com.github.morotsman.lote.interpreter.nconsole.NConsole.{ScreenAdjusted, make}
+import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model.Screen
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -17,13 +17,13 @@ case class Position(characters: List[CharacterPosition])
 
 object CharactersTransition {
 
-  def apply[F[_] : Temporal: NConsole](
-                              gravity: Double = 1.2,
-                              selectAccelerator: Double = 1.1,
-                              timeBetweenTicks: FiniteDuration = 40.milli,
-                              setupPosition: (Char, Char) => List[CharacterPosition],
-                              getNewIndex: (Screen, Int, CharacterPosition) => Option[Int]
-                            ): Transition[F] = new Transition[F] {
+  def apply[F[_] : Temporal : NConsole](
+                                         gravity: Double = 1.2,
+                                         selectAccelerator: Double = 1.1,
+                                         timeBetweenTicks: FiniteDuration = 40.milli,
+                                         setupPosition: (Char, Char) => List[CharacterPosition],
+                                         getNewIndex: (Screen, Int, CharacterPosition) => Option[Int]
+                                       ): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
 
       def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[Position] =

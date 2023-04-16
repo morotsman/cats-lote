@@ -9,17 +9,14 @@ import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp.Capability
 
 object NConsole {
-  case class ScreenAdjusted(content: String, width: Int, height: Int)
-
-  @inline def apply[F[_]](implicit instance: NConsole[F]): NConsole[F] = instance
-
   private val terminal = TerminalBuilder.terminal()
+  private val reader = terminal.reader()
+  private val width = terminal.getWidth
   terminal.enterRawMode()
   terminal.puts(Capability.clear_screen)
-  private val reader = terminal.reader()
-
-  private val width = terminal.getWidth
   private val height = terminal.getHeight
+
+  @inline def apply[F[_]](implicit instance: NConsole[F]): NConsole[F] = instance
 
   def make[F[_] : Sync](): F[NConsole[F]] = {
     Sync[F].delay(
@@ -85,6 +82,8 @@ object NConsole {
 
     )
   }
+
+  case class ScreenAdjusted(content: String, width: Int, height: Int)
 }
 
 object NConsoleInstances {

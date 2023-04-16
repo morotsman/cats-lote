@@ -10,10 +10,10 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 object FallingCharactersTransition {
 
   def apply[F[_] : Temporal : NConsole](
-                              gravity: Double = 1.2,
-                              selectAccelerator: Double = 1.1,
-                              timeBetweenTicks: FiniteDuration = 40.milli
-                            ): Transition[F] = new Transition[F] {
+                                         gravity: Double = 1.2,
+                                         selectAccelerator: Double = 1.1,
+                                         timeBetweenTicks: FiniteDuration = 40.milli
+                                       ): Transition[F] = new Transition[F] {
 
     def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
       CharacterPosition(fromCharacter, inTransition = false, canTransform = true),

@@ -1,8 +1,8 @@
 package com.github.morotsman
 package lote.tools
 
-import cats.implicits._
 import cats.FlatMap
+import cats.implicits._
 
 object DebugHelper {
   implicit class DebugHelper[F[_] : FlatMap, A](fa: F[A]) {

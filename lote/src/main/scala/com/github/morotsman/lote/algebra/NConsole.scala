@@ -2,7 +2,7 @@ package com.github.morotsman
 package lote.algebra
 
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
-import lote.model.{Alignment, Screen, UserInput}
+import com.github.morotsman.lote.model.{Alignment, Screen, UserInput}
 
 
 trait NConsole[F[_]] {

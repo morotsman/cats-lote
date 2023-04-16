@@ -6,7 +6,6 @@ import cats.effect.implicits._
 import cats.effect.kernel.Fiber
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, PresentationExecutor}
-import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.model._
 
 

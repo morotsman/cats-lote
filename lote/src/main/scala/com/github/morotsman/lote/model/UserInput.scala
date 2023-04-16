@@ -1,7 +1,7 @@
 package com.github.morotsman
 package lote.model
 
-import lote.model.SpecialKey.SpecialKey
+import com.github.morotsman.lote.model.SpecialKey.SpecialKey
 
 sealed trait UserInput
 

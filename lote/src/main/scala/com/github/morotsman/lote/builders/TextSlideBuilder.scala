@@ -6,12 +6,12 @@ import com.github.morotsman.lote.builders.TextSlideBuilder.{BuildState, ContentA
 import com.github.morotsman.lote.interpreter.TextSlide
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, SlideSpecification, VerticalAlignment}
 
-final case class TextSlideBuilder[F[_] : Sync: NConsole, State <: BuildState](
-                                                                     alignment: Option[Alignment],
-                                                                     content: String,
-                                                                     in: Option[Transition[F]],
-                                                                     out: Option[Transition[F]]
-                                                                   ) {
+final case class TextSlideBuilder[F[_] : Sync : NConsole, State <: BuildState](
+                                                                                alignment: Option[Alignment],
+                                                                                content: String,
+                                                                                in: Option[Transition[F]],
+                                                                                out: Option[Transition[F]]
+                                                                              ) {
 
   def transition(
                   in: Transition[F] = null,
@@ -34,15 +34,15 @@ final case class TextSlideBuilder[F[_] : Sync: NConsole, State <: BuildState](
 }
 
 object TextSlideBuilder {
+  type WithContent = WithoutContent with ContentAdded
+
+  def apply[F[_] : Sync : NConsole](): TextSlideBuilder[F, WithoutContent] =
+    TextSlideBuilder(None, null, None, None)
+
   sealed trait BuildState
 
   sealed trait WithoutContent extends BuildState
 
   sealed trait ContentAdded extends BuildState
-
-  type WithContent = WithoutContent with ContentAdded
-
-  def apply[F[_] : Sync: NConsole](): TextSlideBuilder[F, WithoutContent] =
-    TextSlideBuilder(None, null, None, None)
 }
 

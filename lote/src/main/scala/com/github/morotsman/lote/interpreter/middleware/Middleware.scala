@@ -13,7 +13,7 @@ case class MiddlewareState[F[_]](
                                 )
 
 object Middleware {
-  def make[F[_] : Monad : Ref.Make: NConsole](): F[Middleware[F]] =
+  def make[F[_] : Monad : Ref.Make : NConsole](): F[Middleware[F]] =
     Ref[F].of(MiddlewareState[F](List.empty)).map { state =>
       new Middleware[F] {
 

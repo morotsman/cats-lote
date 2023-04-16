@@ -4,12 +4,9 @@ import cats.effect.kernel.Temporal
 import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
 import com.github.morotsman.lote.model.Screen
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
-
-
 object MorphTransition {
 
-  def apply[F[_] : Temporal: NConsole](): Transition[F] = new Transition[F] {
+  def apply[F[_] : Temporal : NConsole](): Transition[F] = new Transition[F] {
 
     def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
       CharacterPosition(fromCharacter, inTransition = false, canTransform = true),
