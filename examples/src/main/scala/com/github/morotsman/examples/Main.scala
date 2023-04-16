@@ -2,7 +2,7 @@ package com.github.morotsman.examples
 
 import cats.effect._
 import com.github.morotsman.examples.slides.{Agenda, Animator, Bye, ExampleInteractiveSlide, Start}
-import com.github.morotsman.lote.algebra.Slide
+import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.builders.PresentationBuilder
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
 import com.github.morotsman.lote.interpreter.middleware.{Middleware, Timer}
@@ -21,61 +21,61 @@ object Session1 extends IOApp.Simple {
       |""".stripMargin
 
   override def run(): IO[Unit] = {
-    def createPresentation(interactiveSlide: Slide[IO]): Presentation[IO] =
-      PresentationBuilder[IO]()
+    def createPresentation(console: NConsole[IO], interactiveSlide: Slide[IO]): Presentation[IO] =
+      PresentationBuilder[IO](console)
         .addTextSlide {
           _.content(Start())
-            .transition(out = ReplaceTransition(' '))
+            .transition(out = ReplaceTransition(console, ' '))
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
         }
         .addTextSlide {
           _.content(Agenda())
-            .transition(out = FallingCharactersTransition(1.4, 1.3))
+            .transition(out = FallingCharactersTransition(console, 1.4, 1.3))
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
         }
         .addTextSlide {
           _.content(instruction1)
-            .transition(out = MorphTransition())
+            .transition(out = MorphTransition(console))
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
         }
         .addTextSlide {
           _.content(instruction1)
-            .transition(out = MorphTransition())
+            .transition(out = MorphTransition(console))
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
         }
         .addTextSlide {
           _.content(instruction1)
-            .transition(out = MorphTransition())
+            .transition(out = MorphTransition(console))
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Right))
         }
         .addTextSlide {
           _.content(instruction1)
-            .transition(out = MorphTransition())
+            .transition(out = MorphTransition(console))
             .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Left))
         }
         .addTextSlide {
           _.content(instruction1)
-            .transition(out = MorphTransition())
+            .transition(out = MorphTransition(console))
             .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
         }
         .addTextSlide {
           _.content(instruction1)
-            .transition(out = MorphTransition())
+            .transition(out = MorphTransition(console))
             .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Right))
         }
         .addTextSlide {
           _.content(instruction1)
-            .transition(out = MorphTransition())
+            .transition(out = MorphTransition(console))
             .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Left))
         }
         .addTextSlide {
           _.content(instruction1)
-            .transition(out = MorphTransition())
+            .transition(out = MorphTransition(console))
             .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Center))
         }
         .addTextSlide {
           _.content(instruction1)
-            .transition(out = MorphTransition())
+            .transition(out = MorphTransition(console))
             .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
         }
         .addSlide { builder =>
@@ -83,7 +83,7 @@ object Session1 extends IOApp.Simple {
         }
         .addTextSlide {
           _.content(Bye())
-            .transition(out = FallingCharactersTransition())
+            .transition(out = FallingCharactersTransition(console))
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
         }
         .addTextSlide {
@@ -100,9 +100,9 @@ object Session1 extends IOApp.Simple {
       _ <- middleware.addOverlays(List(
         timer
       ))
-      animator <- Animator.make[IO]()
-      interactiveSlide <- ExampleInteractiveSlide.make[IO](animator)
-      executor <- PresentationExecutorInterpreter.make[IO](middleware, createPresentation(interactiveSlide))
+      animator <- Animator.make[IO](middleware)
+      interactiveSlide <- ExampleInteractiveSlide.make[IO](middleware, animator)
+      executor <- PresentationExecutorInterpreter.make[IO](middleware, createPresentation(middleware, interactiveSlide))
       _ <- executor.start()
     } yield ()
   }

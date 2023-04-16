@@ -17,13 +17,14 @@ case class Position(characters: List[CharacterPosition])
 
 object CharactersTransition {
 
-  def apply[F[_] : Temporal : NConsole](
-                                         gravity: Double = 1.2,
-                                         selectAccelerator: Double = 1.1,
-                                         timeBetweenTicks: FiniteDuration = 40.milli,
-                                         setupPosition: (Char, Char) => List[CharacterPosition],
-                                         getNewIndex: (Screen, Int, CharacterPosition) => Option[Int]
-                                       ): Transition[F] = new Transition[F] {
+  def apply[F[_] : Temporal](
+                              console: NConsole[F],
+                              gravity: Double = 1.2,
+                              selectAccelerator: Double = 1.1,
+                              timeBetweenTicks: FiniteDuration = 40.milli,
+                              setupPosition: (Char, Char) => List[CharacterPosition],
+                              getNewIndex: (Screen, Int, CharacterPosition) => Option[Int]
+                            ): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
 
       def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[Position] =
@@ -94,13 +95,13 @@ object CharactersTransition {
                            nrUnderTransformation: Double = 1.0
                          ): F[Unit] = {
         if (positions.forall(_.characters.forall(_.canTransform == false))) {
-          NConsole[F].clear()
+          console.clear()
         } else {
           val positionsToUpdate = randomPositions.take(nrUnderTransformation.toInt);
           val newRandomPositions = randomPositions.drop(nrUnderTransformation.toInt)
           val updatedPositions = transformPositions(screen, positions, positionsToUpdate)
-          NConsole[F].clear() >>
-            NConsole[F].writeString(
+          console.clear() >>
+            console.writeString(
               ScreenAdjusted(
                 updatedPositions.map(_.characters.headOption.map(_.character).getOrElse("")).mkString(""),
                 screen.screenWidth,
@@ -117,10 +118,10 @@ object CharactersTransition {
         slide2 <- to.content
         positions = setupPositions(slide1, slide2)
         randomPositions = Random.shuffle(positions.indices.toList)
-        _ <- NConsole[F].writeString(slide1) >>
+        _ <- console.writeString(slide1) >>
           transformSlides(Screen(slide1.width, slide1.height), positions, randomPositions) >>
           Temporal[F].sleep(200.milli) >>
-          NConsole[F].writeString(slide2)
+          console.writeString(slide2)
       } yield ()
     }
   }
