@@ -1,6 +1,6 @@
 package com.github.morotsman.lote.builders
 
-import cats.effect.{Sync, Temporal}
+import cats.effect.{Temporal}
 import com.github.morotsman.lote.algebra.{NConsole, Transition}
 import com.github.morotsman.lote.builders.TextSlideBuilder.{BuildState, ContentAdded}
 import com.github.morotsman.lote.interpreter.TextSlide
