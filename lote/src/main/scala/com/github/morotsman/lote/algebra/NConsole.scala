@@ -19,3 +19,7 @@ trait NConsole[F[_]] {
 
   def context: F[Screen]
 }
+
+object NConsole {
+  @inline def apply[F[_]](implicit instance: NConsole[F]): NConsole[F] = instance
+}
