@@ -14,7 +14,7 @@ import scala.util.Random
 
 object ExampleInteractiveSlide {
 
-  def make[F[_] : Temporal](console: NConsole[F], animator: Animator[F]): F[Slide[F]] = {
+  def make[F[_] : Temporal](animator: Animator[F])(implicit console: NConsole[F]): F[Slide[F]] = {
 
     Temporal[F].pure(new Slide[F] {
       override def content: F[NConsole.ScreenAdjusted] =
@@ -57,7 +57,7 @@ case class Worm(segments: Vector[WormSegment])
 
 object Animator {
 
-  def make[F[_] : Temporal](console: NConsole[F]): F[Animator[F]] = {
+  def make[F[_] : Temporal]()(implicit console: NConsole[F]): F[Animator[F]] = {
 
     def createAnimator(queue: Queue[F, Direction]): Animator[F] = new Animator[F] {
       override def animate(): F[Unit] = {
