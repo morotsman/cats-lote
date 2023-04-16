@@ -2,6 +2,7 @@ package com.github.morotsman.lote.builders
 
 import cats.Functor
 import cats.effect.Sync
+import cats.effect.Temporal
 import com.github.morotsman.lote.algebra.{NConsole, Overlay, Slide}
 import com.github.morotsman.lote.builders.PresentationBuilder.{BuildState, Buildable, SlideAdded}
 import com.github.morotsman.lote.builders.SlideBuilder.{WithContentSlide, WithoutSlide}
@@ -9,7 +10,7 @@ import com.github.morotsman.lote.builders.TextSlideBuilder.{WithContent, Without
 import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
 import com.github.morotsman.lote.model.{Presentation, SlideSpecification}
 
-case class PresentationBuilder[F[_] : Sync : Functor: NConsole, State <: BuildState](
+case class PresentationBuilder[F[_] : Temporal : Functor: NConsole, State <: BuildState](
                                                                             slideSpecifications: List[SlideSpecification[F]],
                                                                             exitSlide: Option[Slide[F]],
                                                                             overlays: List[Overlay[F]]
@@ -50,7 +51,7 @@ case class PresentationBuilder[F[_] : Sync : Functor: NConsole, State <: BuildSt
 object PresentationBuilder {
   type Buildable = Empty with SlideAdded
 
-  def apply[F[_] : Sync: NConsole](): PresentationBuilder[F, Empty] =
+  def apply[F[_] : Temporal: NConsole](): PresentationBuilder[F, Empty] =
     PresentationBuilder[F, Empty](List.empty, None, List.empty)
 
   sealed trait BuildState

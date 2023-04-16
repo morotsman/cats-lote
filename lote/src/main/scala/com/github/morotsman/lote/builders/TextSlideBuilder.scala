@@ -1,12 +1,12 @@
 package com.github.morotsman.lote.builders
 
-import cats.effect.Sync
+import cats.effect.{Sync, Temporal}
 import com.github.morotsman.lote.algebra.{NConsole, Transition}
 import com.github.morotsman.lote.builders.TextSlideBuilder.{BuildState, ContentAdded}
 import com.github.morotsman.lote.interpreter.TextSlide
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, SlideSpecification, VerticalAlignment}
 
-final case class TextSlideBuilder[F[_] : Sync, State <: BuildState](
+final case class TextSlideBuilder[F[_] : Temporal, State <: BuildState](
                                                                      alignment: Option[Alignment],
                                                                      content: String,
                                                                      in: Option[Transition[F]],
@@ -36,7 +36,7 @@ final case class TextSlideBuilder[F[_] : Sync, State <: BuildState](
 object TextSlideBuilder {
   type WithContent = WithoutContent with ContentAdded
 
-  def apply[F[_] : Sync]()(implicit console: NConsole[F]): TextSlideBuilder[F, WithoutContent] =
+  def apply[F[_] : Temporal]()(implicit console: NConsole[F]): TextSlideBuilder[F, WithoutContent] =
     TextSlideBuilder(None, null, None, None)
 
   sealed trait BuildState

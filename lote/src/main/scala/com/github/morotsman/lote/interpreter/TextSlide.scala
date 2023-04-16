@@ -1,14 +1,14 @@
 package com.github.morotsman
 package lote.interpreter
 
-import cats.effect.Sync
+import cats.effect.{Sync, Temporal}
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
 
 object TextSlide {
-  def apply[F[_] : Sync: NConsole](slideContent: String, alignment: Alignment)(implicit console: NConsole[F]): Slide[F] =
+  def apply[F[_] : Temporal: NConsole](slideContent: String, alignment: Alignment)(implicit console: NConsole[F]): Slide[F] =
     new Slide[F] {
       override def content: F[ScreenAdjusted] =
         console.alignText(slideContent, alignment)
@@ -17,14 +17,14 @@ object TextSlide {
         content >>= (c => console.writeString(c))
 
       override def stopShow: F[Unit] =
-        Sync[F].unit
+        Temporal[F].unit
 
       override def userInput(input: UserInput): F[Unit] =
-        Sync[F].unit
+        Temporal[F].unit
     }
 
   implicit class ToTextSlide(val s: String) {
-    def toSlide[F[_] : Sync: NConsole](): Slide[F] =
+    def toSlide[F[_] : Temporal: NConsole](): Slide[F] =
       TextSlide[F](s, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
   }
 
