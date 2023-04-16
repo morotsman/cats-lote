@@ -100,9 +100,7 @@ object CharactersTransition {
           NConsole[F].clear() >>
             NConsole[F].writeString(
               ScreenAdjusted(
-                updatedPositions.map(_.characters.headOption.map(_.character).getOrElse("")).mkString(""),
-                screen.screenWidth,
-                screen.screenHeight
+                updatedPositions.map(_.characters.headOption.map(_.character).getOrElse("")).mkString("")
               )
             ) >>
             Temporal[F].sleep(timeBetweenTicks) >>
@@ -113,10 +111,11 @@ object CharactersTransition {
       for {
         slide1 <- from.content
         slide2 <- to.content
+        screen <- NConsole[F].context
         positions = setupPositions(slide1, slide2)
         randomPositions = Random.shuffle(positions.indices.toList)
         _ <- NConsole[F].writeString(slide1) >>
-          transformSlides(Screen(slide1.width, slide1.height), positions, randomPositions) >>
+          transformSlides(Screen(screen.screenWidth, screen.screenHeight), positions, randomPositions) >>
           Temporal[F].sleep(200.milli) >>
           NConsole[F].writeString(slide2)
       } yield ()

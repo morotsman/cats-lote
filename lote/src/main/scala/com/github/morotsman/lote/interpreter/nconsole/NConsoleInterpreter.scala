@@ -58,7 +58,7 @@ object NConsoleInterpreter {
 
         override def alignText(s: String, alignment: Alignment): F[ScreenAdjusted] = Sync[F].blocking {
           val cutOverflow = s.split("\n").take(height - 1).map(_.take(width)).mkString("\n")
-          ScreenAdjusted(Aligner.alignText(cutOverflow, alignment, width = width, height = height), width, height)
+          ScreenAdjusted(Aligner.alignText(cutOverflow, alignment, width = width, height = height))
         }
 
         override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = Sync[F].blocking {

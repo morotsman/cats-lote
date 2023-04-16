@@ -132,9 +132,7 @@ object Animator {
               }
             }
             _ <- NConsole[F].writeString(ScreenAdjusted(
-              updatedScreen.mkString,
-              screen.screenWidth,
-              screen.screenHeight
+              updatedScreen.mkString
             ))
             _ <- loop(emptyScreen, updatedWorm, updatedHeartIndexes)
           } yield ()
