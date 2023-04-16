@@ -13,7 +13,7 @@ import scala.concurrent.duration.DurationInt
 object Session1 extends IOApp.Simple {
 
   override def run(): IO[Unit] = {
-    
+
     def createPresentation(implicit console: NConsole[IO]): IO[Presentation[IO]] =
       ExamplePresentation.make[IO]()
 
@@ -24,7 +24,7 @@ object Session1 extends IOApp.Simple {
       timer <- Timer.make[IO](30.minutes)
       _ <- middleware.addOverlays(List(timer))
       presentation <- createPresentation(middleware)
-      executor <- PresentationExecutorInterpreter.make(middleware, presentation)
+      executor <- PresentationExecutorInterpreter.make(presentation)
       _ <- executor.start()
     } yield ()
   }

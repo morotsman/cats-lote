@@ -14,11 +14,11 @@ import scala.util.Random
 
 object ExampleInteractiveSlide {
 
-  def make[F[_] : Temporal](animator: Animator[F])(implicit console: NConsole[F]): F[Slide[F]] = {
+  def make[F[_] : Temporal: NConsole](animator: Animator[F]): F[Slide[F]] = {
 
     Temporal[F].pure(new Slide[F] {
       override def content: F[NConsole.ScreenAdjusted] =
-        console.alignText("", Alignment(
+        NConsole[F].alignText("", Alignment(
           VerticalAlignment.Center,
           HorizontalAlignment.Center
         ))

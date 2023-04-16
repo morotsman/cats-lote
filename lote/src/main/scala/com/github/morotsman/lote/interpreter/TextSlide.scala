@@ -1,20 +1,21 @@
 package com.github.morotsman
 package lote.interpreter
 
-import cats.effect.{Sync, Temporal}
+import cats.effect.{Temporal}
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
+import com.github.morotsman.lote.interpreter.nconsole.NConsole
 import com.github.morotsman.lote.interpreter.nconsole.NConsole.ScreenAdjusted
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, UserInput, VerticalAlignment}
 
 object TextSlide {
-  def apply[F[_] : Temporal: NConsole](slideContent: String, alignment: Alignment)(implicit console: NConsole[F]): Slide[F] =
+  def apply[F[_] : Temporal: NConsole](slideContent: String, alignment: Alignment): Slide[F] =
     new Slide[F] {
       override def content: F[ScreenAdjusted] =
-        console.alignText(slideContent, alignment)
+        NConsole[F].alignText(slideContent, alignment)
 
       override def startShow: F[Unit] =
-        content >>= (c => console.writeString(c))
+        content >>= (c => NConsole[F].writeString(c))
 
       override def stopShow: F[Unit] =
         Temporal[F].unit
