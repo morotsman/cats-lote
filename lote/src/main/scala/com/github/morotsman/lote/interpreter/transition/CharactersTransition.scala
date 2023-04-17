@@ -40,17 +40,15 @@ object CharactersTransition {
         val toUpdate = currentCharacterPositions.toArray
 
         // mark positions to transform
-        if (positionsToUpdate.nonEmpty) {
-          positionsToUpdate.foreach { randomPosition =>
-            currentCharacterPositions.get(randomPosition).foreach { position =>
-              val markedAsMoving = position.copy(characters = position.characters.map(cp => if (cp.canTransform) {
-                cp.copy(inTransition = true)
-              } else {
-                cp
-              }
-              ))
-              toUpdate(randomPosition) = markedAsMoving
+        positionsToUpdate.foreach { randomPosition =>
+          currentCharacterPositions.get(randomPosition).foreach { position =>
+            val markedAsMoving = position.copy(characters = position.characters.map(cp => if (cp.canTransform) {
+              cp.copy(inTransition = true)
+            } else {
+              cp
             }
+            ))
+            toUpdate(randomPosition) = markedAsMoving
           }
         }
 
