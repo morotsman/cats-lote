@@ -11,7 +11,7 @@ import scala.util.Random
 
 case class CharacterPosition(character: Char, inTransition: Boolean, canTransform: Boolean, tick: Int = 0)
 
-case class Position(characters: List[CharacterPosition])
+case class ScreenPosition(index: Int, characters: List[CharacterPosition])
 
 object CharactersTransition {
 
@@ -23,20 +23,20 @@ object CharactersTransition {
                                        ): Transition[F] = new Transition[F] {
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
 
-      def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[Position] =
-        from.content.zip(to.content).map { case (from, to) => if (from == '\n') {
-          Position(List(
+      def setupPositions(from: ScreenAdjusted, to: ScreenAdjusted): List[ScreenPosition] =
+        from.content.zip(to.content).zipWithIndex.map { case ((from, to), index) => if (from == '\n') {
+          ScreenPosition(index, List(
             CharacterPosition(from, inTransition = false, canTransform = false)
           ))
         } else {
-          Position(setupPosition(from, to))
+          ScreenPosition(index, setupPosition(from, to))
         }
         }.toList
 
       def transformPositions(
-                              currentCharacterPositions: List[Position],
+                              currentCharacterPositions: List[ScreenPosition],
                               positionsToUpdate: List[Int]
-                            ): F[List[Position]] = {
+                            ): F[List[ScreenPosition]] = {
         val toUpdate = currentCharacterPositions.toArray
 
         // mark positions to transform
@@ -54,16 +54,16 @@ object CharactersTransition {
 
         NConsole[F].context.map { screen =>
           // transform positions
-          currentCharacterPositions.zipWithIndex
-            .filter { case (position, _) =>
+          currentCharacterPositions
+            .filter { position =>
               position.characters.exists(_.inTransition)
             }
-            .foreach { case (position, index) =>
+            .foreach { case ScreenPosition(index, characters) =>
               // take them away from the old position
               toUpdate(index) = toUpdate(index).copy(characters = toUpdate(index).characters.filter(!_.inTransition))
 
               // move to new position
-              val toMove = position.characters.filter(_.inTransition)
+              val toMove = characters.filter(_.inTransition)
               toMove.foreach { cp =>
                 val newIndex = getNewIndex(screen, index, cp);
                 newIndex.foreach { index =>
@@ -86,7 +86,7 @@ object CharactersTransition {
       }
 
       def transformSlides(
-                           positions: List[Position],
+                           positions: List[ScreenPosition],
                            randomPositions: List[Int],
                            nrUnderTransformation: Double = 1.0
                          ): F[Unit] = {
