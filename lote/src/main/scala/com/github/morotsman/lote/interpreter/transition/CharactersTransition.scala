@@ -40,15 +40,15 @@ object CharactersTransition {
 
 
         // mark positions to transform
-        val positions : List[ScreenPosition] = screenPositions.map { position =>
-          if (positionsToUpdate.contains(position.index)) {
-            position.copy(characterPositions = position.characterPositions.map(cp => if (cp.canTransform) {
+        val positions : List[ScreenPosition] = screenPositions.map { screenPosition =>
+          if (positionsToUpdate.contains(screenPosition.index)) {
+            screenPosition.copy(characterPositions = screenPosition.characterPositions.map(cp => if (cp.canTransform) {
               cp.copy(inTransition = true)
             } else {
               cp
             }))
           } else {
-            position
+            screenPosition
           }
         }
 
@@ -56,8 +56,8 @@ object CharactersTransition {
         NConsole[F].context.map { screen =>
           // transform positions
           screenPositions
-            .filter { position =>
-              position.characterPositions.exists(_.inTransition)
+            .filter { screenPosition =>
+              screenPosition.characterPositions.exists(_.inTransition)
             }
             .foreach { case ScreenPosition(index, characters) =>
               // take them away from the old position
