@@ -2,7 +2,7 @@ package com.github.morotsman.lote.interpreter.transition
 
 import cats.effect.kernel.Temporal
 import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
-import com.github.morotsman.lote.model.Screen
+import com.github.morotsman.lote.model.{Screen, UserInput}
 
 
 object ReplaceTransition {
@@ -25,6 +25,8 @@ object ReplaceTransition {
       ).transition(from, to)
 
     }
+
+    override def userInput(input: UserInput): F[Unit] = Temporal[F].unit
 
   }
 }

@@ -3,7 +3,7 @@ package com.github.morotsman.lote.interpreter.transition
 import cats.effect.kernel.Temporal
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
-import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
+import com.github.morotsman.lote.model.{Screen, ScreenAdjusted, UserInput}
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random
@@ -16,7 +16,6 @@ case class Position(characters: List[CharacterPosition])
 object CharactersTransition {
 
   def apply[F[_] : Temporal: NConsole](
-                              gravity: Double = 1.2,
                               selectAccelerator: Double = 1.1,
                               timeBetweenTicks: FiniteDuration = 40.milli,
                               setupPosition: (Char, Char) => List[CharacterPosition],
@@ -120,6 +119,8 @@ object CharactersTransition {
           NConsole[F].writeString(slide2)
       } yield ()
     }
+
+    override def userInput(input: UserInput): F[Unit] = Temporal[F].unit
   }
 
 }
