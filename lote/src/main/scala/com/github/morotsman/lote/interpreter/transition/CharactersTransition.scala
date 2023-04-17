@@ -59,12 +59,14 @@ object CharactersTransition {
             .filter { screenPosition =>
               screenPosition.characterPositions.exists(_.inTransition)
             }
-            .foreach { case ScreenPosition(index, characters) =>
+            .foreach { case ScreenPosition(index, characterPositions) =>
               // take them away from the old position
-              toUpdate(index) = toUpdate(index).copy(characterPositions = toUpdate(index).characterPositions.filter(!_.inTransition))
+              toUpdate(index) = toUpdate(index).copy(
+                characterPositions = toUpdate(index).characterPositions.filter(!_.inTransition)
+              )
 
               // move to new position
-              val toMove = characters.filter(_.inTransition)
+              val toMove = characterPositions.filter(_.inTransition)
               toMove.foreach { cp =>
                 val newIndex = getNewIndex(screen, index, cp);
                 newIndex.foreach { index =>
