@@ -11,7 +11,7 @@ import scala.util.Random
 
 case class CharacterPosition(character: Char, inTransition: Boolean, canTransform: Boolean, tick: Int = 0)
 
-case class ScreenPosition(index: Int, characters: List[CharacterPosition])
+case class ScreenPosition(index: Int, characterPositions: List[CharacterPosition])
 
 object CharactersTransition {
 
@@ -42,7 +42,7 @@ object CharactersTransition {
         // mark positions to transform
         positionsToUpdate.foreach { randomPosition =>
           currentCharacterPositions.get(randomPosition).foreach { position =>
-            val markedAsMoving = position.copy(characters = position.characters.map(cp => if (cp.canTransform) {
+            val markedAsMoving = position.copy(characterPositions = position.characterPositions.map(cp => if (cp.canTransform) {
               cp.copy(inTransition = true)
             } else {
               cp
@@ -56,11 +56,11 @@ object CharactersTransition {
           // transform positions
           currentCharacterPositions
             .filter { position =>
-              position.characters.exists(_.inTransition)
+              position.characterPositions.exists(_.inTransition)
             }
             .foreach { case ScreenPosition(index, characters) =>
               // take them away from the old position
-              toUpdate(index) = toUpdate(index).copy(characters = toUpdate(index).characters.filter(!_.inTransition))
+              toUpdate(index) = toUpdate(index).copy(characterPositions = toUpdate(index).characterPositions.filter(!_.inTransition))
 
               // move to new position
               val toMove = characters.filter(_.inTransition)
@@ -71,8 +71,8 @@ object CharactersTransition {
                   if (
                     index < toUpdate.length &&
                       index >= 0 &&
-                      !toUpdate(index).characters.exists(_.character == '\n')) {
-                    toUpdate(index) = toUpdate(index).copy(characters = updatedPosition :: toUpdate(index).characters)
+                      !toUpdate(index).characterPositions.exists(_.character == '\n')) {
+                    toUpdate(index) = toUpdate(index).copy(characterPositions = updatedPosition :: toUpdate(index).characterPositions)
                   }
                 }
 
@@ -90,7 +90,7 @@ object CharactersTransition {
                            randomPositions: List[Int],
                            nrUnderTransformation: Double = 1.0
                          ): F[Unit] = {
-        if (positions.forall(_.characters.forall(_.canTransform == false))) {
+        if (positions.forall(_.characterPositions.forall(_.canTransform == false))) {
           NConsole[F].clear()
         } else {
           val positionsToUpdate = randomPositions.take(nrUnderTransformation.toInt);
@@ -101,7 +101,7 @@ object CharactersTransition {
             updatedPositions <- transformPositions(positions, positionsToUpdate)
             _ <- NConsole[F].writeString(
               ScreenAdjusted(
-                updatedPositions.map(_.characters.headOption.map(_.character).getOrElse("")).mkString("")
+                updatedPositions.map(_.characterPositions.headOption.map(_.character).getOrElse("")).mkString("")
               )
             )
             _ <- Temporal[F].sleep(timeBetweenTicks)
