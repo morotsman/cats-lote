@@ -35,22 +35,26 @@ object CharactersTransition {
 
       def transformPositions(
                               currentCharacterPositions: List[ScreenPosition],
-                              positionsToUpdate: List[Int]
+                              positionsToUpdate: Set[Int]
                             ): F[List[ScreenPosition]] = {
-        val toUpdate = currentCharacterPositions.toArray
+
 
         // mark positions to transform
-        positionsToUpdate.foreach { randomPosition =>
-          currentCharacterPositions.get(randomPosition).foreach { position =>
-            val markedAsMoving = position.copy(characterPositions = position.characterPositions.map(cp => if (cp.canTransform) {
+        val positions : List[ScreenPosition] = currentCharacterPositions.map { position =>
+          if (positionsToUpdate.contains(position.index)) {
+            position.copy(characterPositions = position.characterPositions.map(cp => if (cp.canTransform) {
               cp.copy(inTransition = true)
             } else {
               cp
-            }
-            ))
-            toUpdate(randomPosition) = markedAsMoving
+            }))
+          } else {
+            position
           }
+
         }
+
+        val toUpdate = positions.toArray
+
 
         NConsole[F].context.map { screen =>
           // transform positions
@@ -87,7 +91,7 @@ object CharactersTransition {
 
       def transformSlides(
                            positions: List[ScreenPosition],
-                           randomPositions: List[Int],
+                           randomPositions: Set[Int],
                            nrUnderTransformation: Double = 1.0
                          ): F[Unit] = {
         if (positions.forall(_.characterPositions.forall(_.canTransform == false))) {
@@ -116,7 +120,7 @@ object CharactersTransition {
         positions = setupPositions(slide1, slide2)
         randomPositions = Random.shuffle(positions.indices.toList)
         _ <- NConsole[F].writeString(slide1) >>
-          transformSlides(positions, randomPositions) >>
+          transformSlides(positions, randomPositions.toSet) >>
           Temporal[F].sleep(200.milli) >>
           NConsole[F].writeString(slide2)
       } yield ()
