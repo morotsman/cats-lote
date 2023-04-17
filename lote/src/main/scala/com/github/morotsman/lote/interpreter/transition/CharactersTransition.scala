@@ -87,17 +87,15 @@ object CharactersTransition {
 
       def transformSlides(
                            positions: List[ScreenPosition],
-                           randomPositions: Set[Int],
+                           randomIndexes: Set[Int],
                            nrUnderTransformation: Double = 1.0
                          ): F[Unit] = {
         if (positions.forall(_.characterPositions.forall(_.canTransform == false))) {
           NConsole[F].clear()
         } else {
-          val positionsToUpdate = randomPositions.take(nrUnderTransformation.toInt);
-          val newRandomPositions = randomPositions.drop(nrUnderTransformation.toInt)
-
           for {
             _ <- NConsole[F].clear()
+            positionsToUpdate = randomIndexes.take(nrUnderTransformation.toInt)
             updatedPositions <- transformPositions(positions, positionsToUpdate)
             _ <- NConsole[F].writeString(
               ScreenAdjusted(
@@ -105,7 +103,8 @@ object CharactersTransition {
               )
             )
             _ <- Temporal[F].sleep(timeBetweenTicks)
-            _ <- transformSlides(updatedPositions, newRandomPositions, nrUnderTransformation * selectAccelerator)
+            newRandomIndexes = randomIndexes.drop(nrUnderTransformation.toInt)
+            _ <- transformSlides(updatedPositions, newRandomIndexes, nrUnderTransformation * selectAccelerator)
           } yield ()
         }
       }
@@ -114,9 +113,9 @@ object CharactersTransition {
         slide1 <- from.content
         slide2 <- to.content
         positions = setupPositions(slide1, slide2)
-        randomPositions = Random.shuffle(positions.indices.toList)
+        randomIndexes = Random.shuffle(positions.indices.toList)
         _ <- NConsole[F].writeString(slide1) >>
-          transformSlides(positions, randomPositions.toSet) >>
+          transformSlides(positions, randomIndexes.toSet) >>
           Temporal[F].sleep(200.milli) >>
           NConsole[F].writeString(slide2)
       } yield ()
