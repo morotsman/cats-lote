@@ -34,13 +34,13 @@ object CharactersTransition {
         }.toList
 
       def transformPositions(
-                              currentCharacterPositions: List[ScreenPosition],
+                              screenPositions: List[ScreenPosition],
                               positionsToUpdate: Set[Int]
                             ): F[List[ScreenPosition]] = {
 
 
         // mark positions to transform
-        val positions : List[ScreenPosition] = currentCharacterPositions.map { position =>
+        val positions : List[ScreenPosition] = screenPositions.map { position =>
           if (positionsToUpdate.contains(position.index)) {
             position.copy(characterPositions = position.characterPositions.map(cp => if (cp.canTransform) {
               cp.copy(inTransition = true)
@@ -50,15 +50,12 @@ object CharactersTransition {
           } else {
             position
           }
-
         }
 
         val toUpdate = positions.toArray
-
-
         NConsole[F].context.map { screen =>
           // transform positions
-          currentCharacterPositions
+          screenPositions
             .filter { position =>
               position.characterPositions.exists(_.inTransition)
             }
@@ -82,11 +79,8 @@ object CharactersTransition {
 
               }
             }
-
           toUpdate.toList
         }
-
-
       }
 
       def transformSlides(
