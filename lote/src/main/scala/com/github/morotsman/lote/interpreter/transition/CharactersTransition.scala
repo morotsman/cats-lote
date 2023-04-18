@@ -4,7 +4,6 @@ import cats.effect.kernel.Temporal
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
 import com.github.morotsman.lote.model.{Screen, ScreenAdjusted, UserInput}
-
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random
 
@@ -39,22 +38,23 @@ object CharactersTransition {
                             ): F[List[ScreenPosition]] = {
 
         NConsole[F].context.map { screen =>
-          val updatedCharacterPositions = screenPositions.flatMap(screenPosition => screenPosition.characterPositions.map { characterPosition =>
-            if (characterPosition.inTransition || (positionsToUpdate.contains(screenPosition.index) && characterPosition.canTransform)) {
-              val maybeNewIndex = getNewIndex(screen, screenPosition.index, characterPosition);
-              maybeNewIndex
-                .filter(newIndex => newIndex < screenPositions.length && newIndex >= 0 && !screenPositions(newIndex).characterPositions.exists(_.character == '\n'))
-                .map { newIndex =>
-                  (
-                    newIndex,
-                    characterPosition.copy(tick = characterPosition.tick + 1, inTransition = true)
-                  )
-                }
-            }
-            else {
-              Option((screenPosition.index, characterPosition))
-            }
-          }).flatten.groupBy(_._1)
+          val updatedCharacterPositions = screenPositions.flatMap(screenPosition =>
+            screenPosition.characterPositions.flatMap { characterPosition =>
+              if (characterPosition.inTransition || (positionsToUpdate.contains(screenPosition.index) && characterPosition.canTransform)) {
+                val maybeNewIndex = getNewIndex(screen, screenPosition.index, characterPosition);
+                maybeNewIndex
+                  .filter(newIndex => newIndex < screenPositions.length && newIndex >= 0 && !screenPositions(newIndex).characterPositions.exists(_.character == '\n'))
+                  .map { newIndex =>
+                    (
+                      newIndex,
+                      characterPosition.copy(tick = characterPosition.tick + 1, inTransition = true)
+                    )
+                  }
+              }
+              else {
+                Option((screenPosition.index, characterPosition))
+              }
+            }).groupBy(_._1)
 
           screenPositions.map { screenPosition =>
             screenPosition.copy(
