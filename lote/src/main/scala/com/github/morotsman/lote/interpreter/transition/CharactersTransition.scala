@@ -38,36 +38,18 @@ object CharactersTransition {
                               positionsToUpdate: Set[Int]
                             ): F[List[ScreenPosition]] = {
 
-
-        // mark positions to transform
-        val positions: List[ScreenPosition] = screenPositions.map { screenPosition =>
-          if (positionsToUpdate.contains(screenPosition.index)) {
-            screenPosition.copy(characterPositions = screenPosition.characterPositions.map(cp => if (cp.canTransform) {
-              cp.copy(inTransition = true)
-            } else {
-              cp
-            }))
-          } else {
-            screenPosition
-          }
-        }
-
         NConsole[F].context.map { screen =>
-          val updatedCharacterPositions = positions.flatMap(screenPosition => screenPosition.characterPositions.map { characterPosition =>
-            if (characterPosition.inTransition) {
+          val updatedCharacterPositions = screenPositions.flatMap(screenPosition => screenPosition.characterPositions.map { characterPosition =>
+            if (characterPosition.inTransition || (positionsToUpdate.contains(screenPosition.index) && characterPosition.canTransform)) {
               val maybeNewIndex = getNewIndex(screen, screenPosition.index, characterPosition);
-              maybeNewIndex.flatMap { newIndex =>
-                val updatedCharacterPosition = characterPosition.copy(tick = characterPosition.tick + 1)
-                if (
-                  newIndex < screenPositions.length &&
-                    newIndex >= 0 &&
-                    !screenPositions(newIndex).characterPositions.exists(_.character == '\n')
-                ) {
-                  Option((newIndex, updatedCharacterPosition))
-                } else {
-                  None
+              maybeNewIndex
+                .filter(newIndex => newIndex < screenPositions.length && newIndex >= 0 && !screenPositions(newIndex).characterPositions.exists(_.character == '\n'))
+                .map { newIndex =>
+                  (
+                    newIndex,
+                    characterPosition.copy(tick = characterPosition.tick + 1, inTransition = true)
+                  )
                 }
-              }
             }
             else {
               Option((screenPosition.index, characterPosition))
