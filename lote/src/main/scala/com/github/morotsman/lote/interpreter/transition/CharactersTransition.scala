@@ -40,7 +40,7 @@ object CharactersTransition {
 
 
         // mark positions to transform
-        val positions : List[ScreenPosition] = screenPositions.map { screenPosition =>
+        val positions: List[ScreenPosition] = screenPositions.map { screenPosition =>
           if (positionsToUpdate.contains(screenPosition.index)) {
             screenPosition.copy(characterPositions = screenPosition.characterPositions.map(cp => if (cp.canTransform) {
               cp.copy(inTransition = true)
@@ -52,36 +52,33 @@ object CharactersTransition {
           }
         }
 
-        val toUpdate = positions.toArray
         NConsole[F].context.map { screen =>
-          // transform positions
-          screenPositions
-            .filter { screenPosition =>
-              screenPosition.characterPositions.exists(_.inTransition)
-            }
-            .foreach { case ScreenPosition(index, characterPositions) =>
-              // take them away from the old position
-              toUpdate(index) = toUpdate(index).copy(
-                characterPositions = toUpdate(index).characterPositions.filter(!_.inTransition)
-              )
-
-              // move to new position
-              val toMove = characterPositions.filter(_.inTransition)
-              toMove.foreach { cp =>
-                val newIndex = getNewIndex(screen, index, cp);
-                newIndex.foreach { index =>
-                  val updatedPosition = cp.copy(tick = cp.tick + 1)
-                  if (
-                    index < toUpdate.length &&
-                      index >= 0 &&
-                      !toUpdate(index).characterPositions.exists(_.character == '\n')) {
-                    toUpdate(index) = toUpdate(index).copy(characterPositions = updatedPosition :: toUpdate(index).characterPositions)
-                  }
+          val updatedCharacterPositions = positions.flatMap(screenPosition => screenPosition.characterPositions.map { characterPosition =>
+            if (characterPosition.inTransition) {
+              val maybeNewIndex = getNewIndex(screen, screenPosition.index, characterPosition);
+              maybeNewIndex.flatMap { newIndex =>
+                val updatedCharacterPosition = characterPosition.copy(tick = characterPosition.tick + 1)
+                if (
+                  newIndex < screenPositions.length &&
+                    newIndex >= 0 &&
+                    !screenPositions(newIndex).characterPositions.exists(_.character == '\n')
+                ) {
+                  Option((newIndex, updatedCharacterPosition))
+                } else {
+                  None
                 }
-
               }
             }
-          toUpdate.toList
+            else {
+              Option((screenPosition.index, characterPosition))
+            }
+          }).flatten.groupBy(_._1)
+
+          screenPositions.map { screenPosition =>
+            screenPosition.copy(
+              characterPositions = updatedCharacterPositions(screenPosition.index).map(_._2).sortBy(!_.canTransform)
+            )
+          }
         }
       }
 

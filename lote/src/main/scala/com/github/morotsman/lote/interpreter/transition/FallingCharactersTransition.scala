@@ -11,7 +11,7 @@ object FallingCharactersTransition {
 
   def apply[F[_] : Temporal: NConsole](
                               gravity: Double = 1.2,
-                              selectAccelerator: Double = 1.1,
+                              selectAccelerator: Double = 1.2,
                               timeBetweenTicks: FiniteDuration = 40.milli
                             ): Transition[F] = new Transition[F] {
 
