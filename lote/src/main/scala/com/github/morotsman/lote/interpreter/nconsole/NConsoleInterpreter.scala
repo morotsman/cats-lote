@@ -62,6 +62,8 @@ object NConsoleInterpreter {
         }
 
         override def writeString(screenAdjusted: ScreenAdjusted): F[Unit] = Sync[F].blocking {
+          // Move cursor to top-left before writing
+          print("\u001b[H")
           println(screenAdjusted.content)
         }
 

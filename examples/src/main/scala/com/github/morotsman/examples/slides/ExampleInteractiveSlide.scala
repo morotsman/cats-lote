@@ -77,7 +77,7 @@ object Animator {
 
         if (originalWorm.segments.map(_.index).size == originalWorm.segments.map(_.index).toSet.size) {
           for {
-            _ <- Temporal[F].sleep(100.milli)
+            _ <- Temporal[F].sleep(40.milli)
             maybeUserInput <- queue.tryTake
             screen <- NConsole[F].context
             wormWithHearts = Worm(segments = if (collisions.nonEmpty) {
@@ -132,7 +132,7 @@ object Animator {
               }
             }
             _ <- NConsole[F].writeString(ScreenAdjusted(
-              updatedScreen.mkString
+              updatedScreen.grouped(screen.screenWidth).map(_.mkString).mkString("\n")
             ))
             _ <- loop(emptyScreen, updatedWorm, updatedHeartIndexes)
           } yield ()
