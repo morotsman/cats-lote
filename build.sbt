@@ -1,12 +1,12 @@
 ThisBuild / name := "cats-lote"
-ThisBuild / scalaVersion := "2.13.3"
+ThisBuild / scalaVersion := "2.13.12"
 ThisBuild / version := "0.0.1-SNAPSHOT"
 
 
 val commonSettings =
   Seq(
     addCompilerPlugin(
-      "org.typelevel" %% "kind-projector" % "0.11.1" cross CrossVersion.full
+      "org.typelevel" %% "kind-projector" % "0.13.3" cross CrossVersion.full
     ),
     addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
   )

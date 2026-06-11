@@ -11,7 +11,12 @@ import com.github.morotsman.lote.model._
 
 object PresentationExecutorInterpreter {
 
-  def make[F[_] : Temporal: NConsole](presentation: Presentation[F]): F[PresentationExecutor[F]] = Monad[F].pure(
+  def make[F[_] : Temporal: NConsole](
+                                       presentation: Presentation[F],
+                                       onSlideChange: Int => F[Unit] = null
+                                     ): F[PresentationExecutor[F]] = {
+    val slideChange: Int => F[Unit] = if (onSlideChange != null) onSlideChange else (_: Int) => Monad[F].unit
+    Monad[F].pure(
     new PresentationExecutor[F] {
       override def start(): F[Unit] = for {
         _ <- NConsole[F].clear()
@@ -25,6 +30,7 @@ object PresentationExecutorInterpreter {
               val current = presentation.slideSpecifications(currentIndex)
 
               for {
+                _ <- if (switchSlide) slideChange(currentIndex) else Monad[F].unit
                 currentWork <- if (switchSlide) {
                   current.slide.startShow.start
                 } else {
@@ -78,4 +84,5 @@ object PresentationExecutorInterpreter {
       }
 
     })
+  }
 }
