@@ -1,5 +1,8 @@
 # cats-lote
-A lo tech presentation tool
+Do you ever have the urge to create truly underwhelming presentations?
+
+Then this might be for you: A lo tech presentation tool for making presentations in the terminal.
+
 
 Run example like this:
 
