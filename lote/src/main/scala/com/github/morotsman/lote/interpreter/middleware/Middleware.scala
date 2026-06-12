@@ -1,26 +1,21 @@
 package com.github.morotsman.lote.interpreter.middleware
 
 import cats.Monad
-import cats.effect.{Clock, Ref, Temporal}
-import cats.effect.implicits._
-import cats.effect.kernel.{Fiber, Spawn}
+import cats.effect.Ref
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay}
+import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay, Ticker, TickerSubscription}
 import com.github.morotsman.lote.model.{Alignment, Screen, ScreenAdjusted, UserInput}
-
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 case class MiddlewareState[F[_]](
                                   overlays: List[Overlay[F]],
                                   lastContent: Option[ScreenAdjusted] = None,
                                   lastRendered: Option[String] = None,
-                                  refreshFiber: Option[Fiber[F, Throwable, Unit]] = None
+                                  subscription: Option[TickerSubscription[F]] = None
                                 )
 
 object Middleware {
-  def make[F[_] : Monad : Temporal : Spawn : Ref.Make : NConsole](
-                                                                    refreshInterval: FiniteDuration = 40.millis
-                                                                  ): F[Middleware[F]] =
+  def make[F[_] : Monad : Ref.Make : NConsole : Ticker](
+                                                       ): F[Middleware[F]] =
     Ref[F].of(MiddlewareState[F](List.empty)).map { state =>
       new Middleware[F] {
 
@@ -49,8 +44,7 @@ object Middleware {
           }
         } yield result
 
-        private def refreshLoop(): F[Unit] = for {
-          _ <- Temporal[F].sleep(refreshInterval)
+        private val onTick: F[Unit] = for {
           s <- state.get
           _ <- s.lastContent.traverse_ { content =>
             for {
@@ -63,15 +57,15 @@ object Middleware {
               } else Monad[F].unit
             } yield ()
           }
-          _ <- refreshLoop()
         } yield ()
 
-        private def ensureRefreshLoop(): F[Unit] = for {
+        private def ensureSubscribed(): F[Unit] = for {
           s <- state.get
-          _ <- if (s.refreshFiber.isEmpty) {
+          _ <- if (s.subscription.isEmpty) {
             for {
-              f <- refreshLoop().start
-              _ <- state.update(_.copy(refreshFiber = Some(f)))
+              sub <- Ticker[F].subscribe(onTick)
+              _ <- state.update(_.copy(subscription = Some(sub)))
+              _ <- Ticker[F].start
             } yield ()
           } else Monad[F].unit
         } yield ()
@@ -94,7 +88,7 @@ object Middleware {
 
         override def writeString(s: ScreenAdjusted): F[Unit] = for {
           _ <- state.update(_.copy(lastContent = Some(s)))
-          _ <- ensureRefreshLoop()
+          _ <- ensureSubscribed()
           withOverlay <- applyMiddleware(s)
           _ <- NConsole[F].writeString(withOverlay)
           _ <- state.update(_.copy(lastRendered = Some(withOverlay.content)))

@@ -1,12 +1,13 @@
 package com.github.morotsman.lote.interpreter.transition
 
-import cats.effect.kernel.Temporal
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
+import cats.Monad
+import cats.effect.{Concurrent, Ref}
+import com.github.morotsman.lote.algebra.{NConsole, Slide, Ticker, Transition}
 import com.github.morotsman.lote.model.{Screen, UserInput}
 
 object MorphTransition {
 
-  def apply[F[_] : Temporal: NConsole](): Transition[F] = new Transition[F] {
+  def apply[F[_] : Concurrent : Ref.Make : NConsole : Ticker](): Transition[F] = new Transition[F] {
 
     def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
       CharacterPosition(fromCharacter, inTransition = false, canTransform = true),
@@ -25,7 +26,7 @@ object MorphTransition {
 
     }
 
-    override def userInput(input: UserInput): F[Unit] = Temporal[F].unit
+    override def userInput(input: UserInput): F[Unit] = Monad[F].unit
 
   }
 }
