@@ -22,7 +22,11 @@ lazy val lote = (project in file("lote"))
       "org.jline" % "jline" % "3.21.0",
       "dev.optics" %% "monocle-core"  % "3.1.0",
       "dev.optics" %% "monocle-macro" % "3.1.0",
+      // test
+      "org.typelevel" %% "munit-cats-effect-3" % "1.0.7" % Test,
+      "org.scalameta" %% "munit" % "0.7.29" % Test,
     ),
+    testFrameworks += new TestFramework("munit.Framework"),
     scalacOptions ++= Seq(
       "-Ymacro-annotations"
     )
