@@ -1,10 +1,10 @@
 package com.github.morotsman.examples
 
-import cats.effect.Temporal
+import cats.effect.{Ref, Temporal}
 import com.github.morotsman.examples.slides.{Agenda, Animator, Bye, ExampleInteractiveSlide, Start}
-import com.github.morotsman.lote.algebra.NConsole
+import com.github.morotsman.lote.algebra.{NConsole, Ticker}
 import com.github.morotsman.lote.builders.PresentationBuilder
-import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition}
+import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition, GrabTransition}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, Presentation, VerticalAlignment}
 import cats.implicits._
 
@@ -15,7 +15,7 @@ object ExamplePresentation {
       |Supports different alignments
       |""".stripMargin
 
-  def make[F[_]: Temporal: NConsole](): F[Presentation[F]] = {
+  def make[F[_]: Temporal: Ref.Make: NConsole: Ticker](): F[Presentation[F]] = {
     def createPresentation(): F[Presentation[F]] = {
       for {
         animator <- Animator.make[F]()
@@ -48,7 +48,7 @@ object ExamplePresentation {
           }
           .addTextSlide {
             _.content(instruction1)
-              .transition(MorphTransition())
+              .transition(GrabTransition())
               .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Left))
           }
           .addTextSlide {

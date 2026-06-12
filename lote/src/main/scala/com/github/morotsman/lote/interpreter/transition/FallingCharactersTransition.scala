@@ -1,18 +1,16 @@
 package com.github.morotsman.lote.interpreter.transition
 
-import cats.effect.kernel.Temporal
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
+import cats.Monad
+import cats.effect.{Concurrent, Ref}
+import com.github.morotsman.lote.algebra.{NConsole, Slide, Ticker, Transition}
 import com.github.morotsman.lote.model.{Screen, UserInput}
-
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 
 object FallingCharactersTransition {
 
-  def apply[F[_] : Temporal: NConsole](
+  def apply[F[_] : Concurrent : Ref.Make : NConsole : Ticker](
                               gravity: Double = 1.2,
-                              selectAccelerator: Double = 1.2,
-                              timeBetweenTicks: FiniteDuration = 40.milli
+                              selectAccelerator: Double = 1.2
                             ): Transition[F] = new Transition[F] {
 
     def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
@@ -30,12 +28,13 @@ object FallingCharactersTransition {
 
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
       CharactersTransition(
+        selectAccelerator = selectAccelerator,
         setupPosition = setupPosition,
         getNewIndex = getNewIndex
       ).transition(from, to)
 
     }
 
-    override def userInput(input: UserInput): F[Unit] = Temporal[F].unit
+    override def userInput(input: UserInput): F[Unit] = Monad[F].unit
   }
 }
