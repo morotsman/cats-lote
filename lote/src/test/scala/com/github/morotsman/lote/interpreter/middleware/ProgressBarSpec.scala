@@ -78,23 +78,5 @@ class ProgressBarSpec extends CatsEffectSuite {
       assert(stripped.contains("Main"), s"Expected 'Main' in: '$stripped'")
     }
   }
-
-  test("ProgressBar onKeyPress is a no-op") {
-    for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      bar <- ProgressBar.make[IO](totalSlides = 3)
-      _ <- bar.onKeyPress(Key(SpecialKey.Right))
-    } yield ()
-  }
-
-  test("ProgressBar onContentChange is a no-op") {
-    for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      bar <- ProgressBar.make[IO](totalSlides = 3)
-      _ <- bar.onContentChange("some content")
-    } yield ()
-  }
 }
 

@@ -2,12 +2,17 @@ package com.github.morotsman.lote.interpreter.middleware
 
 import cats.effect.IO
 import cats.effect.kernel.Ref
-import com.github.morotsman.lote.algebra.{NConsole, Overlay, Ticker, TickerSubscription}
+import com.github.morotsman.lote.algebra.{IdleDetector, NConsole, Overlay, Ticker, TickerSubscription}
+import com.github.morotsman.lote.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
 import com.github.morotsman.lote.model._
 import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
 
+import scala.concurrent.duration._
+
 class MiddlewareSpec extends CatsEffectSuite {
+
+  private def noopIdleDetector: IdleDetector[IO] = IdleDetector.noop[IO]
 
   /** A no-op Ticker for tests that don't need real ticking */
   private def stubTicker: Ticker[IO] = new Ticker[IO] {
@@ -22,6 +27,7 @@ class MiddlewareSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       implicit0(tk: Ticker[IO]) = stubTicker
+      implicit0(id: IdleDetector[IO]) = noopIdleDetector
       middleware <- Middleware.make[IO]()
       result <- middleware.alignText("Hi", Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
     } yield {
@@ -34,6 +40,7 @@ class MiddlewareSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       implicit0(tk: Ticker[IO]) = stubTicker
+      implicit0(id: IdleDetector[IO]) = noopIdleDetector
       middleware <- Middleware.make[IO]()
       _ <- middleware.clear()
       cleared <- console.clearedRef.get
@@ -47,6 +54,7 @@ class MiddlewareSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(42, 13))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       implicit0(tk: Ticker[IO]) = stubTicker
+      implicit0(id: IdleDetector[IO]) = noopIdleDetector
       middleware <- Middleware.make[IO]()
       ctx <- middleware.context
     } yield {
@@ -59,6 +67,7 @@ class MiddlewareSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       implicit0(tk: Ticker[IO]) = stubTicker
+      implicit0(id: IdleDetector[IO]) = noopIdleDetector
       middleware <- Middleware.make[IO]()
       _ <- middleware.writeString(ScreenAdjusted("hello"))
       written <- console.writtenRef.get
@@ -73,12 +82,11 @@ class MiddlewareSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       implicit0(tk: Ticker[IO]) = stubTicker
+      implicit0(id: IdleDetector[IO]) = noopIdleDetector
       middleware <- Middleware.make[IO]()
       overlay = new Overlay[IO] {
         override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
           IO.pure(ScreenAdjusted(screenAdjusted.content + " [overlay]"))
-        override def onKeyPress(input: UserInput): IO[Unit] = IO.unit
-        override def onContentChange(content: String): IO[Unit] = IO.unit
       }
       _ <- middleware.addOverlays(List(overlay))
       _ <- middleware.writeString(ScreenAdjusted("content"))
@@ -93,18 +101,15 @@ class MiddlewareSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       implicit0(tk: Ticker[IO]) = stubTicker
+      implicit0(id: IdleDetector[IO]) = noopIdleDetector
       middleware <- Middleware.make[IO]()
       overlay1 = new Overlay[IO] {
         override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
           IO.pure(ScreenAdjusted(screenAdjusted.content + "[1]"))
-        override def onKeyPress(input: UserInput): IO[Unit] = IO.unit
-        override def onContentChange(content: String): IO[Unit] = IO.unit
       }
       overlay2 = new Overlay[IO] {
         override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
           IO.pure(ScreenAdjusted(screenAdjusted.content + "[2]"))
-        override def onKeyPress(input: UserInput): IO[Unit] = IO.unit
-        override def onContentChange(content: String): IO[Unit] = IO.unit
       }
       _ <- middleware.addOverlays(List(overlay1, overlay2))
       _ <- middleware.writeString(ScreenAdjusted("X"))
@@ -114,55 +119,46 @@ class MiddlewareSpec extends CatsEffectSuite {
     }
   }
 
-  test("Middleware read notifies overlays of key press") {
+  test("Middleware read notifies IdleDetector of key press") {
     for {
-      keyPresses <- Ref[IO].of(List.empty[UserInput])
+      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
       console <- TestNConsole.make(
         screen = Screen(20, 5),
         inputs = List(Character('a'))
       )
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       implicit0(tk: Ticker[IO]) = stubTicker
+      implicit0(id: IdleDetector[IO]) = detector: IdleDetector[IO]
+      // Wait to become idle
+      _ <- IO.sleep(100.millis)
+      idleBefore <- detector.isIdle
       middleware <- Middleware.make[IO]()
-      overlay = new Overlay[IO] {
-        override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
-          IO.pure(screenAdjusted)
-        override def onKeyPress(input: UserInput): IO[Unit] =
-          keyPresses.update(input :: _)
-        override def onContentChange(content: String): IO[Unit] = IO.unit
-      }
-      _ <- middleware.addOverlays(List(overlay))
       input <- middleware.read()
-      presses <- keyPresses.get
+      idleAfter <- detector.isIdle
     } yield {
       assertEquals(input, Character('a'))
-      assertEquals(presses, List(Character('a')))
+      assert(idleBefore, "Should have been idle before read")
+      assert(!idleAfter, "Should not be idle after read (key press resets)")
     }
   }
 
-  test("Middleware readInterruptible delegates without notifying overlays") {
+  test("Middleware readInterruptible does not notify IdleDetector") {
     for {
-      keyPresses <- Ref[IO].of(List.empty[UserInput])
+      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
       console <- TestNConsole.make(
         screen = Screen(20, 5),
         inputs = List(Key(SpecialKey.Esc))
       )
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       implicit0(tk: Ticker[IO]) = stubTicker
+      implicit0(id: IdleDetector[IO]) = detector: IdleDetector[IO]
+      _ <- IO.sleep(100.millis)
       middleware <- Middleware.make[IO]()
-      overlay = new Overlay[IO] {
-        override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
-          IO.pure(screenAdjusted)
-        override def onKeyPress(input: UserInput): IO[Unit] =
-          keyPresses.update(input :: _)
-        override def onContentChange(content: String): IO[Unit] = IO.unit
-      }
-      _ <- middleware.addOverlays(List(overlay))
       input <- middleware.readInterruptible()
-      presses <- keyPresses.get
+      idleAfter <- detector.isIdle
     } yield {
       assertEquals(input, Key(SpecialKey.Esc))
-      assertEquals(presses, Nil) // readInterruptible should NOT notify overlays
+      assert(idleAfter, "readInterruptible should NOT reset idle state")
     }
   }
 
@@ -171,18 +167,15 @@ class MiddlewareSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       implicit0(tk: Ticker[IO]) = stubTicker
+      implicit0(id: IdleDetector[IO]) = noopIdleDetector
       middleware <- Middleware.make[IO]()
       overlay1 = new Overlay[IO] {
         override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
           IO.pure(ScreenAdjusted("first"))
-        override def onKeyPress(input: UserInput): IO[Unit] = IO.unit
-        override def onContentChange(content: String): IO[Unit] = IO.unit
       }
       overlay2 = new Overlay[IO] {
         override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
           IO.pure(ScreenAdjusted("second"))
-        override def onKeyPress(input: UserInput): IO[Unit] = IO.unit
-        override def onContentChange(content: String): IO[Unit] = IO.unit
       }
       _ <- middleware.addOverlays(List(overlay1))
       _ <- middleware.writeString(ScreenAdjusted("x"))
