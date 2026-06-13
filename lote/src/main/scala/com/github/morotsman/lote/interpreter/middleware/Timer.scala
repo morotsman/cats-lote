@@ -4,7 +4,7 @@ import cats.Monad
 import cats.effect.{Clock, Ref, Temporal}
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Overlay}
-import com.github.morotsman.lote.model.{Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
@@ -17,9 +17,6 @@ object Timer {
                                                                   ): F[Overlay[F]] = Monad[F].pure {
     new Overlay[F] {
 
-      override def onKeyPress(input: UserInput): F[Unit] = Monad[F].unit
-
-      override def onContentChange(content: String): F[Unit] = Monad[F].unit
 
       override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
         time <- Clock[F].realTime

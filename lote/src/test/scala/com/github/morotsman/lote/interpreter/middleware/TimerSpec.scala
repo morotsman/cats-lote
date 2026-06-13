@@ -58,25 +58,5 @@ class TimerSpec extends CatsEffectSuite {
       assertEquals(result.content.length, content.content.length)
     }
   }
-
-  test("Timer onKeyPress is a no-op") {
-    for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      now <- IO.realTime.map(_.toMillis)
-      timer <- Timer.make[IO](allocatedTime = 10.minutes, startTime = now)
-      _ <- timer.onKeyPress(Key(SpecialKey.Right))
-    } yield ()
-  }
-
-  test("Timer onContentChange is a no-op") {
-    for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      now <- IO.realTime.map(_.toMillis)
-      timer <- Timer.make[IO](allocatedTime = 10.minutes, startTime = now)
-      _ <- timer.onContentChange("new content")
-    } yield ()
-  }
 }
 

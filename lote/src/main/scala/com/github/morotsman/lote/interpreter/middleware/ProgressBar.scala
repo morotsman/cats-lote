@@ -4,7 +4,7 @@ import cats.Monad
 import cats.effect.Ref
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Overlay}
-import com.github.morotsman.lote.model.{Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
 
 case class Milestone(label: String, slideIndex: Int)
 
@@ -23,9 +23,6 @@ object ProgressBar {
       override def setCurrentSlide(index: Int): F[Unit] =
         currentSlideRef.set(index)
 
-      override def onKeyPress(input: UserInput): F[Unit] = Monad[F].unit
-
-      override def onContentChange(content: String): F[Unit] = Monad[F].unit
 
       override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
         currentIndex <- currentSlideRef.get

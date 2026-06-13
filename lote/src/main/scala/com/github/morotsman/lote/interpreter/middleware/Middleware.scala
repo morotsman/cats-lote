@@ -3,7 +3,7 @@ package com.github.morotsman.lote.interpreter.middleware
 import cats.Monad
 import cats.effect.Ref
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay, Ticker, TickerSubscription}
+import com.github.morotsman.lote.algebra.{IdleDetector, Middleware, NConsole, Overlay, Ticker, TickerSubscription}
 import com.github.morotsman.lote.model.{Alignment, Screen, ScreenAdjusted, UserInput}
 
 case class MiddlewareState[F[_]](
@@ -14,8 +14,8 @@ case class MiddlewareState[F[_]](
                                 )
 
 object Middleware {
-  def make[F[_] : Monad : Ref.Make : NConsole : Ticker](
-                                                       ): F[Middleware[F]] =
+  def make[F[_] : Monad : Ref.Make : NConsole : Ticker : IdleDetector](
+                                                                       ): F[Middleware[F]] =
     Ref[F].of(MiddlewareState[F](List.empty)).map { state =>
       new Middleware[F] {
 
@@ -23,15 +23,11 @@ object Middleware {
           state.update(_.copy(overlays = overlays))
         }
 
-        private def notifyContentChange(content: ScreenAdjusted): F[Unit] = for {
-          s <- state.get
-          _ <- s.overlays.traverse_(_.onContentChange(content.content))
-        } yield ()
+        private def notifyContentChange(content: ScreenAdjusted): F[Unit] =
+          IdleDetector[F].onContentChange(content.content)
 
-        private def notifyKeyPress(input: UserInput): F[Unit] = for {
-          s <- state.get
-          _ <- s.overlays.traverse_(_.onKeyPress(input))
-        } yield ()
+        private def notifyKeyPress(input: UserInput): F[Unit] =
+          IdleDetector[F].onKeyPress(input)
 
         private def applyMiddleware(screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
           middleWare <- state.get
