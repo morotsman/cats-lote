@@ -1,7 +1,6 @@
 package com.github.morotsman.lote.interpreter.middleware
 
 import cats.effect.IO
-import cats.effect.kernel.Ref
 import com.github.morotsman.lote.algebra.{IdleDetector, NConsole, Overlay, Ticker, TickerSubscription}
 import com.github.morotsman.lote.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
 import com.github.morotsman.lote.model._

@@ -4,7 +4,7 @@ import cats.Monad
 import cats.effect.{Concurrent, Deferred, Ref}
 import cats.effect.implicits._
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Ticker, TickerSubscription, Transition}
+import com.github.morotsman.lote.algebra.{NConsole, Slide, Ticker, Transition}
 import com.github.morotsman.lote.model.{Screen, ScreenAdjusted, UserInput}
 
 import scala.util.Random

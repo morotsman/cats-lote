@@ -2,13 +2,23 @@ ThisBuild / name := "cats-lote"
 ThisBuild / scalaVersion := "2.13.15"
 ThisBuild / version := "0.0.1-SNAPSHOT"
 
+ThisBuild / semanticdbEnabled := true
+ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
+
 
 val commonSettings =
   Seq(
     addCompilerPlugin(
       "org.typelevel" %% "kind-projector" % "0.13.3" cross CrossVersion.full
     ),
-    addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+    addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+    scalacOptions ++= Seq(
+      "-Wunused:imports",
+      "-Wunused:privates",
+      "-Wunused:locals",
+      "-Wunused:params",
+      "-Wunused:patvars"
+    )
   )
 
 

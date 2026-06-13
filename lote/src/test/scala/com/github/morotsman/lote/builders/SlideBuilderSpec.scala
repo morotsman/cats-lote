@@ -1,9 +1,8 @@
 package com.github.morotsman.lote.builders
 
 import cats.effect.IO
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Transition}
+import com.github.morotsman.lote.algebra.{Slide, Transition}
 import com.github.morotsman.lote.model._
-import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
 
 class SlideBuilderSpec extends CatsEffectSuite {

@@ -111,8 +111,8 @@ class MorphTransitionSpec extends CatsEffectSuite {
 
   test("MorphTransition getNewIndex always returns None") {
     // MorphTransition removes the transformable char in place (no movement)
-    val screen = Screen(10, 5)
-    val cp = CharacterPosition('X', inTransition = true, canTransform = true, tick = 3)
+    Screen(10, 5)
+    CharacterPosition('X', inTransition = true, canTransform = true, tick = 3)
 
     // getNewIndex = None means the character is removed, revealing the "to" char underneath
     val result: Option[Int] = None

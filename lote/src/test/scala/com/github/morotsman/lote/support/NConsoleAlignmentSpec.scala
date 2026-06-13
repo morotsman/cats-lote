@@ -1,6 +1,5 @@
 package com.github.morotsman.lote.support
 
-import cats.effect.IO
 import com.github.morotsman.lote.model._
 import munit.CatsEffectSuite
 

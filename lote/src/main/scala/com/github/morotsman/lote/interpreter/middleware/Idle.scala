@@ -3,7 +3,7 @@ package com.github.morotsman.lote.interpreter.middleware
 import cats.Monad
 import cats.effect.{Clock, Ref, Temporal}
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{IdleDetector, NConsole, Overlay}
+import com.github.morotsman.lote.algebra.{IdleDetector, Overlay}
 import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
 
 import java.time.LocalTime
