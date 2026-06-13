@@ -1,5 +1,5 @@
 ThisBuild / name := "cats-lote"
-ThisBuild / scalaVersion := "2.13.12"
+ThisBuild / scalaVersion := "2.13.15"
 ThisBuild / version := "0.0.1-SNAPSHOT"
 
 
@@ -17,14 +17,14 @@ lazy val lote = (project in file("lote"))
   .settings(
     libraryDependencies ++= Seq(
       // cats
-      "org.typelevel" %% "cats-core" % "2.7.0",
-      "org.typelevel" %% "cats-effect" % "3.3.11",
-      "org.jline" % "jline" % "3.21.0",
-      "dev.optics" %% "monocle-core"  % "3.1.0",
-      "dev.optics" %% "monocle-macro" % "3.1.0",
+      "org.typelevel" %% "cats-core" % "2.12.0",
+      "org.typelevel" %% "cats-effect" % "3.5.7",
+      "org.jline" % "jline" % "3.27.1",
+      "dev.optics" %% "monocle-core"  % "3.3.0",
+      "dev.optics" %% "monocle-macro" % "3.3.0",
       // test
-      "org.typelevel" %% "munit-cats-effect-3" % "1.0.7" % Test,
-      "org.scalameta" %% "munit" % "0.7.29" % Test,
+      "org.typelevel" %% "munit-cats-effect" % "2.0.0" % Test,
+      "org.scalameta" %% "munit" % "1.0.3" % Test,
     ),
     testFrameworks += new TestFramework("munit.Framework"),
     scalacOptions ++= Seq(
