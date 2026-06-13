@@ -1,7 +1,7 @@
 package com.github.morotsman.lote.interpreter.middleware
 
 import cats.effect.IO
-import com.github.morotsman.lote.algebra.{IdleDetector, NConsole, Overlay, Ticker, TickerSubscription}
+import com.github.morotsman.lote.algebra.{IdleDetector, Overlay, Ticker, TickerSubscription}
 import com.github.morotsman.lote.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
 import com.github.morotsman.lote.model._
 import com.github.morotsman.lote.support.TestNConsole
@@ -24,10 +24,7 @@ class MiddlewareSpec extends CatsEffectSuite {
   test("Middleware delegates alignText to underlying NConsole") {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(tk: Ticker[IO]) = stubTicker
-      implicit0(id: IdleDetector[IO]) = noopIdleDetector
-      middleware <- Middleware.make[IO]()
+      middleware <- Middleware.make[IO](console, stubTicker, noopIdleDetector)
       result <- middleware.alignText("Hi", Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
     } yield {
       assert(result.content.contains("Hi"))
@@ -37,10 +34,7 @@ class MiddlewareSpec extends CatsEffectSuite {
   test("Middleware delegates clear to underlying NConsole") {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(tk: Ticker[IO]) = stubTicker
-      implicit0(id: IdleDetector[IO]) = noopIdleDetector
-      middleware <- Middleware.make[IO]()
+      middleware <- Middleware.make[IO](console, stubTicker, noopIdleDetector)
       _ <- middleware.clear()
       cleared <- console.clearedRef.get
     } yield {
@@ -51,10 +45,7 @@ class MiddlewareSpec extends CatsEffectSuite {
   test("Middleware delegates context to underlying NConsole") {
     for {
       console <- TestNConsole.make(screen = Screen(42, 13))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(tk: Ticker[IO]) = stubTicker
-      implicit0(id: IdleDetector[IO]) = noopIdleDetector
-      middleware <- Middleware.make[IO]()
+      middleware <- Middleware.make[IO](console, stubTicker, noopIdleDetector)
       ctx <- middleware.context
     } yield {
       assertEquals(ctx, Screen(42, 13))
@@ -64,10 +55,7 @@ class MiddlewareSpec extends CatsEffectSuite {
   test("Middleware writeString with no overlays writes content unchanged") {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(tk: Ticker[IO]) = stubTicker
-      implicit0(id: IdleDetector[IO]) = noopIdleDetector
-      middleware <- Middleware.make[IO]()
+      middleware <- Middleware.make[IO](console, stubTicker, noopIdleDetector)
       _ <- middleware.writeString(ScreenAdjusted("hello"))
       written <- console.writtenRef.get
     } yield {
@@ -79,10 +67,7 @@ class MiddlewareSpec extends CatsEffectSuite {
   test("Middleware writeString applies overlays") {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(tk: Ticker[IO]) = stubTicker
-      implicit0(id: IdleDetector[IO]) = noopIdleDetector
-      middleware <- Middleware.make[IO]()
+      middleware <- Middleware.make[IO](console, stubTicker, noopIdleDetector)
       overlay = new Overlay[IO] {
         override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
           IO.pure(ScreenAdjusted(screenAdjusted.content + " [overlay]"))
@@ -98,10 +83,7 @@ class MiddlewareSpec extends CatsEffectSuite {
   test("Middleware applies multiple overlays in order") {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(tk: Ticker[IO]) = stubTicker
-      implicit0(id: IdleDetector[IO]) = noopIdleDetector
-      middleware <- Middleware.make[IO]()
+      middleware <- Middleware.make[IO](console, stubTicker, noopIdleDetector)
       overlay1 = new Overlay[IO] {
         override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
           IO.pure(ScreenAdjusted(screenAdjusted.content + "[1]"))
@@ -125,13 +107,10 @@ class MiddlewareSpec extends CatsEffectSuite {
         screen = Screen(20, 5),
         inputs = List(Character('a'))
       )
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(tk: Ticker[IO]) = stubTicker
-      implicit0(id: IdleDetector[IO]) = detector: IdleDetector[IO]
       // Wait to become idle
       _ <- IO.sleep(100.millis)
       idleBefore <- detector.isIdle
-      middleware <- Middleware.make[IO]()
+      middleware <- Middleware.make[IO](console, stubTicker, detector)
       input <- middleware.read()
       idleAfter <- detector.isIdle
     } yield {
@@ -148,11 +127,8 @@ class MiddlewareSpec extends CatsEffectSuite {
         screen = Screen(20, 5),
         inputs = List(Key(SpecialKey.Esc))
       )
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(tk: Ticker[IO]) = stubTicker
-      implicit0(id: IdleDetector[IO]) = detector: IdleDetector[IO]
       _ <- IO.sleep(100.millis)
-      middleware <- Middleware.make[IO]()
+      middleware <- Middleware.make[IO](console, stubTicker, detector)
       input <- middleware.readInterruptible()
       idleAfter <- detector.isIdle
     } yield {
@@ -164,10 +140,7 @@ class MiddlewareSpec extends CatsEffectSuite {
   test("Middleware addOverlays replaces existing overlays") {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(tk: Ticker[IO]) = stubTicker
-      implicit0(id: IdleDetector[IO]) = noopIdleDetector
-      middleware <- Middleware.make[IO]()
+      middleware <- Middleware.make[IO](console, stubTicker, noopIdleDetector)
       overlay1 = new Overlay[IO] {
         override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): IO[ScreenAdjusted] =
           IO.pure(ScreenAdjusted("first"))

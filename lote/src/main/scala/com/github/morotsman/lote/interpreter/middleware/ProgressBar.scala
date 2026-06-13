@@ -3,7 +3,7 @@ package com.github.morotsman.lote.interpreter.middleware
 import cats.Monad
 import cats.effect.Ref
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{NConsole, Overlay}
+import com.github.morotsman.lote.algebra.Overlay
 import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
 
 case class Milestone(label: String, slideIndex: Int)
@@ -14,7 +14,7 @@ trait ProgressBar[F[_]] extends Overlay[F] {
 
 object ProgressBar {
 
-  def make[F[_] : Monad : Ref.Make : NConsole](
+  def make[F[_] : Monad : Ref.Make](
                                                  totalSlides: Int,
                                                  milestones: List[Milestone] = List.empty
                                                ): F[ProgressBar[F]] = Ref[F].of(0).map { currentSlideRef =>

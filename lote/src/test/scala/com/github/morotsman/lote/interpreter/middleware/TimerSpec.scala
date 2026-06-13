@@ -1,9 +1,7 @@
 package com.github.morotsman.lote.interpreter.middleware
 
 import cats.effect.IO
-import com.github.morotsman.lote.algebra.NConsole
 import com.github.morotsman.lote.model._
-import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
@@ -12,8 +10,6 @@ class TimerSpec extends CatsEffectSuite {
 
   test("Timer renders time remaining at start of content") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       now <- IO.realTime.map(_.toMillis)
       timer <- Timer.make[IO](allocatedTime = 10.minutes, startTime = now)
       content = ScreenAdjusted("X" * 40)
@@ -27,8 +23,6 @@ class TimerSpec extends CatsEffectSuite {
 
   test("Timer shows decreasing time after some time passes") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       // Simulate starting 5 minutes ago
       now <- IO.realTime.map(_.toMillis)
       startTime = now - 5.minutes.toMillis
@@ -44,8 +38,6 @@ class TimerSpec extends CatsEffectSuite {
 
   test("Timer replaces characters at the beginning of content") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       now <- IO.realTime.map(_.toMillis)
       timer <- Timer.make[IO](allocatedTime = 30.minutes, startTime = now)
       content = ScreenAdjusted("ABCDEFGHIJKLMNOP")
