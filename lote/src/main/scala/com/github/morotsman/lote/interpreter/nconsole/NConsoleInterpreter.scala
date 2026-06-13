@@ -1,7 +1,7 @@
 package com.github.morotsman.lote.interpreter.nconsole
 
 import cats.Monad
-import cats.effect.Sync
+import cats.effect.{Resource, Sync}
 import cats.implicits._
 import com.github.morotsman.lote.algebra.NConsole
 import com.github.morotsman.lote.model._
@@ -10,8 +10,9 @@ object NConsoleInterpreter {
 
   /**
    * Creates an NConsole backed by the given Terminal abstraction.
+   * Package-private: use `resource` methods for safe lifecycle management.
    */
-  def make[F[_] : Sync](terminal: Terminal): NConsole[F] = {
+  private[lote] def make[F[_] : Sync](terminal: Terminal): NConsole[F] = {
     val width = terminal.width
     val height = terminal.height
 
@@ -28,6 +29,31 @@ object NConsoleInterpreter {
               case 'D' => Key(SpecialKey.Left)
               case 'C' => Key(SpecialKey.Right)
               case 'B' => Key(SpecialKey.Down)
+              case '<' =>
+                // SGR extended mouse mode: ESC [ < button ; x ; y M/m
+                val sb = new StringBuilder
+                var ch = terminal.read(0).toChar
+                while (ch != 'M' && ch != 'm') {
+                  sb.append(ch)
+                  ch = terminal.read(0).toChar
+                }
+                val parts = sb.toString.split(';')
+                if (parts.length == 3) {
+                  val button = parts(0).toInt
+                  val x = parts(1).toInt
+                  val y = parts(2).toInt
+                  val isRelease = ch == 'm'
+                  if (button >= 32 && button <= 35) {
+                    // Motion events (bit 5 set = 32 added to button value)
+                    MouseMove(x, y)
+                  } else if (!isRelease) {
+                    MouseClick(x, y)
+                  } else {
+                    Key(SpecialKey.Unknown)
+                  }
+                } else {
+                  Key(SpecialKey.Unknown)
+                }
               case _ => Key(SpecialKey.Unknown)
             }
           } else {
@@ -72,9 +98,26 @@ object NConsoleInterpreter {
         screenHeight = height
       ))
 
+      override def close(): F[Unit] = Sync[F].blocking {
+        terminal.close()
+      }
+
       override def read(): F[UserInput] = read(0L)
     }
   }
 
-  def make[F[_] : Sync](): NConsole[F] = make(JLineTerminal.make())
+  private def make[F[_] : Sync](): NConsole[F] = make(JLineTerminal.make())
+
+  /**
+   * Creates an NConsole as a Resource that automatically handles terminal cleanup
+   * (disabling mouse tracking, restoring terminal state) when the resource is released.
+   */
+  def resource[F[_] : Sync](): Resource[F, NConsole[F]] =
+    Resource.make(Sync[F].delay(make[F]()))(_.close())
+
+  /**
+   * Creates an NConsole as a Resource backed by the given Terminal.
+   */
+  def resource[F[_] : Sync](terminal: Terminal): Resource[F, NConsole[F]] =
+    Resource.make(Sync[F].delay(make[F](terminal)))(_.close())
 }
