@@ -17,7 +17,7 @@ object NConsoleInterpreter {
     val height = terminal.height
 
     new NConsole[F] {
-      override def read(timeoutInMillis: Long): F[UserInput] = Sync[F].blocking {
+      override def read(timeoutInMillis: Long): F[UserInput] = Sync[F].interruptible {
         val input = terminal.read(timeoutInMillis).toChar
 
         if (input == 27) {
