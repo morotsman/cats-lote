@@ -41,6 +41,10 @@ object IdleDetectorInterpreter {
 
     override def onKeyPress(input: UserInput): F[Unit] = notifyActivity()
 
+    override def onMouseClick(x: Int, y: Int): F[Unit] = notifyActivity()
+
+    override def onMouseMove(x: Int, y: Int): F[Unit] = notifyActivity()
+
     override def onContentChange(content: String): F[Unit] = for {
       s <- state.get
       now <- Clock[F].realTime.map(_.toMillis)

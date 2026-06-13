@@ -160,5 +160,52 @@ class MiddlewareSpec extends CatsEffectSuite {
       assertEquals(written(1), "first")
     }
   }
+
+  test("Middleware read notifies IdleDetector of mouse click") {
+    for {
+      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      console <- TestNConsole.make(
+        screen = Screen(20, 5),
+        inputs = List(MouseClick(10, 20))
+      )
+      _ <- IO.sleep(100.millis)
+      idleBefore <- detector.isIdle
+      middleware <- Middleware.make[IO](console, stubTicker, detector)
+      input <- middleware.read()
+      idleAfter <- detector.isIdle
+    } yield {
+      assertEquals(input, MouseClick(10, 20))
+      assert(idleBefore, "Should have been idle before read")
+      assert(!idleAfter, "Should not be idle after mouse click")
+    }
+  }
+
+  test("Middleware read notifies IdleDetector of mouse move") {
+    for {
+      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      console <- TestNConsole.make(
+        screen = Screen(20, 5),
+        inputs = List(MouseMove(5, 10))
+      )
+      _ <- IO.sleep(100.millis)
+      idleBefore <- detector.isIdle
+      middleware <- Middleware.make[IO](console, stubTicker, detector)
+      input <- middleware.read()
+      idleAfter <- detector.isIdle
+    } yield {
+      assertEquals(input, MouseMove(5, 10))
+      assert(idleBefore, "Should have been idle before read")
+      assert(!idleAfter, "Should not be idle after mouse move")
+    }
+  }
+
+  test("Middleware close delegates to underlying NConsole") {
+    for {
+      console <- TestNConsole.make(screen = Screen(20, 5))
+      middleware <- Middleware.make[IO](console, stubTicker, noopIdleDetector)
+      // close() on TestNConsole is a no-op (IO.unit), just verify it doesn't fail
+      _ <- middleware.close()
+    } yield ()
+  }
 }
 

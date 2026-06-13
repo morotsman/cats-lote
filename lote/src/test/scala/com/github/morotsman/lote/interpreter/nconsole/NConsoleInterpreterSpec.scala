@@ -172,5 +172,76 @@ class NConsoleInterpreterSpec extends CatsEffectSuite {
       assertEquals(result, Character('x'))
     }
   }
+
+  test("read returns MouseClick for SGR mouse click sequence") {
+    // ESC [ < 0 ; 10 ; 20 M  (button 0 = left click at x=10, y=20, 'M' = press)
+    val inputs = List(27, '['.toInt, '<'.toInt) ++
+      "0;10;20".map(_.toInt).toList ++
+      List('M'.toInt)
+    val terminal = new FakeTerminal(inputs = inputs)
+    val console = NConsoleInterpreter.make[IO](terminal)
+    for {
+      result <- console.read()
+    } yield assertEquals(result, MouseClick(10, 20))
+  }
+
+  test("read returns MouseClick for right mouse button") {
+    // ESC [ < 2 ; 5 ; 8 M  (button 2 = right click)
+    val inputs = List(27, '['.toInt, '<'.toInt) ++
+      "2;5;8".map(_.toInt).toList ++
+      List('M'.toInt)
+    val terminal = new FakeTerminal(inputs = inputs)
+    val console = NConsoleInterpreter.make[IO](terminal)
+    for {
+      result <- console.read()
+    } yield assertEquals(result, MouseClick(5, 8))
+  }
+
+  test("read returns MouseMove for SGR mouse move sequence") {
+    // ESC [ < 35 ; 15 ; 25 M  (button 35 = motion with no button, bit 5 set)
+    val inputs = List(27, '['.toInt, '<'.toInt) ++
+      "35;15;25".map(_.toInt).toList ++
+      List('M'.toInt)
+    val terminal = new FakeTerminal(inputs = inputs)
+    val console = NConsoleInterpreter.make[IO](terminal)
+    for {
+      result <- console.read()
+    } yield assertEquals(result, MouseMove(15, 25))
+  }
+
+  test("read returns MouseMove for motion with left button held") {
+    // ESC [ < 32 ; 3 ; 7 M  (button 32 = motion + left button)
+    val inputs = List(27, '['.toInt, '<'.toInt) ++
+      "32;3;7".map(_.toInt).toList ++
+      List('M'.toInt)
+    val terminal = new FakeTerminal(inputs = inputs)
+    val console = NConsoleInterpreter.make[IO](terminal)
+    for {
+      result <- console.read()
+    } yield assertEquals(result, MouseMove(3, 7))
+  }
+
+  test("read returns Unknown for mouse button release") {
+    // ESC [ < 0 ; 10 ; 20 m  (lowercase 'm' = release)
+    val inputs = List(27, '['.toInt, '<'.toInt) ++
+      "0;10;20".map(_.toInt).toList ++
+      List('m'.toInt)
+    val terminal = new FakeTerminal(inputs = inputs)
+    val console = NConsoleInterpreter.make[IO](terminal)
+    for {
+      result <- console.read()
+    } yield assertEquals(result, Key(SpecialKey.Unknown))
+  }
+
+  test("close calls terminal.close") {
+    var closed = false
+    val terminal = new FakeTerminal(inputs = Nil) {
+      override def close(): Unit = closed = true
+    }
+    val console = NConsoleInterpreter.make[IO](terminal)
+    for {
+      _ <- console.close()
+    } yield assert(closed, "terminal.close() should have been called")
+  }
 }
 

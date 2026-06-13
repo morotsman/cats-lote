@@ -4,7 +4,7 @@ import cats.Monad
 import cats.effect.Ref
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{IdleDetector, Middleware, NConsole, Overlay, Ticker, TickerSubscription}
-import com.github.morotsman.lote.model.{Alignment, Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.model.{Alignment, MouseClick, MouseMove, Screen, ScreenAdjusted, UserInput}
 
 case class MiddlewareState[F[_]](
                                   overlays: List[Overlay[F]],
@@ -29,8 +29,11 @@ object Middleware {
         private def notifyContentChange(content: ScreenAdjusted): F[Unit] =
           idleDetector.onContentChange(content.content)
 
-        private def notifyKeyPress(input: UserInput): F[Unit] =
-          idleDetector.onKeyPress(input)
+        private def notifyKeyPress(input: UserInput): F[Unit] = input match {
+          case MouseClick(x, y) => idleDetector.onMouseClick(x, y)
+          case MouseMove(x, y) => idleDetector.onMouseMove(x, y)
+          case _ => idleDetector.onKeyPress(input)
+        }
 
         private def applyMiddleware(screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
           middleWare <- state.get
@@ -95,6 +98,9 @@ object Middleware {
 
         override def clear(): F[Unit] =
           console.clear()
+
+        override def close(): F[Unit] =
+          console.close()
 
         override def context: F[Screen] = console.context
       }

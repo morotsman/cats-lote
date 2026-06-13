@@ -9,5 +9,6 @@ trait Terminal {
   def height: Int
   def flush(): Unit
   def write(s: String): Unit
+  def close(): Unit = ()
 }
 

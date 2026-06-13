@@ -9,6 +9,10 @@ final case class Key(k: SpecialKey) extends UserInput
 
 final case class Character(c: Char) extends UserInput
 
+final case class MouseClick(x: Int, y: Int) extends UserInput
+
+final case class MouseMove(x: Int, y: Int) extends UserInput
+
 
 object SpecialKey extends Enumeration {
   type SpecialKey = Value

@@ -15,8 +15,7 @@ object Session1 extends IOApp.Simple {
 
   override def run(): IO[Unit] = {
 
-    def createMiddleware(): IO[(NConsole[IO], Ticker[IO], ProgressBar[IO], IdleDetector[IO])] = {
-      val console: NConsole[IO] = NConsoleInterpreter.make[IO]()
+    def createMiddleware(console: NConsole[IO]): IO[(NConsole[IO], Ticker[IO], ProgressBar[IO], IdleDetector[IO])] = {
       for {
         ticker <- TickerInterpreter.make[IO]()
         idleDetector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 5.seconds))
@@ -37,13 +36,13 @@ object Session1 extends IOApp.Simple {
         _ <- executor.start()
       } yield ()
 
-
-
-    for {
-      result <- createMiddleware()
-      (middleware, ticker, progressBar, idleDetector) = result
-      _ <- startPresentation(progressBar, idleDetector)(middleware, ticker)
-    } yield ()
+    NConsoleInterpreter.resource[IO]().use { console =>
+      for {
+        result <- createMiddleware(console)
+        (middleware, ticker, progressBar, idleDetector) = result
+        _ <- startPresentation(progressBar, idleDetector)(middleware, ticker)
+      } yield ()
+    }
   }
 
 }

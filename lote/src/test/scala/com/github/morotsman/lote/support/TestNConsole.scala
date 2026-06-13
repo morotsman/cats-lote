@@ -64,6 +64,8 @@ case class TestNConsole(
   override def clear(): IO[Unit] =
     clearedRef.update(_ + 1)
 
+  override def close(): IO[Unit] = IO.unit
+
   override def context: IO[Screen] = IO.pure(screen)
 }
 

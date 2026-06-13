@@ -108,5 +108,59 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
       assert(idle3)
     }
   }
+
+  test("onMouseClick resets idle state") {
+    for {
+      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      _ <- IO.sleep(100.millis)
+      idleBefore <- detector.isIdle
+      _ <- detector.onMouseClick(10, 20)
+      idleAfter <- detector.isIdle
+    } yield {
+      assert(idleBefore)
+      assert(!idleAfter)
+    }
+  }
+
+  test("onMouseMove resets idle state") {
+    for {
+      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      _ <- IO.sleep(100.millis)
+      idleBefore <- detector.isIdle
+      _ <- detector.onMouseMove(5, 15)
+      idleAfter <- detector.isIdle
+    } yield {
+      assert(idleBefore)
+      assert(!idleAfter)
+    }
+  }
+
+  test("onMouseClick resets idleStartTime") {
+    for {
+      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      _ <- IO.sleep(100.millis)
+      _ <- detector.isIdle
+      startBefore <- detector.idleStartTime
+      _ <- detector.onMouseClick(1, 1)
+      startAfter <- detector.idleStartTime
+    } yield {
+      assert(startBefore.isDefined)
+      assertEquals(startAfter, None)
+    }
+  }
+
+  test("onMouseMove resets idleStartTime") {
+    for {
+      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      _ <- IO.sleep(100.millis)
+      _ <- detector.isIdle
+      startBefore <- detector.idleStartTime
+      _ <- detector.onMouseMove(1, 1)
+      startAfter <- detector.idleStartTime
+    } yield {
+      assert(startBefore.isDefined)
+      assertEquals(startAfter, None)
+    }
+  }
 }
 

@@ -17,6 +17,8 @@ trait NConsole[F[_]] {
 
   def clear(): F[Unit]
 
+  def close(): F[Unit]
+
   def context: F[Screen]
 }
 
