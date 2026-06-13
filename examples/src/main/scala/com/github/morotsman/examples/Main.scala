@@ -16,15 +16,11 @@ object Session1 extends IOApp.Simple {
   override def run(): IO[Unit] = {
 
     def createMiddleware(): IO[(NConsole[IO], Ticker[IO], ProgressBar[IO], IdleDetector[IO])] = {
-      implicit val console: NConsole[IO] = NConsoleInterpreter.make[IO]()
+      val console: NConsole[IO] = NConsoleInterpreter.make[IO]()
       for {
         ticker <- TickerInterpreter.make[IO]()
         idleDetector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 5.seconds))
-        middleware <- {
-          implicit val t: Ticker[IO] = ticker
-          implicit val id: IdleDetector[IO] = idleDetector
-          Middleware.make[IO]()
-        }
+        middleware <- Middleware.make[IO](console, ticker, idleDetector)
         timer <- Timer.make[IO](30.minutes)
         progressBar <- ProgressBar.make[IO](14)
         idle <- Idle.make[IO](idleDetector)

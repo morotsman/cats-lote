@@ -1,17 +1,13 @@
 package com.github.morotsman.lote.interpreter.middleware
 
 import cats.effect.IO
-import com.github.morotsman.lote.algebra.NConsole
 import com.github.morotsman.lote.model._
-import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
 
 class ProgressBarSpec extends CatsEffectSuite {
 
   test("ProgressBar shows first slide as current") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       bar <- ProgressBar.make[IO](totalSlides = 5)
       content = ScreenAdjusted((" " * 40 + "\n") * 9 + " " * 40)
       result <- bar.applyOverlay(Screen(40, 10), content)
@@ -25,8 +21,6 @@ class ProgressBarSpec extends CatsEffectSuite {
 
   test("ProgressBar updates current slide indicator") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       bar <- ProgressBar.make[IO](totalSlides = 3)
       _ <- bar.setCurrentSlide(1)
       content = ScreenAdjusted((" " * 40 + "\n") * 9 + " " * 40)
@@ -43,8 +37,6 @@ class ProgressBarSpec extends CatsEffectSuite {
 
   test("ProgressBar at last slide shows all passed except current") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       bar <- ProgressBar.make[IO](totalSlides = 3)
       _ <- bar.setCurrentSlide(2)
       content = ScreenAdjusted((" " * 40 + "\n") * 9 + " " * 40)
@@ -61,8 +53,6 @@ class ProgressBarSpec extends CatsEffectSuite {
 
   test("ProgressBar with milestones renders milestone labels") {
     for {
-      console <- TestNConsole.make(screen = Screen(60, 12))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       bar <- ProgressBar.make[IO](
         totalSlides = 5,
         milestones = List(Milestone("Intro", 0), Milestone("Main", 2))

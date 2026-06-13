@@ -3,7 +3,7 @@ package com.github.morotsman.lote.interpreter.middleware
 import cats.Monad
 import cats.effect.{Clock, Ref, Temporal}
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{NConsole, Overlay}
+import com.github.morotsman.lote.algebra.Overlay
 import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
 
 import java.util.concurrent.TimeUnit
@@ -11,7 +11,7 @@ import scala.concurrent.duration.FiniteDuration
 
 object Timer {
 
-  def make[F[_] : Monad : Clock : Temporal : Ref.Make : NConsole](
+  def make[F[_] : Monad : Clock : Temporal : Ref.Make](
                                                                     allocatedTime: FiniteDuration,
                                                                     startTime: Long = System.currentTimeMillis()
                                                                   ): F[Overlay[F]] = Monad[F].pure {

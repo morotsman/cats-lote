@@ -14,8 +14,11 @@ case class MiddlewareState[F[_]](
                                 )
 
 object Middleware {
-  def make[F[_] : Monad : Ref.Make : NConsole : Ticker : IdleDetector](
-                                                                       ): F[Middleware[F]] =
+  def make[F[_] : Monad : Ref.Make](
+                                      console: NConsole[F],
+                                      ticker: Ticker[F],
+                                      idleDetector: IdleDetector[F]
+                                    ): F[Middleware[F]] =
     Ref[F].of(MiddlewareState[F](List.empty)).map { state =>
       new Middleware[F] {
 
@@ -24,10 +27,10 @@ object Middleware {
         }
 
         private def notifyContentChange(content: ScreenAdjusted): F[Unit] =
-          IdleDetector[F].onContentChange(content.content)
+          idleDetector.onContentChange(content.content)
 
         private def notifyKeyPress(input: UserInput): F[Unit] =
-          IdleDetector[F].onKeyPress(input)
+          idleDetector.onKeyPress(input)
 
         private def applyMiddleware(screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
           middleWare <- state.get
@@ -48,7 +51,7 @@ object Middleware {
               currentState <- state.get
               contentStillCurrent = currentState.lastContent.contains(content)
               _ <- if (contentStillCurrent && !currentState.lastRendered.contains(withOverlay.content)) {
-                NConsole[F].writeString(withOverlay) *>
+                console.writeString(withOverlay) *>
                   state.update(_.copy(lastRendered = Some(withOverlay.content)))
               } else Monad[F].unit
             } yield ()
@@ -59,41 +62,41 @@ object Middleware {
           s <- state.get
           _ <- if (s.subscription.isEmpty) {
             for {
-              sub <- Ticker[F].subscribe(onTick)
+              sub <- ticker.subscribe(onTick)
               _ <- state.update(_.copy(subscription = Some(sub)))
-              _ <- Ticker[F].start
+              _ <- ticker.start
             } yield ()
           } else Monad[F].unit
         } yield ()
 
         override def read(timeoutInMillis: Long): F[UserInput] = for {
-          input <- NConsole[F].read()
+          input <- console.read()
           _ <- notifyKeyPress(input)
         } yield input
 
         override def read(): F[UserInput] = for {
-          input <- NConsole[F].read(0L)
+          input <- console.read(0L)
           _ <- notifyKeyPress(input)
         } yield input
 
         override def readInterruptible(): F[UserInput] =
-          NConsole[F].readInterruptible()
+          console.readInterruptible()
 
         override def alignText(s: String, alignment: Alignment): F[ScreenAdjusted] =
-          NConsole[F].alignText(s: String, alignment: Alignment)
+          console.alignText(s: String, alignment: Alignment)
 
         override def writeString(s: ScreenAdjusted): F[Unit] = for {
           _ <- state.update(_.copy(lastContent = Some(s)))
           _ <- ensureSubscribed()
           withOverlay <- applyMiddleware(s)
-          _ <- NConsole[F].writeString(withOverlay)
+          _ <- console.writeString(withOverlay)
           _ <- state.update(_.copy(lastRendered = Some(withOverlay.content)))
         } yield ()
 
         override def clear(): F[Unit] =
-          NConsole[F].clear()
+          console.clear()
 
-        override def context: F[Screen] = NConsole[F].context
+        override def context: F[Screen] = console.context
       }
     }
 
