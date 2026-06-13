@@ -5,7 +5,7 @@ import com.github.morotsman.lote.algebra.{IdleDetector, NConsole, Ticker}
 import com.github.morotsman.lote.interpreter.nconsole.NConsoleInterpreter
 import com.github.morotsman.lote.interpreter.ticker.TickerInterpreter
 import com.github.morotsman.lote.interpreter.PresentationExecutorInterpreter
-import com.github.morotsman.lote.interpreter.middleware.{Idle, IdleOverlayConfig, Middleware, ProgressBar, Timer}
+import com.github.morotsman.lote.interpreter.middleware.{Idle, Middleware, ProgressBar, Timer}
 import com.github.morotsman.lote.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
 
 import scala.concurrent.duration.DurationInt

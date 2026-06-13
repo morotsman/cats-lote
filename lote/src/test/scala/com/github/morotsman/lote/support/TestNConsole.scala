@@ -32,7 +32,7 @@ case class TestNConsole(
 
   override def alignText(s: String, alignment: Alignment): IO[ScreenAdjusted] = {
     val lines = s.split("\n", -1)
-    val maxLineWidth = lines.map(_.length).maxOption.getOrElse(0)
+    lines.map(_.length).maxOption.getOrElse(0)
 
     val horizontallyAligned = alignment.horizontalAlignment match {
       case HorizontalAlignment.Left => lines.map(l => l + " " * (screen.screenWidth - l.length))
