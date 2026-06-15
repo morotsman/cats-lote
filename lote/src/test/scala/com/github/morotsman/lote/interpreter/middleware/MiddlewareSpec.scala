@@ -6,8 +6,6 @@ import com.github.morotsman.lote.model._
 import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
 
-import scala.concurrent.duration._
-
 class MiddlewareSpec extends CatsEffectSuite {
 
   /** A no-op Ticker for tests that don't need real ticking */
