@@ -50,7 +50,8 @@ case class PresentationBuilder[F[
 
   def build()(implicit ev: State =:= Buildable): Presentation[F] = Presentation(
     slideSpecifications = slideSpecifications.reverse,
-    exitSlide = exitSlide
+    exitSlide = exitSlide,
+    overlays = overlays.reverse
   )
 
 }

@@ -1,4 +1,4 @@
-package com.github.morotsman.examples.slides
+package com.github.morotsman.lote.interpreter
 
 import cats.effect.{Ref, Temporal}
 import cats.implicits._

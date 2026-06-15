@@ -2,7 +2,7 @@
 
 Do you ever have the urge to create truly underwhelming presentations?
 
-Then this might be for you: A lo-tech presentation tool for making presentations in the terminal, built with Scala, [Cats Effect](https://typelevel.org/cats-effect/), and an unreasonable amount of functional programming — because why use PowerPoint when you can write a monad?
+Then this might be for you: A lo-tech presentation tool for making presentations in the terminal, built with Scala, [Cats Effect](https://typelevel.org/cats-effect/), and an unreasonable amount of functional programming, because why use PowerPoint when you can write a monad?
 
 ## Features
 
@@ -38,19 +38,24 @@ Overlays that render on top of your slides, because your content alone clearly i
 
 - **Timer** – A countdown timer so you know exactly how much of your audience's time you're wasting.
 - **ProgressBar** – Shows how far through the presentation you are. Gives your audience hope that it will eventually end. Supports named milestones for section markers.
+- **Quick Navigation** – Press `N` to pop up a slide list, use Up/Down arrows to browse, Enter to jump. For when you need to skip ahead before your audience falls asleep.
 - **Idle** – An idle-screen animation that activates when you stop presenting. Bugs crawl in from the edges, steal words from your slide, and eventually rearrange themselves to display the current time. It's more entertaining than most presentations.
 
 ### 🏗️ Type-Safe Builder DSL
 
 A type-safe builder pattern using phantom types, because if you're going to build a presentation tool in Scala, you might as well make the compiler yell at you for forgetting a slide:
 
-- **PresentationBuilder** – Compose a full presentation from slides, transitions, overlays, and an optional exit slide.
+- **SessionBuilder** – The high-level API that wires everything together: slides, transitions, middleware, overlays, and execution. Just call `.run()` and try to contain your excitement.
 - **TextSlideBuilder** – Quickly create text-based slides with content, alignment, and transitions.
 - **SlideBuilder** – Add custom interactive slides with their own logic, for when plain text isn't over-engineered enough.
 
 ### 🖥️ Interactive Slides
 
 Implement the `Slide[F]` trait to create fully custom, interactive slides that respond to user keyboard input. Finally, audience participation that doesn't involve eye contact.
+
+### 📋 Step-by-Step Slides
+
+`StepByStepSlide` lets you reveal content progressively, press any key to advance to the next stage. Perfect for bullet points you want to dramatically unveil one at a time, as if each one is a plot twist.
 
 ### ⚡ Ticker-Based Animation Engine
 
@@ -85,31 +90,61 @@ examples/runMain com.github.morotsman.examples.Session1
 
 ### Navigation
 
-- Use arrow keys to navigate between slides
-- Press `q` to quit (no judgement)
+- Use `←` / `→` arrow keys to navigate between slides
+- Press `Esc` to exit (no judgement)
+- Press `N` to toggle quick navigation overlay, then `↑` / `↓` to browse and `Enter` to jump
 
 ## Quick Example
 
 ```scala
 import cats.effect._
-import com.github.morotsman.lote.algebra.{NConsole, Ticker}
-import com.github.morotsman.lote.builders.PresentationBuilder
+import com.github.morotsman.lote.builders.SessionBuilder
 import com.github.morotsman.lote.interpreter.transition._
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
 
-// Build a presentation (the hard way)
-val presentation = PresentationBuilder[IO]()
-  .addTextSlide {
-    _.content("Hello, Terminal!")
-      .transition(MorphTransition())
-      .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+import scala.concurrent.duration.DurationInt
+
+object MyPresentation extends IOApp.Simple {
+  override def run(): IO[Unit] = {
+    SessionBuilder[IO]()
+      .withTimer(15.minutes)
+      .withProgressBar()
+      .withQuickNavigation()
+      .withIdleAnimation(idleTimeout = 2.minutes)
+      .addTextSlide { implicit ctx => import ctx._
+        _.content("Hello, Terminal!")
+          .title("Intro")
+          .transition(MorphTransition())
+          .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+      }
+      .addTextSlide { implicit ctx => import ctx._
+        _.content("Goodbye!")
+          .title("Outro")
+          .transition(FallingCharactersTransition())
+          .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+      }
+      .addExitSlide("Thanks for watching!")
+      .run()
   }
-  .addTextSlide {
-    _.content("Goodbye!")
-      .transition(FallingCharactersTransition())
-      .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+}
+```
+
+### Interactive Slides with `addSlideF`
+
+For slides that need effectful construction (allocating `Ref`s, building stateful components), use `addSlideF`:
+
+```scala
+.addSlideF { implicit ctx => import ctx._
+  for {
+    slide <- StepByStepSlide.make[IO](Vector(
+      "First point",
+      "First point\nSecond point",
+      "First point\nSecond point\nThird point, mic drop"
+    ))
+  } yield {
+    _.addSlide(slide).title("Agenda")
   }
-  .build()
+}
 ```
 
 ## Tech Stack
@@ -127,9 +162,9 @@ cats-lote/
 ├── lote/          # Core library
 │   └── src/main/scala/com/github/morotsman/lote/
 │       ├── algebra/       # Core traits (Slide, Transition, Middleware, etc.)
-│       ├── builders/      # Type-safe builder DSL
+│       ├── builders/      # Type-safe builder DSL (SessionBuilder, TextSlideBuilder, SlideBuilder)
 │       ├── interpreter/   # Implementations
-│       │   ├── middleware/    # Timer, ProgressBar, Idle
+│       │   ├── middleware/    # Timer, ProgressBar, QuickNavigation, Idle
 │       │   └── transition/   # Morph, Falling, Replace, Grab
 │       ├── model/         # Data types (Alignment, Screen, Presentation)
 │       └── util/          # Colors and helpers

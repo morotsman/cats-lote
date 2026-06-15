@@ -41,12 +41,12 @@ object JLineTerminal {
         override def handle(sig: Signal): Unit = {
           disableMouseTracking()
           // Chain to the previous handler so the application/sbt can terminate gracefully.
-          // Never call System.exit() here — it triggers JVM shutdown which conflicts with
+          // Never call System.exit() here, it triggers JVM shutdown which conflicts with
           // sbt's own shutdown hook management.
           if (prevHandler != null && prevHandler != SignalHandler.SIG_DFL && prevHandler != SignalHandler.SIG_IGN) {
             prevHandler.handle(sig)
           } else {
-            // No meaningful previous handler — restore default and re-raise so the OS
+            // No meaningful previous handler, restore default and re-raise so the OS
             // delivers the default SIGINT behavior (process termination) without going
             // through System.exit().
             Signal.handle(new Signal("INT"), SignalHandler.SIG_DFL)
