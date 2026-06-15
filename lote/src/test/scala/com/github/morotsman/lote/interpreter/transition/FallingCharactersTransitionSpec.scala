@@ -129,7 +129,7 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
     val transition = new Object {
       def setupPosition(
           fromCharacter: Char,
-          toCharacter: Char
+          _toCharacter: Char
       ): List[CharacterPosition] = List(
         CharacterPosition(
           fromCharacter,

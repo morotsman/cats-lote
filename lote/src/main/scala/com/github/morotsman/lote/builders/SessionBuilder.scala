@@ -6,7 +6,11 @@ import cats.implicits._
 import com.github.morotsman.lote.algebra._
 import com.github.morotsman.lote.builders.SlideBuilder.{WithContentSlide, WithoutSlide}
 import com.github.morotsman.lote.builders.TextSlideBuilder.{WithContent, WithoutContent}
-import com.github.morotsman.lote.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter, PresentationExecutorInterpreter}
+import com.github.morotsman.lote.interpreter.{
+  IdleDetectorConfig,
+  IdleDetectorInterpreter,
+  PresentationExecutorInterpreter
+}
 import com.github.morotsman.lote.interpreter.middleware.{
   Idle,
   IdleOverlayConfig,
@@ -22,9 +26,8 @@ import com.github.morotsman.lote.model.Presentation
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
-/** Provides implicit NConsole and Ticker instances for use inside slide builder functions.
-  * This is passed to the user's builder lambdas so transitions and other components that
-  * require these typeclasses can be constructed.
+/** Provides implicit NConsole and Ticker instances for use inside slide builder functions. This is passed to the user's
+  * builder lambdas so transitions and other components that require these typeclasses can be constructed.
   */
 class SlideContext[F[_]](val console: NConsole[F], val ticker: Ticker[F]) {
   implicit def nConsole: NConsole[F] = console
@@ -33,8 +36,8 @@ class SlideContext[F[_]](val console: NConsole[F], val ticker: Ticker[F]) {
 
 /** A high-level builder that encapsulates all the wiring needed to run a presentation with middleware.
   *
-  * Instead of manually creating a ticker, idle detector, middleware layer, and presentation executor,
-  * you can use the SessionBuilder to configure everything declaratively and then call `run()`.
+  * Instead of manually creating a ticker, idle detector, middleware layer, and presentation executor, you can use the
+  * SessionBuilder to configure everything declaratively and then call `run()`.
   *
   * Example:
   * {{{
@@ -68,19 +71,19 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
 
   // -- Slide building --
 
-  /** Adds a custom interactive slide using the SlideBuilder DSL.
-    * The builder function receives a `SlideContext` providing implicit `NConsole` and `Ticker` instances.
+  /** Adds a custom interactive slide using the SlideBuilder DSL. The builder function receives a `SlideContext`
+    * providing implicit `NConsole` and `Ticker` instances.
     */
   def addSlide(
       slideBuilder: SlideContext[F] => SlideBuilder[F, WithoutSlide] => SlideBuilder[F, WithContentSlide]
   ): SessionBuilder[F] =
     this.copy(slideSteps = slideSteps :+ SessionBuilder.CustomSlide(slideBuilder))
 
-  /** Adds an effectful custom slide. Use this for interactive slides that require
-    * effectful construction (e.g., allocating Refs, Queues, etc.).
+  /** Adds an effectful custom slide. Use this for interactive slides that require effectful construction (e.g.,
+    * allocating Refs, Queues, etc.).
     *
-    * The function receives a `SlideContext` providing implicit `NConsole` and `Ticker` instances.
-    * Returns a builder function wrapped in `F[_]`.
+    * The function receives a `SlideContext` providing implicit `NConsole` and `Ticker` instances. Returns a builder
+    * function wrapped in `F[_]`.
     *
     * Example:
     * {{{
@@ -96,9 +99,8 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
   ): SessionBuilder[F] =
     this.copy(slideSteps = slideSteps :+ SessionBuilder.EffectfulSlide(slideBuilder))
 
-  /** Adds a text-based slide using the TextSlideBuilder DSL.
-    * The builder function receives a `SlideContext` providing implicit `NConsole` and `Ticker` instances
-    * needed for creating transitions.
+  /** Adds a text-based slide using the TextSlideBuilder DSL. The builder function receives a `SlideContext` providing
+    * implicit `NConsole` and `Ticker` instances needed for creating transitions.
     *
     * Example:
     * {{{
@@ -136,8 +138,10 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
 
   /** Adds an idle screen animation that activates when the presenter stops interacting.
     *
-    * @param idleTimeout how long before the idle animation triggers (default 2 minutes)
-    * @param overlayConfig fine-grained idle animation configuration
+    * @param idleTimeout
+    *   how long before the idle animation triggers (default 2 minutes)
+    * @param overlayConfig
+    *   fine-grained idle animation configuration
     */
   def withIdleAnimation(
       idleTimeout: FiniteDuration = 2.minutes,
@@ -149,8 +153,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
       idleOverlayConfig = overlayConfig
     )
 
-  /** Adds a custom overlay (middleware) created by the user.
-    * The effect will be evaluated during session setup.
+  /** Adds a custom overlay (middleware) created by the user. The effect will be evaluated during session setup.
     *
     * Use this for overlays that require effectful construction (e.g., those that allocate Refs).
     */
@@ -257,46 +260,42 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
         }
 
         // Start the presentation loop
-        _ <- {
-          implicit val mc: NConsole[F] = consoleWithMiddleware
-          executor.start()
-        }
+        _ <- executor.start()
       } yield ()
     }
   }
 
   private def buildPresentation(console: NConsole[F], ticker: Ticker[F]): F[Presentation[F]] = {
     implicit val nc: NConsole[F] = console
-    implicit val tk: Ticker[F] = ticker
     val ctx = new SlideContext[F](console, ticker)
 
-    import com.github.morotsman.lote.model.SlideSpecification
-
-    slideSteps.traverse {
-      case SessionBuilder.TextSlideStep(f) =>
-        val builder = TextSlideBuilder[F]()
-        Monad[F].pure(f(ctx)(builder).build())
-      case SessionBuilder.CustomSlide(f) =>
-        val builder = SlideBuilder[F]()
-        Monad[F].pure(f(ctx)(builder).build())
-      case SessionBuilder.EffectfulSlide(f) =>
-        f(ctx).map { builderFn =>
+    slideSteps
+      .traverse {
+        case SessionBuilder.TextSlideStep(f) =>
+          val builder = TextSlideBuilder[F]()
+          Monad[F].pure(f(ctx)(builder).build())
+        case SessionBuilder.CustomSlide(f) =>
           val builder = SlideBuilder[F]()
-          builderFn(builder).build()
-        }
-    }.map { specs =>
-      val exitSlide = exitSlideConfig.map {
-        case SessionBuilder.ExitSlideInstance(slide) => slide
-        case SessionBuilder.ExitSlideText(text) =>
-          import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
-          text.toSlide()
+          Monad[F].pure(f(ctx)(builder).build())
+        case SessionBuilder.EffectfulSlide(f) =>
+          f(ctx).map { builderFn =>
+            val builder = SlideBuilder[F]()
+            builderFn(builder).build()
+          }
       }
-      Presentation(
-        slideSpecifications = specs,
-        exitSlide = exitSlide,
-        overlays = List.empty
-      )
-    }
+      .map { specs =>
+        val exitSlide = exitSlideConfig.map {
+          case SessionBuilder.ExitSlideInstance(slide) => slide
+          case SessionBuilder.ExitSlideText(text) =>
+            import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
+            text.toSlide()
+        }
+        Presentation(
+          slideSpecifications = specs,
+          exitSlide = exitSlide,
+          overlays = List.empty
+        )
+      }
   }
 }
 
@@ -337,4 +336,3 @@ object SessionBuilder {
   private[builders] case class ExitSlideInstance[F[_]](slide: Slide[F]) extends ExitSlideConfig[F]
   private[builders] case class ExitSlideText[F[_]](text: String) extends ExitSlideConfig[F]
 }
-

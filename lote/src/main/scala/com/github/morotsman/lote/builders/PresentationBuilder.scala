@@ -48,7 +48,6 @@ case class PresentationBuilder[F[
     this.copy(overlays = overlay :: overlays)
   }
 
-
   def build()(implicit ev: State =:= Buildable): Presentation[F] = Presentation(
     slideSpecifications = slideSpecifications.reverse,
     exitSlide = exitSlide,

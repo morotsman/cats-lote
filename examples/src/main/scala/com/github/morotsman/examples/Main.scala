@@ -21,7 +21,8 @@ object Session1 extends IOApp.Simple {
       .withProgressBar()
       .withQuickNavigation()
       .withIdleAnimation(idleTimeout = 2.minutes)
-      .addTextSlide { implicit ctx => import ctx._
+      .addTextSlide { implicit ctx =>
+        import ctx._
         _.content(Start())
           .title("Start")
           .transition(ReplaceTransition(' '))
@@ -38,23 +39,28 @@ object Session1 extends IOApp.Simple {
             .transition(FallingCharactersTransition(1.4, 1.3))
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
-      .addTextSlide { implicit ctx => import ctx._
+      .addTextSlide { implicit ctx =>
+        import ctx._
         _.content("Supports different alignments")
           .transition(MorphTransition())
           .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
       }
-      .addSlideF { implicit ctx => import ctx._
+      .addSlideF { implicit ctx =>
+        import ctx._
         for {
-          slide <- StepByStepSlide.make[IO](Vector(
-            "Step 1: Introduction to the topic",
-            "Step 1: Introduction to the topic\nStep 2: Dive deeper into details",
-            "Step 1: Introduction to the topic\nStep 2: Dive deeper into details\nStep 3: Conclusion"
-          ))
+          slide <- StepByStepSlide.make[IO](
+            Vector(
+              "Step 1: Introduction to the topic",
+              "Step 1: Introduction to the topic\nStep 2: Dive deeper into details",
+              "Step 1: Introduction to the topic\nStep 2: Dive deeper into details\nStep 3: Conclusion"
+            )
+          )
         } yield {
           _.addSlide(slide).title("Step by Step")
         }
       }
-      .addSlideF { implicit ctx => import ctx._
+      .addSlideF { implicit ctx =>
+        import ctx._
         for {
           animator <- Animator.make[IO]()
           slide <- ExampleInteractiveSlide.make[IO](animator)
@@ -62,7 +68,8 @@ object Session1 extends IOApp.Simple {
           _.addSlide(slide).title("Interactive")
         }
       }
-      .addTextSlide { implicit ctx => import ctx._
+      .addTextSlide { implicit ctx =>
+        import ctx._
         _.content(Bye())
           .title("Bye")
           .transition(FallingCharactersTransition())
