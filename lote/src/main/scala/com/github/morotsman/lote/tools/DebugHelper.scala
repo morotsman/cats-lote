@@ -5,7 +5,7 @@ import cats.FlatMap
 import cats.implicits._
 
 object DebugHelper {
-  implicit class DebugHelper[F[_] : FlatMap, A](fa: F[A]) {
+  implicit class DebugHelper[F[_]: FlatMap, A](fa: F[A]) {
 
     def debug: F[A] =
       for {

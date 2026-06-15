@@ -37,11 +37,16 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
     } yield {
       assert(written.nonEmpty)
       // Final write should be the "to" slide
-      assert(written.head.contains("BBBB"), s"Expected final content 'BBBB', got: '${written.head}'")
+      assert(
+        written.head.contains("BBBB"),
+        s"Expected final content 'BBBB', got: '${written.head}'"
+      )
     }
   }
 
-  test("FallingCharactersTransition with identical slides completes immediately") {
+  test(
+    "FallingCharactersTransition with identical slides completes immediately"
+  ) {
     for {
       console <- TestNConsole.make(screen = Screen(4, 4))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
@@ -60,7 +65,9 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
     }
   }
 
-  test("FallingCharactersTransition writes intermediate frames during animation") {
+  test(
+    "FallingCharactersTransition writes intermediate frames during animation"
+  ) {
     for {
       console <- TestNConsole.make(screen = Screen(4, 4))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
@@ -75,7 +82,10 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
       _ <- transition.transition(from, to)
       written <- console.writtenRef.get
     } yield {
-      assert(written.length >= 2, s"Expected multiple writes, got ${written.length}")
+      assert(
+        written.length >= 2,
+        s"Expected multiple writes, got ${written.length}"
+      )
     }
   }
 
@@ -112,11 +122,20 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
     } yield ()
   }
 
-  test("FallingCharactersTransition setupPosition creates falling and replacement chars") {
+  test(
+    "FallingCharactersTransition setupPosition creates falling and replacement chars"
+  ) {
     // Verify the setup directly
     val transition = new Object {
-      def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
-        CharacterPosition(fromCharacter, inTransition = false, canTransform = true),
+      def setupPosition(
+          fromCharacter: Char,
+          toCharacter: Char
+      ): List[CharacterPosition] = List(
+        CharacterPosition(
+          fromCharacter,
+          inTransition = false,
+          canTransform = true
+        ),
         CharacterPosition(' ', inTransition = false, canTransform = false)
       )
     }
@@ -141,20 +160,23 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
       }
 
     // At tick 0, acceleration = 0, so character stays in place
-    val cp0 = CharacterPosition('X', inTransition = true, canTransform = true, tick = 0)
+    val cp0 =
+      CharacterPosition('X', inTransition = true, canTransform = true, tick = 0)
     assertEquals(getNewIndex(5, cp0), Some(5))
 
     // At tick 1, acceleration = 1.2, toInt = 1, moves down by (10+1)*1 = 11
-    val cp1 = CharacterPosition('X', inTransition = true, canTransform = true, tick = 1)
+    val cp1 =
+      CharacterPosition('X', inTransition = true, canTransform = true, tick = 1)
     assertEquals(getNewIndex(5, cp1), Some(16))
 
     // At tick 2, acceleration = 2.4, toInt = 2, moves down by (10+1)*2 = 22
-    val cp2 = CharacterPosition('X', inTransition = true, canTransform = true, tick = 2)
+    val cp2 =
+      CharacterPosition('X', inTransition = true, canTransform = true, tick = 2)
     assertEquals(getNewIndex(5, cp2), Some(27))
 
     // Space characters return None
-    val cpSpace = CharacterPosition(' ', inTransition = true, canTransform = true, tick = 1)
+    val cpSpace =
+      CharacterPosition(' ', inTransition = true, canTransform = true, tick = 1)
     assertEquals(getNewIndex(5, cpSpace), None)
   }
 }
-

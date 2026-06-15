@@ -155,7 +155,9 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
       transition = makeTransition()
       spec = TextSlideBuilder[IO]()
         .content("Hi")
-        .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+        .alignment(
+          Alignment(VerticalAlignment.Center, HorizontalAlignment.Center)
+        )
         .transition(transition)
         .build()
       content <- spec.slide.content
@@ -165,4 +167,3 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
     }
   }
 }
-

@@ -7,26 +7,42 @@ import com.github.morotsman.lote.model.{Screen, UserInput}
 
 object MorphTransition {
 
-  def apply[F[_] : Concurrent : Ref.Make : NConsole : Ticker](): Transition[F] = new Transition[F] {
+  def apply[F[_]: Concurrent: Ref.Make: NConsole: Ticker](): Transition[F] =
+    new Transition[F] {
 
-    def setupPosition(fromCharacter: Char, toCharacter: Char): List[CharacterPosition] = List(
-      CharacterPosition(fromCharacter, inTransition = false, canTransform = true),
-      CharacterPosition(toCharacter, inTransition = false, canTransform = false)
-    )
+      def setupPosition(
+          fromCharacter: Char,
+          toCharacter: Char
+      ): List[CharacterPosition] = List(
+        CharacterPosition(
+          fromCharacter,
+          inTransition = false,
+          canTransform = true
+        ),
+        CharacterPosition(
+          toCharacter,
+          inTransition = false,
+          canTransform = false
+        )
+      )
 
-    def getNewIndex(screen: Screen, currentIndex: Int, cp: CharacterPosition): Option[Int] =
-      None
+      def getNewIndex(
+          screen: Screen,
+          currentIndex: Int,
+          cp: CharacterPosition
+      ): Option[Int] =
+        None
 
-    override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
-      CharactersTransition(
-        selectAccelerator = 1.5,
-        setupPosition = setupPosition,
-        getNewIndex = getNewIndex
-      ).transition(from, to)
+      override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
+        CharactersTransition(
+          selectAccelerator = 1.5,
+          setupPosition = setupPosition,
+          getNewIndex = getNewIndex
+        ).transition(from, to)
+
+      }
+
+      override def userInput(input: UserInput): F[Unit] = Monad[F].unit
 
     }
-
-    override def userInput(input: UserInput): F[Unit] = Monad[F].unit
-
-  }
 }

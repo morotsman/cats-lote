@@ -33,7 +33,10 @@ class ReplaceTransitionSpec extends CatsEffectSuite {
       written <- console.writtenRef.get
     } yield {
       assert(written.nonEmpty)
-      assert(written.head.contains("BBBB"), s"Expected final content 'BBBB', got: '${written.head}'")
+      assert(
+        written.head.contains("BBBB"),
+        s"Expected final content 'BBBB', got: '${written.head}'"
+      )
     }
   }
 
@@ -51,8 +54,10 @@ class ReplaceTransitionSpec extends CatsEffectSuite {
     } yield {
       // Intermediate frames should contain the replacement character '#'
       val intermediates = written.drop(1) // drop the final "to" write
-      assert(intermediates.exists(_.contains("#")),
-        s"Expected replacement char '#' in intermediate frames, got: ${intermediates.map(_.take(10))}")
+      assert(
+        intermediates.exists(_.contains("#")),
+        s"Expected replacement char '#' in intermediate frames, got: ${intermediates.map(_.take(10))}"
+      )
     }
   }
 
@@ -112,4 +117,3 @@ class ReplaceTransitionSpec extends CatsEffectSuite {
     assert(!positions(1).canTransform)
   }
 }
-

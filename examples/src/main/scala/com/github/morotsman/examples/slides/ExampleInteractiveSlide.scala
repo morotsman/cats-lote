@@ -9,17 +9,21 @@ import com.github.morotsman.lote.model._
 
 import scala.util.Random
 
-
 object ExampleInteractiveSlide {
 
-  def make[F[_] : Monad : Ref.Make : NConsole : Ticker](animator: Animator[F]): F[Slide[F]] = {
+  def make[F[_]: Monad: Ref.Make: NConsole: Ticker](
+      animator: Animator[F]
+  ): F[Slide[F]] = {
 
     Monad[F].pure(new Slide[F] {
       override def content: F[ScreenAdjusted] =
-        NConsole[F].alignText("", Alignment(
-          VerticalAlignment.Center,
-          HorizontalAlignment.Center
-        ))
+        NConsole[F].alignText(
+          "",
+          Alignment(
+            VerticalAlignment.Center,
+            HorizontalAlignment.Center
+          )
+        )
 
       override def startShow: F[Unit] =
         animator.animate()
@@ -56,16 +60,16 @@ case class WormSegment(index: Int, direction: Direction, symbol: Char)
 case class Worm(segments: Vector[WormSegment])
 
 case class AnimatorState(
-                          emptyScreen: Vector[Char],
-                          worm: Worm,
-                          heartIndexes: Set[Int],
-                          screenWidth: Int,
-                          running: Boolean
-                        )
+    emptyScreen: Vector[Char],
+    worm: Worm,
+    heartIndexes: Set[Int],
+    screenWidth: Int,
+    running: Boolean
+)
 
 object Animator {
 
-  def make[F[_] : Concurrent : Ref.Make : NConsole : Ticker](): F[Animator[F]] = {
+  def make[F[_]: Concurrent: Ref.Make: NConsole: Ticker](): F[Animator[F]] = {
 
     for {
       queue <- Queue.unbounded[F, Direction]
@@ -73,52 +77,76 @@ object Animator {
       subscriptionRef <- Ref[F].of(Option.empty[TickerSubscription[F]])
     } yield new Animator[F] {
 
-      private def growWorm(worm: Worm, collisions: Set[Int], screenWidth: Int): Worm =
+      private def growWorm(
+          worm: Worm,
+          collisions: Set[Int],
+          screenWidth: Int
+      ): Worm =
         if (collisions.nonEmpty) {
           val last = worm.segments.last
-          Worm(segments = worm.segments :+ last.copy(
-            index = last.direction match {
-              case DirectionLeft() => last.index + 1
-              case DirectionRight() => last.index - 1
-              case DirectionUp() => last.index + screenWidth
-              case DirectionDown() => last.index - screenWidth
-            },
-            symbol = '?'
-          ))
+          Worm(segments =
+            worm.segments :+ last.copy(
+              index = last.direction match {
+                case DirectionLeft()  => last.index + 1
+                case DirectionRight() => last.index - 1
+                case DirectionUp()    => last.index + screenWidth
+                case DirectionDown()  => last.index - screenWidth
+              },
+              symbol = '?'
+            )
+          )
         } else {
           worm
         }
 
-      private def moveWorm(worm: Worm, newHeadDirection: Direction, screenWidth: Int, screenLength: Int): Worm =
-        worm.copy(segments = worm.segments.foldLeft((newHeadDirection, Vector[WormSegment]())) {
-          case ((newDirection, acc), oldSegment) =>
-            val newSegment = oldSegment.copy(
-              direction = newDirection,
-              index = oldSegment.direction match {
-                case DirectionLeft() =>
-                  oldSegment.index - 1
-                case DirectionRight() =>
-                  oldSegment.index + 1
-                case DirectionUp() => if (oldSegment.index - screenWidth > -1) {
-                  oldSegment.index - screenWidth
-                } else {
-                  screenLength + (oldSegment.index - screenWidth)
+      private def moveWorm(
+          worm: Worm,
+          newHeadDirection: Direction,
+          screenWidth: Int,
+          screenLength: Int
+      ): Worm =
+        worm.copy(segments =
+          worm.segments
+            .foldLeft((newHeadDirection, Vector[WormSegment]())) { case ((newDirection, acc), oldSegment) =>
+              val newSegment = oldSegment.copy(
+                direction = newDirection,
+                index = oldSegment.direction match {
+                  case DirectionLeft() =>
+                    oldSegment.index - 1
+                  case DirectionRight() =>
+                    oldSegment.index + 1
+                  case DirectionUp() =>
+                    if (oldSegment.index - screenWidth > -1) {
+                      oldSegment.index - screenWidth
+                    } else {
+                      screenLength + (oldSegment.index - screenWidth)
+                    }
+                  case DirectionDown() =>
+                    if (oldSegment.index + screenWidth < screenLength) {
+                      oldSegment.index + screenWidth
+                    } else {
+                      screenWidth + oldSegment.index - screenLength
+                    }
                 }
-                case DirectionDown() => if (oldSegment.index + screenWidth < screenLength) {
-                  oldSegment.index + screenWidth
-                } else {
-                  screenWidth + oldSegment.index - screenLength
-                }
-              }
-            )
-            (oldSegment.direction, newSegment +: acc)
-        }._2.reverse)
+              )
+              (oldSegment.direction, newSegment +: acc)
+            }
+            ._2
+            .reverse
+        )
 
-      private def updateWormState(s: AnimatorState, maybeUserInput: Option[Direction], screenWidth: Int): AnimatorState = {
-        val collisions = s.worm.segments.map(_.index).toSet.intersect(s.heartIndexes)
+      private def updateWormState(
+          s: AnimatorState,
+          maybeUserInput: Option[Direction],
+          screenWidth: Int
+      ): AnimatorState = {
+        val collisions =
+          s.worm.segments.map(_.index).toSet.intersect(s.heartIndexes)
         val updatedHeartIndexes = s.heartIndexes.removedAll(collisions)
         val wormWithHearts = growWorm(s.worm, collisions, screenWidth)
-        val headDirection = maybeUserInput.orElse(wormWithHearts.segments.headOption.map(_.direction))
+        val headDirection = maybeUserInput.orElse(
+          wormWithHearts.segments.headOption.map(_.direction)
+        )
         val updatedWorm = headDirection.fold(wormWithHearts) { dir =>
           moveWorm(wormWithHearts, dir, screenWidth, s.emptyScreen.length)
         }
@@ -128,14 +156,19 @@ object Animator {
       private def hasSelfCollision(worm: Worm): Boolean =
         worm.segments.map(_.index).size != worm.segments.map(_.index).toSet.size
 
-      private def renderScreen(s: AnimatorState, screenWidth: Int): ScreenAdjusted = {
+      private def renderScreen(
+          s: AnimatorState,
+          screenWidth: Int
+      ): ScreenAdjusted = {
         val screenWithWorm = s.worm.segments.foldRight(s.emptyScreen) { case (WormSegment(index, _, sym), screen) =>
           screen.updated(index, sym)
         }
         val finalScreen = s.heartIndexes.foldRight(screenWithWorm) { case (index, screen) =>
           screen.updated(index, '?')
         }
-        ScreenAdjusted(finalScreen.grouped(screenWidth).map(_.mkString).mkString("\n"))
+        ScreenAdjusted(
+          finalScreen.grouped(screenWidth).map(_.mkString).mkString("\n")
+        )
       }
 
       // User input is consumed here (via tryTake) rather than applied immediately in changeDirection.
@@ -152,8 +185,14 @@ object Animator {
             for {
               maybeUserInput <- queue.tryTake
               screen <- NConsole[F].context
-              updatedState = updateWormState(s, maybeUserInput, screen.screenWidth)
-              _ <- NConsole[F].writeString(renderScreen(updatedState, screen.screenWidth))
+              updatedState = updateWormState(
+                s,
+                maybeUserInput,
+                screen.screenWidth
+              )
+              _ <- NConsole[F].writeString(
+                renderScreen(updatedState, screen.screenWidth)
+              )
               _ <- stateRef.set(Some(updatedState))
             } yield ()
           }
@@ -169,7 +208,17 @@ object Animator {
         initialWorm = Worm(message.zipWithIndex.map { case (c, index) =>
           WormSegment(screenSize / 2 + index, DirectionLeft(), c)
         }.toVector)
-        _ <- stateRef.set(Some(AnimatorState(emptyScreen, initialWorm, heartIndexes, screen.screenWidth, running = true)))
+        _ <- stateRef.set(
+          Some(
+            AnimatorState(
+              emptyScreen,
+              initialWorm,
+              heartIndexes,
+              screen.screenWidth,
+              running = true
+            )
+          )
+        )
         sub <- Ticker[F].subscribe(onTick)
         _ <- subscriptionRef.set(Some(sub))
         _ <- Ticker[F].start

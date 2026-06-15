@@ -74,7 +74,10 @@ class TickerInterpreterSpec extends CatsEffectSuite {
       c2Final <- counter2.get
     } yield {
       assertEquals(c1AtCancel, c1Final)
-      assert(c2Final > c1Final, s"Expected counter2 ($c2Final) > counter1 ($c1Final)")
+      assert(
+        c2Final > c1Final,
+        s"Expected counter2 ($c2Final) > counter1 ($c1Final)"
+      )
     }
   }
 
@@ -90,7 +93,10 @@ class TickerInterpreterSpec extends CatsEffectSuite {
       _ <- ticker.stop
       count <- counter.get
     } yield {
-      assert(count <= 8, s"Expected at most ~8 ticks (no double-ticking), got $count")
+      assert(
+        count <= 8,
+        s"Expected at most ~8 ticks (no double-ticking), got $count"
+      )
       assert(count >= 2, s"Expected at least 2 ticks, got $count")
     }
   }
@@ -111,4 +117,3 @@ class TickerInterpreterSpec extends CatsEffectSuite {
     } yield ()
   }
 }
-

@@ -9,22 +9,30 @@ import com.github.morotsman.lote.builders.TextSlideBuilder.{WithContent, Without
 import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
 import com.github.morotsman.lote.model.{Presentation, SlideSpecification}
 
-case class PresentationBuilder[F[_] : Temporal : Functor: NConsole, State <: BuildState](
-                                                                            slideSpecifications: List[SlideSpecification[F]],
-                                                                            exitSlide: Option[Slide[F]],
-                                                                            overlays: List[Overlay[F]]
-                                                                          ) {
+case class PresentationBuilder[F[
+    _
+]: Temporal: Functor: NConsole, State <: BuildState](
+    slideSpecifications: List[SlideSpecification[F]],
+    exitSlide: Option[Slide[F]],
+    overlays: List[Overlay[F]]
+) {
   def addSlide(
-                slideBuilder: SlideBuilder[F, WithoutSlide] => SlideBuilder[F, WithContentSlide]
-              ): PresentationBuilder[F, State with SlideAdded] = {
+      slideBuilder: SlideBuilder[F, WithoutSlide] => SlideBuilder[
+        F,
+        WithContentSlide
+      ]
+  ): PresentationBuilder[F, State with SlideAdded] = {
     val builder: SlideBuilder[F, WithoutSlide] = SlideBuilder()
     val slideSpecification = slideBuilder(builder).build()
     this.copy(slideSpecifications = slideSpecification :: slideSpecifications)
   }
 
   def addTextSlide(
-                    textSlideBuilder: TextSlideBuilder[F, WithoutContent] => TextSlideBuilder[F, WithContent]
-                  ): PresentationBuilder[F, State with SlideAdded] = {
+      textSlideBuilder: TextSlideBuilder[F, WithoutContent] => TextSlideBuilder[
+        F,
+        WithContent
+      ]
+  ): PresentationBuilder[F, State with SlideAdded] = {
     val builder = TextSlideBuilder()
     val slideSpecification = textSlideBuilder(builder).build()
     this.copy(slideSpecifications = slideSpecification :: slideSpecifications)
@@ -50,7 +58,7 @@ case class PresentationBuilder[F[_] : Temporal : Functor: NConsole, State <: Bui
 object PresentationBuilder {
   type Buildable = Empty with SlideAdded
 
-  def apply[F[_] : Temporal: NConsole](): PresentationBuilder[F, Empty] =
+  def apply[F[_]: Temporal: NConsole](): PresentationBuilder[F, Empty] =
     PresentationBuilder[F, Empty](List.empty, None, List.empty)
 
   sealed trait BuildState
@@ -59,4 +67,3 @@ object PresentationBuilder {
 
   sealed trait SlideAdded extends BuildState
 }
-

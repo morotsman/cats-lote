@@ -5,24 +5,27 @@ import cats.implicits._
 import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.model._
 
-
 object StepByStepSlide {
 
-  def make[F[_] : Temporal : NConsole](stages: Vector[String]): F[Slide[F]] = {
+  def make[F[_]: Temporal: NConsole](stages: Vector[String]): F[Slide[F]] = {
     val hint = "                              [press any key to continue]"
     val stagesWithHint = stages.zipWithIndex.map { case (s, i) =>
       val withLeadingLine = "\n" + s
-      if (i < stages.size - 1) withLeadingLine + "\n" + hint else withLeadingLine
+      if (i < stages.size - 1) withLeadingLine + "\n" + hint
+      else withLeadingLine
     }
     Ref[F].of(0).map { stageRef =>
       new Slide[F] {
         override def content: F[ScreenAdjusted] =
           for {
             stage <- stageRef.get
-            aligned <- NConsole[F].alignText(stagesWithHint(stage), Alignment(
-              VerticalAlignment.Up,
-              HorizontalAlignment.Left
-            ))
+            aligned <- NConsole[F].alignText(
+              stagesWithHint(stage),
+              Alignment(
+                VerticalAlignment.Up,
+                HorizontalAlignment.Left
+              )
+            )
           } yield aligned
 
         override def startShow: F[Unit] =
@@ -43,10 +46,13 @@ object StepByStepSlide {
               stage <- stageRef.get
               nextStage = math.min(stage + 1, stagesWithHint.size - 1)
               _ <- stageRef.set(nextStage)
-              aligned <- NConsole[F].alignText(stagesWithHint(nextStage), Alignment(
-                VerticalAlignment.Up,
-                HorizontalAlignment.Left
-              ))
+              aligned <- NConsole[F].alignText(
+                stagesWithHint(nextStage),
+                Alignment(
+                  VerticalAlignment.Up,
+                  HorizontalAlignment.Left
+                )
+              )
               _ <- NConsole[F].writeString(aligned)
             } yield ()
         }
@@ -54,4 +60,3 @@ object StepByStepSlide {
     }
   }
 }
-

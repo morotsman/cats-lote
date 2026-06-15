@@ -11,18 +11,24 @@ import scala.concurrent.duration.FiniteDuration
 
 object Timer {
 
-  def make[F[_] : Monad : Clock : Temporal : Ref.Make](
-                                                                    allocatedTime: FiniteDuration,
-                                                                    startTime: Long = System.currentTimeMillis()
-                                                                  ): F[Overlay[F]] = Monad[F].pure {
+  def make[F[_]: Monad: Clock: Temporal: Ref.Make](
+      allocatedTime: FiniteDuration,
+      startTime: Long = System.currentTimeMillis()
+  ): F[Overlay[F]] = Monad[F].pure {
     new Overlay[F] {
 
-
-      override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
+      override def applyOverlay(
+          context: Screen,
+          screenAdjusted: ScreenAdjusted,
+          originalContent: ScreenAdjusted
+      ): F[ScreenAdjusted] = for {
         time <- Clock[F].realTime
-        timeLeft = allocatedTime.minus(FiniteDuration(time.toMillis - startTime, TimeUnit.MILLISECONDS))
+        timeLeft = allocatedTime.minus(
+          FiniteDuration(time.toMillis - startTime, TimeUnit.MILLISECONDS)
+        )
         seconds = timeLeft.toSeconds % (timeLeft.toMinutes * 60)
-        output = s"${timeLeft.toMinutes}:${if (seconds < 10) "0" + seconds else seconds}"
+        output =
+          s"${timeLeft.toMinutes}:${if (seconds < 10) "0" + seconds else seconds}"
         result = screenAdjusted.copy(content = output + screenAdjusted.content.drop(output.length))
       } yield result
 

@@ -22,9 +22,14 @@ class IdleSpec extends CatsEffectSuite {
     bugSpeed = 1
   )
 
-  private def makeIdleWithDetector(timeout: FiniteDuration = shortIdleTimeout, overlayConfig: IdleOverlayConfig = shortOverlayConfig)(implicit nc: NConsole[IO]): IO[(IdleDetector[IO], Idle[IO])] =
+  private def makeIdleWithDetector(
+      timeout: FiniteDuration = shortIdleTimeout,
+      overlayConfig: IdleOverlayConfig = shortOverlayConfig
+  )(implicit nc: NConsole[IO]): IO[(IdleDetector[IO], Idle[IO])] =
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = timeout))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = timeout)
+      )
       idle <- Idle.make[IO](detector, overlayConfig)
     } yield (detector, idle)
 
@@ -34,7 +39,7 @@ class IdleSpec extends CatsEffectSuite {
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       (_, idle) <- makeIdleWithDetector(timeout = 10.minutes)
       content = ScreenAdjusted("Hello World         ")
-      result <- idle.applyOverlay(Screen(20, 5), content)
+      result <- idle.applyOverlay(Screen(20, 5), content, content)
     } yield {
       assertEquals(result.content, content.content)
     }
@@ -45,12 +50,16 @@ class IdleSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       (_, idle) <- makeIdleWithDetector()
-      content = ScreenAdjusted("Hello World         \n" * 4 + "Hello World         ")
+      content = ScreenAdjusted(
+        "Hello World         \n" * 4 + "Hello World         "
+      )
       _ <- IO.sleep(100.millis)
-      result <- idle.applyOverlay(Screen(20, 5), content)
+      result <- idle.applyOverlay(Screen(20, 5), content, content)
     } yield {
-      assert(result.content != content.content || result.content.contains("@"),
-        s"Expected content modification after idle, got: '${result.content}'")
+      assert(
+        result.content != content.content || result.content.contains("@"),
+        s"Expected content modification after idle, got: '${result.content}'"
+      )
     }
   }
 
@@ -59,11 +68,13 @@ class IdleSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       (detector, idle) <- makeIdleWithDetector()
-      content = ScreenAdjusted("Hello World         \n" * 4 + "Hello World         ")
+      content = ScreenAdjusted(
+        "Hello World         \n" * 4 + "Hello World         "
+      )
       _ <- IO.sleep(100.millis)
       // Simulate user activity through the detector (as Middleware would)
       _ <- detector.onKeyPress(Key(SpecialKey.Right))
-      result <- idle.applyOverlay(Screen(20, 5), content)
+      result <- idle.applyOverlay(Screen(20, 5), content, content)
     } yield {
       assertEquals(result.content, content.content)
     }
@@ -74,13 +85,17 @@ class IdleSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       (detector, idle) <- makeIdleWithDetector()
-      content1 = ScreenAdjusted("First content       \n" * 4 + "First content       ")
+      content1 = ScreenAdjusted(
+        "First content       \n" * 4 + "First content       "
+      )
       _ <- detector.onContentChange(content1.content)
       _ <- IO.sleep(100.millis)
       // Change content through the detector (as Middleware would)
-      content2 = ScreenAdjusted("New content here    \n" * 4 + "New content here    ")
+      content2 = ScreenAdjusted(
+        "New content here    \n" * 4 + "New content here    "
+      )
       _ <- detector.onContentChange(content2.content)
-      result <- idle.applyOverlay(Screen(20, 5), content2)
+      result <- idle.applyOverlay(Screen(20, 5), content2, content2)
     } yield {
       assertEquals(result.content, content2.content)
     }
@@ -91,10 +106,12 @@ class IdleSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       (detector, idle) <- makeIdleWithDetector()
-      content = ScreenAdjusted("Test content        \n" * 4 + "Test content        ")
+      content = ScreenAdjusted(
+        "Test content        \n" * 4 + "Test content        "
+      )
       _ <- IO.sleep(100.millis)
       _ <- detector.notifyActivity()
-      result <- idle.applyOverlay(Screen(20, 5), content)
+      result <- idle.applyOverlay(Screen(20, 5), content, content)
     } yield {
       assertEquals(result.content, content.content)
     }
@@ -112,14 +129,18 @@ class IdleSpec extends CatsEffectSuite {
           bugsPerSpawn = 5
         )
       )
-      content = ScreenAdjusted(("Hello World" + " " * 19 + "\n") * 7 + "Hello World" + " " * 19)
+      content = ScreenAdjusted(
+        ("Hello World" + " " * 19 + "\n") * 7 + "Hello World" + " " * 19
+      )
       _ <- IO.sleep(80.millis)
-      _ <- idle.applyOverlay(Screen(30, 8), content)
+      _ <- idle.applyOverlay(Screen(30, 8), content, content)
       _ <- IO.sleep(30.millis)
-      result <- idle.applyOverlay(Screen(30, 8), content)
+      result <- idle.applyOverlay(Screen(30, 8), content, content)
     } yield {
-      assert(result.content.contains("@"),
-        s"Expected bugs (@) in output after idle period")
+      assert(
+        result.content.contains("@"),
+        s"Expected bugs (@) in output after idle period"
+      )
     }
   }
 
@@ -128,16 +149,20 @@ class IdleSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       (detector, idle) <- makeIdleWithDetector()
-      content = ScreenAdjusted("Same content        \n" * 4 + "Same content        ")
+      content = ScreenAdjusted(
+        "Same content        \n" * 4 + "Same content        "
+      )
       _ <- detector.onContentChange(content.content)
       _ <- IO.sleep(30.millis)
       // Same content again - should NOT reset timer
       _ <- detector.onContentChange(content.content)
       _ <- IO.sleep(40.millis)
-      result <- idle.applyOverlay(Screen(20, 5), content)
+      result <- idle.applyOverlay(Screen(20, 5), content, content)
     } yield {
-      assert(result.content != content.content || result.content.contains("@"),
-        "Expected idle state after same content repeated")
+      assert(
+        result.content != content.content || result.content.contains("@"),
+        "Expected idle state after same content repeated"
+      )
     }
   }
 }

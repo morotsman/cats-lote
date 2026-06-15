@@ -15,7 +15,8 @@ class CharactersTransitionSpec extends CatsEffectSuite {
   // Override default timeout for transition tests
   override val munitTimeout: Duration = 10.seconds
 
-  /** Creates a slide that returns fixed ScreenAdjusted content (no alignment/padding) */
+  /** Creates a slide that returns fixed ScreenAdjusted content (no alignment/padding)
+    */
   private def fixedSlide(text: String): Slide[IO] = new Slide[IO] {
     override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
     override def startShow: IO[Unit] = IO.unit
@@ -24,7 +25,10 @@ class CharactersTransitionSpec extends CatsEffectSuite {
   }
 
   // setupPosition: if chars differ, create two entries - one transformable (to be removed) and one final
-  private def simpleSetupPosition(from: Char, to: Char): List[CharacterPosition] = {
+  private def simpleSetupPosition(
+      from: Char,
+      to: Char
+  ): List[CharacterPosition] = {
     if (from == to) {
       List(CharacterPosition(from, inTransition = false, canTransform = false))
     } else {
@@ -36,7 +40,11 @@ class CharactersTransitionSpec extends CatsEffectSuite {
   }
 
   // getNewIndex: returns None to remove the transformable character (revealing the final one underneath)
-  private def inPlaceNewIndex(screen: Screen, index: Int, cp: CharacterPosition): Option[Int] = None
+  private def inPlaceNewIndex(
+      screen: Screen,
+      index: Int,
+      cp: CharacterPosition
+  ): Option[Int] = None
 
   test("CharactersTransition completes and shows the target slide") {
     for {
@@ -56,7 +64,10 @@ class CharactersTransitionSpec extends CatsEffectSuite {
     } yield {
       assert(written.nonEmpty, "Expected content to be written")
       // Last write is the final "to" slide
-      assert(written.head.contains("BBBB"), s"Expected final write to contain 'BBBB', got: '${written.head}'")
+      assert(
+        written.head.contains("BBBB"),
+        s"Expected final write to contain 'BBBB', got: '${written.head}'"
+      )
     }
   }
 
@@ -77,7 +88,10 @@ class CharactersTransitionSpec extends CatsEffectSuite {
       written <- console.writtenRef.get
     } yield {
       // initial write + at least one tick write + final write
-      assert(written.length >= 2, s"Expected multiple writes, got ${written.length}")
+      assert(
+        written.length >= 2,
+        s"Expected multiple writes, got ${written.length}"
+      )
     }
   }
 
@@ -119,7 +133,12 @@ class CharactersTransitionSpec extends CatsEffectSuite {
   private def runTransition(accelerator: Double): IO[FiniteDuration] = for {
     console <- TestNConsole.make(screen = Screen(4, 1))
     nc = console: NConsole[IO]
-    ticker <- TickerInterpreter.make[IO](interval = 5.millis)(implicitly, implicitly, implicitly, implicitly)
+    ticker <- TickerInterpreter.make[IO](interval = 5.millis)(
+      implicitly,
+      implicitly,
+      implicitly,
+      implicitly
+    )
     from = fixedSlide("ABCD")
     to = fixedSlide("WXYZ")
     transition = CharactersTransition[IO](
@@ -137,7 +156,10 @@ class CharactersTransitionSpec extends CatsEffectSuite {
       fastDuration <- runTransition(100.0)
       slowDuration <- runTransition(1.1)
     } yield {
-      assert(fastDuration <= slowDuration, s"Expected fast ($fastDuration) <= slow ($slowDuration)")
+      assert(
+        fastDuration <= slowDuration,
+        s"Expected fast ($fastDuration) <= slow ($slowDuration)"
+      )
     }
   }
 
@@ -161,5 +183,3 @@ class CharactersTransitionSpec extends CatsEffectSuite {
     }
   }
 }
-
-

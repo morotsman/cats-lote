@@ -41,7 +41,8 @@ class BuilderSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(40, 10))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       exitSlide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Bye"))
+        override def content: IO[ScreenAdjusted] =
+          IO.pure(ScreenAdjusted("Bye"))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] = IO.unit
@@ -89,13 +90,15 @@ class BuilderSpec extends CatsEffectSuite {
       console <- TestNConsole.make(screen = Screen(40, 10))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       slide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("content"))
+        override def content: IO[ScreenAdjusted] =
+          IO.pure(ScreenAdjusted("content"))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] = IO.unit
       }
       transition = new Transition[IO] {
-        override def transition(from: Slide[IO], to: Slide[IO]): IO[Unit] = IO.unit
+        override def transition(from: Slide[IO], to: Slide[IO]): IO[Unit] =
+          IO.unit
         override def userInput(input: UserInput): IO[Unit] = IO.unit
       }
       spec = SlideBuilder[IO]()
@@ -120,4 +123,3 @@ class BuilderSpec extends CatsEffectSuite {
     }
   }
 }
-

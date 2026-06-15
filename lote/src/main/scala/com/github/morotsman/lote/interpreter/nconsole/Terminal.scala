@@ -1,8 +1,7 @@
 package com.github.morotsman.lote.interpreter.nconsole
 
-/**
- * Abstraction over a terminal, allowing injection for testing.
- */
+/** Abstraction over a terminal, allowing injection for testing.
+  */
 trait Terminal {
   def read(timeoutInMillis: Long): Int
   def width: Int
@@ -11,4 +10,3 @@ trait Terminal {
   def write(s: String): Unit
   def close(): Unit = ()
 }
-

@@ -1,7 +1,15 @@
 package com.github.morotsman.lote.algebra
 
-import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
+import cats.Applicative
+import com.github.morotsman.lote.model.{Screen, ScreenAdjusted, UserInput}
 
 trait Overlay[F[_]] {
-  def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): F[ScreenAdjusted]
+  def applyOverlay(
+      context: Screen,
+      screenAdjusted: ScreenAdjusted,
+      originalContent: ScreenAdjusted
+  ): F[ScreenAdjusted]
+
+  def onUserInput(userInput: UserInput)(implicit F: Applicative[F]): F[Unit] =
+    F.unit
 }

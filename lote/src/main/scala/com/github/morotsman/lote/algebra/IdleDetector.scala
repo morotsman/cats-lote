@@ -4,6 +4,7 @@ import cats.Applicative
 import com.github.morotsman.lote.model.UserInput
 
 trait IdleDetector[F[_]] {
+
   /** Signal that user activity occurred (e.g. slide navigation) */
   def notifyActivity(): F[Unit]
 
@@ -27,10 +28,11 @@ trait IdleDetector[F[_]] {
 }
 
 object IdleDetector {
-  @inline def apply[F[_]](implicit instance: IdleDetector[F]): IdleDetector[F] = instance
+  @inline def apply[F[_]](implicit instance: IdleDetector[F]): IdleDetector[F] =
+    instance
 
   /** A no-op IdleDetector that never reports idle. Useful as a default. */
-  def noop[F[_] : Applicative]: IdleDetector[F] = new IdleDetector[F] {
+  def noop[F[_]: Applicative]: IdleDetector[F] = new IdleDetector[F] {
     override def notifyActivity(): F[Unit] = Applicative[F].unit
     override def onKeyPress(input: UserInput): F[Unit] = Applicative[F].unit
     override def onMouseClick(x: Int, y: Int): F[Unit] = Applicative[F].unit
@@ -40,4 +42,3 @@ object IdleDetector {
     override def idleStartTime: F[Option[Long]] = Applicative[F].pure(None)
   }
 }
-

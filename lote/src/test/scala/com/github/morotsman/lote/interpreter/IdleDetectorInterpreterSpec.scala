@@ -10,14 +10,18 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("is not idle before timeout") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 10.minutes))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 10.minutes)
+      )
       result <- detector.isIdle
     } yield assert(!result)
   }
 
   test("is idle after timeout elapses") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       result <- detector.isIdle
     } yield assert(result)
@@ -25,7 +29,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("notifyActivity resets idle state") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       _ <- detector.notifyActivity()
       result <- detector.isIdle
@@ -34,7 +40,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("onKeyPress resets idle state") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       _ <- detector.onKeyPress(Key(SpecialKey.Right))
       result <- detector.isIdle
@@ -43,7 +51,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("onContentChange with different content resets idle state") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- detector.onContentChange("first content")
       _ <- IO.sleep(100.millis)
       _ <- detector.onContentChange("different content")
@@ -53,7 +63,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("onContentChange with same content does not reset idle state") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- detector.onContentChange("same content")
       _ <- IO.sleep(30.millis)
       _ <- detector.onContentChange("same content")
@@ -65,14 +77,18 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("idleStartTime returns None when not idle") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 10.minutes))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 10.minutes)
+      )
       result <- detector.idleStartTime
     } yield assertEquals(result, None)
   }
 
   test("idleStartTime returns Some when idle") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       _ <- detector.isIdle // triggers the idle state transition
       result <- detector.idleStartTime
@@ -81,7 +97,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("idleStartTime resets after notifyActivity") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       _ <- detector.isIdle
       startBefore <- detector.idleStartTime
@@ -95,7 +113,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("becomes idle again after activity followed by another timeout") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       idle1 <- detector.isIdle
       _ <- detector.notifyActivity()
@@ -111,7 +131,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("onMouseClick resets idle state") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       idleBefore <- detector.isIdle
       _ <- detector.onMouseClick(10, 20)
@@ -124,7 +146,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("onMouseMove resets idle state") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       idleBefore <- detector.isIdle
       _ <- detector.onMouseMove(5, 15)
@@ -137,7 +161,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("onMouseClick resets idleStartTime") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       _ <- detector.isIdle
       startBefore <- detector.idleStartTime
@@ -151,7 +177,9 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
 
   test("onMouseMove resets idleStartTime") {
     for {
-      detector <- IdleDetectorInterpreter.make[IO](IdleDetectorConfig(idleTimeout = 50.millis))
+      detector <- IdleDetectorInterpreter.make[IO](
+        IdleDetectorConfig(idleTimeout = 50.millis)
+      )
       _ <- IO.sleep(100.millis)
       _ <- detector.isIdle
       startBefore <- detector.idleStartTime
@@ -163,4 +191,3 @@ class IdleDetectorInterpreterSpec extends CatsEffectSuite {
     }
   }
 }
-

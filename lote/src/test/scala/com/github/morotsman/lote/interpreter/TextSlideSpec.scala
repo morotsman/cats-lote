@@ -12,7 +12,10 @@ class TextSlideSpec extends CatsEffectSuite {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      slide = TextSlide[IO]("Hello", Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+      slide = TextSlide[IO](
+        "Hello",
+        Alignment(VerticalAlignment.Center, HorizontalAlignment.Center)
+      )
       content <- slide.content
     } yield {
       assert(content.content.contains("Hello"))
@@ -23,7 +26,10 @@ class TextSlideSpec extends CatsEffectSuite {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      slide = TextSlide[IO]("Hello", Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+      slide = TextSlide[IO](
+        "Hello",
+        Alignment(VerticalAlignment.Center, HorizontalAlignment.Center)
+      )
       _ <- slide.startShow
       written <- console.writtenRef.get
     } yield {
@@ -36,7 +42,10 @@ class TextSlideSpec extends CatsEffectSuite {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      slide = TextSlide[IO]("Hello", Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+      slide = TextSlide[IO](
+        "Hello",
+        Alignment(VerticalAlignment.Center, HorizontalAlignment.Center)
+      )
       _ <- slide.stopShow
     } yield ()
   }
@@ -45,7 +54,10 @@ class TextSlideSpec extends CatsEffectSuite {
     for {
       console <- TestNConsole.make(screen = Screen(20, 5))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      slide = TextSlide[IO]("Hello", Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+      slide = TextSlide[IO](
+        "Hello",
+        Alignment(VerticalAlignment.Center, HorizontalAlignment.Center)
+      )
       _ <- slide.userInput(Character('x'))
     } yield ()
   }
@@ -62,4 +74,3 @@ class TextSlideSpec extends CatsEffectSuite {
     }
   }
 }
-
