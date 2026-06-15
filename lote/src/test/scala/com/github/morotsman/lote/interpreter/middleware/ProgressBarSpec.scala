@@ -10,12 +10,18 @@ class ProgressBarSpec extends CatsEffectSuite {
     for {
       bar <- ProgressBar.make[IO](totalSlides = 5)
       content = ScreenAdjusted((" " * 40 + "\n") * 9 + " " * 40)
-      result <- bar.applyOverlay(Screen(40, 10), content)
+      result <- bar.applyOverlay(Screen(40, 10), content, content)
     } yield {
       val lines = result.content.split("\n", -1)
       val progressLine = lines(7) // screenHeight - 3
-      assert(progressLine.contains("0"), s"Expected current indicator '0' in: '$progressLine'")
-      assert(progressLine.contains("-"), s"Expected future indicator '-' in: '$progressLine'")
+      assert(
+        progressLine.contains("0"),
+        s"Expected current indicator '0' in: '$progressLine'"
+      )
+      assert(
+        progressLine.contains("-"),
+        s"Expected future indicator '-' in: '$progressLine'"
+      )
     }
   }
 
@@ -24,14 +30,23 @@ class ProgressBarSpec extends CatsEffectSuite {
       bar <- ProgressBar.make[IO](totalSlides = 3)
       _ <- bar.setCurrentSlide(1)
       content = ScreenAdjusted((" " * 40 + "\n") * 9 + " " * 40)
-      result <- bar.applyOverlay(Screen(40, 10), content)
+      result <- bar.applyOverlay(Screen(40, 10), content, content)
     } yield {
       val lines = result.content.split("\n", -1)
       val progressLine = lines(7)
       // Should show: # 0 -  (first passed, second current, third future)
-      assert(progressLine.contains("#"), s"Expected past indicator '#' in: '$progressLine'")
-      assert(progressLine.contains("0"), s"Expected current indicator '0' in: '$progressLine'")
-      assert(progressLine.contains("-"), s"Expected future indicator '-' in: '$progressLine'")
+      assert(
+        progressLine.contains("#"),
+        s"Expected past indicator '#' in: '$progressLine'"
+      )
+      assert(
+        progressLine.contains("0"),
+        s"Expected current indicator '0' in: '$progressLine'"
+      )
+      assert(
+        progressLine.contains("-"),
+        s"Expected future indicator '-' in: '$progressLine'"
+      )
     }
   }
 
@@ -40,12 +55,15 @@ class ProgressBarSpec extends CatsEffectSuite {
       bar <- ProgressBar.make[IO](totalSlides = 3)
       _ <- bar.setCurrentSlide(2)
       content = ScreenAdjusted((" " * 40 + "\n") * 9 + " " * 40)
-      result <- bar.applyOverlay(Screen(40, 10), content)
+      result <- bar.applyOverlay(Screen(40, 10), content, content)
     } yield {
       val lines = result.content.split("\n", -1)
       val progressLine = lines(7)
       // Should show: # # 0
-      assert(!progressLine.contains("-"), s"Expected no future indicator in: '$progressLine'")
+      assert(
+        !progressLine.contains("-"),
+        s"Expected no future indicator in: '$progressLine'"
+      )
       assert(progressLine.contains("#"))
       assert(progressLine.contains("0"))
     }
@@ -58,7 +76,7 @@ class ProgressBarSpec extends CatsEffectSuite {
         milestones = List(Milestone("Intro", 0), Milestone("Main", 2))
       )
       content = ScreenAdjusted((" " * 60 + "\n") * 11 + " " * 60)
-      result <- bar.applyOverlay(Screen(60, 12), content)
+      result <- bar.applyOverlay(Screen(60, 12), content, content)
     } yield {
       val lines = result.content.split("\n", -1)
       val milestoneLine = lines(8) // progressRowIndex - 1 = (12-3) - 1 = 8
@@ -69,4 +87,3 @@ class ProgressBarSpec extends CatsEffectSuite {
     }
   }
 }
-

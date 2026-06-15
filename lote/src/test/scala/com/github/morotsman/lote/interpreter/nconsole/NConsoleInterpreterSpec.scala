@@ -10,10 +10,10 @@ class NConsoleInterpreterSpec extends CatsEffectSuite {
 
   /** A fake Terminal that returns pre-configured characters from read() */
   class FakeTerminal(
-                      inputs: List[Int],
-                      val width: Int = 40,
-                      val height: Int = 10
-                    ) extends Terminal {
+      inputs: List[Int],
+      val width: Int = 40,
+      val height: Int = 10
+  ) extends Terminal {
     private val inputQueue = inputs.iterator
     private val written = ListBuffer.empty[String]
     private var flushCount = 0
@@ -98,7 +98,10 @@ class NConsoleInterpreterSpec extends CatsEffectSuite {
     val terminal = new FakeTerminal(inputs = Nil, width = 20, height = 5)
     val console = NConsoleInterpreter.make[IO](terminal)
     for {
-      result <- console.alignText("Hi", Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+      result <- console.alignText(
+        "Hi",
+        Alignment(VerticalAlignment.Center, HorizontalAlignment.Center)
+      )
     } yield {
       assert(result.content.contains("Hi"))
       val lines = result.content.split("\n")
@@ -110,7 +113,10 @@ class NConsoleInterpreterSpec extends CatsEffectSuite {
     val terminal = new FakeTerminal(inputs = Nil, width = 5, height = 4)
     val console = NConsoleInterpreter.make[IO](terminal)
     for {
-      result <- console.alignText("ABCDEFGHIJ", Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+      result <- console.alignText(
+        "ABCDEFGHIJ",
+        Alignment(VerticalAlignment.Up, HorizontalAlignment.Left)
+      )
     } yield {
       val lines = result.content.split("\n")
       // Content should be truncated to width=5
@@ -124,7 +130,10 @@ class NConsoleInterpreterSpec extends CatsEffectSuite {
     val console = NConsoleInterpreter.make[IO](terminal)
     val longContent = (1 to 10).map(i => s"Line$i").mkString("\n")
     for {
-      result <- console.alignText(longContent, Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+      result <- console.alignText(
+        longContent,
+        Alignment(VerticalAlignment.Up, HorizontalAlignment.Left)
+      )
     } yield {
       val lines = result.content.split("\n")
       // height - 1 = 2 lines of content max
@@ -244,4 +253,3 @@ class NConsoleInterpreterSpec extends CatsEffectSuite {
     } yield assert(closed, "terminal.close() should have been called")
   }
 }
-

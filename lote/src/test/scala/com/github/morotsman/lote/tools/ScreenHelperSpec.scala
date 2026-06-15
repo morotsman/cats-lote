@@ -30,4 +30,3 @@ class ScreenHelperSpec extends FunSuite {
     }
   }
 }
-

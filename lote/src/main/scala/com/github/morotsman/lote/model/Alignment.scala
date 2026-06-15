@@ -14,6 +14,6 @@ object HorizontalAlignment extends Enumeration {
 }
 
 case class Alignment(
-                      verticalAlignment: VerticalAlignment,
-                      horizontalAlignment: HorizontalAlignment
-                    )
+    verticalAlignment: VerticalAlignment,
+    horizontalAlignment: HorizontalAlignment
+)

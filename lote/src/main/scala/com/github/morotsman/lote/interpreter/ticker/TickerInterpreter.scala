@@ -12,17 +12,17 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 case class TickerEntry[F[_]](id: Long, callback: F[Unit])
 
 case class TickerState[F[_]](
-                              subscribers: List[TickerEntry[F]] = List.empty,
-                              nextId: Long = 0,
-                              fiber: Option[Fiber[F, Throwable, Unit]] = None,
-                              running: Boolean = false
-                            )
+    subscribers: List[TickerEntry[F]] = List.empty,
+    nextId: Long = 0,
+    fiber: Option[Fiber[F, Throwable, Unit]] = None,
+    running: Boolean = false
+)
 
 object TickerInterpreter {
 
-  def make[F[_] : Monad : Temporal : Spawn : Ref.Make](
-                                                         interval: FiniteDuration = 40.millis
-                                                       ): F[Ticker[F]] =
+  def make[F[_]: Monad: Temporal: Spawn: Ref.Make](
+      interval: FiniteDuration = 40.millis
+  ): F[Ticker[F]] =
     Ref[F].of(TickerState[F]()).map { state =>
       new Ticker[F] {
 
@@ -34,22 +34,25 @@ object TickerInterpreter {
           _ <- if (running) tickLoop() else Monad[F].unit
         } yield ()
 
-        override def subscribe(callback: F[Unit]): F[TickerSubscription[F]] = for {
-          id <- state.modify(s => (s.copy(nextId = s.nextId + 1), s.nextId))
-          _ <- state.update(s => s.copy(subscribers = s.subscribers :+ TickerEntry(id, callback)))
-        } yield new TickerSubscription[F] {
-          override def cancel: F[Unit] =
-            state.update(s => s.copy(subscribers = s.subscribers.filterNot(_.id == id)))
-        }
+        override def subscribe(callback: F[Unit]): F[TickerSubscription[F]] =
+          for {
+            id <- state.modify(s => (s.copy(nextId = s.nextId + 1), s.nextId))
+            _ <- state.update(s => s.copy(subscribers = s.subscribers :+ TickerEntry(id, callback)))
+          } yield new TickerSubscription[F] {
+            override def cancel: F[Unit] =
+              state.update(s => s.copy(subscribers = s.subscribers.filterNot(_.id == id)))
+          }
 
         override def start: F[Unit] = for {
           s <- state.get
-          _ <- if (s.running) Monad[F].unit
-          else for {
-            _ <- state.update(_.copy(running = true))
-            f <- tickLoop().start
-            _ <- state.update(_.copy(fiber = Some(f)))
-          } yield ()
+          _ <-
+            if (s.running) Monad[F].unit
+            else
+              for {
+                _ <- state.update(_.copy(running = true))
+                f <- tickLoop().start
+                _ <- state.update(_.copy(fiber = Some(f)))
+              } yield ()
         } yield ()
 
         override def stop: F[Unit] = for {
@@ -60,5 +63,3 @@ object TickerInterpreter {
       }
     }
 }
-
-

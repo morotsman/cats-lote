@@ -4,7 +4,12 @@ import cats.effect.{Ref, Temporal}
 import com.github.morotsman.examples.slides.{Agenda, Animator, Bye, ExampleInteractiveSlide, Start}
 import com.github.morotsman.lote.algebra.{NConsole, Ticker}
 import com.github.morotsman.lote.builders.PresentationBuilder
-import com.github.morotsman.lote.interpreter.transition.{FallingCharactersTransition, MorphTransition, ReplaceTransition, GrabTransition}
+import com.github.morotsman.lote.interpreter.transition.{
+  FallingCharactersTransition,
+  MorphTransition,
+  ReplaceTransition,
+  GrabTransition
+}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, Presentation, VerticalAlignment}
 import cats.implicits._
 
@@ -23,70 +28,99 @@ object ExamplePresentation {
         presentation = PresentationBuilder[F]()
           .addTextSlide {
             _.content(Start())
+              .title("Start")
               .transition(ReplaceTransition(' '))
-              .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+              .alignment(
+                Alignment(VerticalAlignment.Up, HorizontalAlignment.Center)
+              )
           }
           .addTextSlide {
             _.content(Agenda())
+              .title("Agenda")
               .transition(FallingCharactersTransition(1.4, 1.3))
-              .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+              .alignment(
+                Alignment(VerticalAlignment.Up, HorizontalAlignment.Center)
+              )
           }
           .addTextSlide {
             _.content(instruction1)
               .transition(MorphTransition())
-              .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+              .alignment(
+                Alignment(VerticalAlignment.Up, HorizontalAlignment.Left)
+              )
           }
           .addTextSlide {
             _.content(instruction1)
               .transition(MorphTransition())
-              .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+              .alignment(
+                Alignment(VerticalAlignment.Up, HorizontalAlignment.Center)
+              )
           }
           .addTextSlide {
             _.content(instruction1)
               .transition(MorphTransition())
-              .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Right))
+              .alignment(
+                Alignment(VerticalAlignment.Up, HorizontalAlignment.Right)
+              )
           }
           .addTextSlide {
             _.content(instruction1)
               .transition(GrabTransition())
-              .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Left))
+              .alignment(
+                Alignment(VerticalAlignment.Center, HorizontalAlignment.Left)
+              )
           }
           .addTextSlide {
             _.content(instruction1)
               .transition(MorphTransition())
-              .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+              .alignment(
+                Alignment(VerticalAlignment.Center, HorizontalAlignment.Center)
+              )
           }
           .addTextSlide {
             _.content(instruction1)
               .transition(MorphTransition())
-              .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Right))
+              .alignment(
+                Alignment(VerticalAlignment.Center, HorizontalAlignment.Right)
+              )
           }
           .addTextSlide {
             _.content(instruction1)
               .transition(MorphTransition())
-              .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Left))
+              .alignment(
+                Alignment(VerticalAlignment.Down, HorizontalAlignment.Left)
+              )
           }
           .addTextSlide {
             _.content(instruction1)
               .transition(MorphTransition())
-              .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Center))
+              .alignment(
+                Alignment(VerticalAlignment.Down, HorizontalAlignment.Center)
+              )
           }
           .addTextSlide {
             _.content(instruction1)
               .transition(MorphTransition())
-              .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
+              .alignment(
+                Alignment(VerticalAlignment.Down, HorizontalAlignment.Right)
+              )
           }
           .addSlide { builder =>
-            builder.addSlide(interactiveSlide)
+            builder.addSlide(interactiveSlide).title("Interactive")
           }
           .addTextSlide {
             _.content(Bye())
+              .title("Bye")
               .transition(FallingCharactersTransition())
-              .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+              .alignment(
+                Alignment(VerticalAlignment.Up, HorizontalAlignment.Center)
+              )
           }
           .addTextSlide {
             _.content("")
-              .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+              .alignment(
+                Alignment(VerticalAlignment.Up, HorizontalAlignment.Center)
+              )
           }
           .build()
       } yield presentation
@@ -94,6 +128,5 @@ object ExamplePresentation {
     }
     createPresentation()
   }
-
 
 }

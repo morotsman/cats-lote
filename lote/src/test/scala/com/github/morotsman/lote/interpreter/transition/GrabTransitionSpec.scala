@@ -23,10 +23,12 @@ class GrabTransitionSpec extends CatsEffectSuite {
   // Create content that fits a small screen with enough rows for the snake (9 rows)
   private def smallScreenContent(width: Int, height: Int): String = {
     val line = "Hello World" + " " * (width - 11)
-    (0 until height).map { i =>
-      if (i == 0) line.take(width)
-      else " " * width
-    }.mkString("\n")
+    (0 until height)
+      .map { i =>
+        if (i == 0) line.take(width)
+        else " " * width
+      }
+      .mkString("\n")
   }
 
   test("GrabTransition completes and shows target slide") {
@@ -44,7 +46,10 @@ class GrabTransitionSpec extends CatsEffectSuite {
       written <- console.writtenRef.get
     } yield {
       assert(written.nonEmpty)
-      assert(written.head.contains("Goodbye"), s"Expected final content to contain 'Goodbye', got: '${written.head.take(40)}'")
+      assert(
+        written.head.contains("Goodbye"),
+        s"Expected final content to contain 'Goodbye', got: '${written.head.take(40)}'"
+      )
     }
   }
 
@@ -63,7 +68,10 @@ class GrabTransitionSpec extends CatsEffectSuite {
       written <- console.writtenRef.get
     } yield {
       // Should have many frames: crawl in + bite + drag out + final
-      assert(written.length >= 3, s"Expected at least 3 writes, got ${written.length}")
+      assert(
+        written.length >= 3,
+        s"Expected at least 3 writes, got ${written.length}"
+      )
     }
   }
 
@@ -112,7 +120,10 @@ class GrabTransitionSpec extends CatsEffectSuite {
     } yield {
       // Snake art contains characters like /^\/^\ and _|__|
       val allFrames = written.mkString("")
-      assert(allFrames.contains("/^"), s"Expected snake art characters in frames")
+      assert(
+        allFrames.contains("/^"),
+        s"Expected snake art characters in frames"
+      )
     }
   }
 
@@ -120,27 +131,48 @@ class GrabTransitionSpec extends CatsEffectSuite {
     for {
       console1 <- TestNConsole.make(screen = Screen(40, 12))
       nc1 = console1: NConsole[IO]
-      ticker1 <- TickerInterpreter.make[IO](interval = 5.millis)(implicitly, implicitly, implicitly, implicitly)
+      ticker1 <- TickerInterpreter.make[IO](interval = 5.millis)(
+        implicitly,
+        implicitly,
+        implicitly,
+        implicitly
+      )
       fromContent = smallScreenContent(40, 12)
       toContent = " " * 40 + ("\n" + " " * 40) * 11
       from1 = fixedSlide(fromContent)
       to1 = fixedSlide(toContent)
-      transition1 = GrabTransition[IO](stepSize = 20)(implicitly, implicitly, nc1, ticker1)
+      transition1 = GrabTransition[IO](stepSize = 20)(
+        implicitly,
+        implicitly,
+        nc1,
+        ticker1
+      )
       _ <- transition1.transition(from1, to1)
       written1 <- console1.writtenRef.get
 
       console2 <- TestNConsole.make(screen = Screen(40, 12))
       nc2 = console2: NConsole[IO]
-      ticker2 <- TickerInterpreter.make[IO](interval = 5.millis)(implicitly, implicitly, implicitly, implicitly)
+      ticker2 <- TickerInterpreter.make[IO](interval = 5.millis)(
+        implicitly,
+        implicitly,
+        implicitly,
+        implicitly
+      )
       from2 = fixedSlide(fromContent)
       to2 = fixedSlide(toContent)
-      transition2 = GrabTransition[IO](stepSize = 2)(implicitly, implicitly, nc2, ticker2)
+      transition2 = GrabTransition[IO](stepSize = 2)(
+        implicitly,
+        implicitly,
+        nc2,
+        ticker2
+      )
       _ <- transition2.transition(from2, to2)
       written2 <- console2.writtenRef.get
     } yield {
-      assert(written1.length <= written2.length,
-        s"Expected larger step (${written1.length} frames) <= smaller step (${written2.length} frames)")
+      assert(
+        written1.length <= written2.length,
+        s"Expected larger step (${written1.length} frames) <= smaller step (${written2.length} frames)"
+      )
     }
   }
 }
-

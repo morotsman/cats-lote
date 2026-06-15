@@ -111,7 +111,10 @@ class PresentationExecutorSpec extends CatsEffectSuite {
       changes <- slideChanges.get
     } yield {
       val slide0Count = changes.count(_ == 0)
-      assert(slide0Count >= 2, s"Expected slide 0 visited at least twice, got changes: ${changes.reverse}")
+      assert(
+        slide0Count >= 2,
+        s"Expected slide 0 visited at least twice, got changes: ${changes.reverse}"
+      )
     }
   }
 
@@ -119,7 +122,11 @@ class PresentationExecutorSpec extends CatsEffectSuite {
     for {
       console <- TestNConsole.make(
         screen = Screen(20, 5),
-        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Right), Key(SpecialKey.Esc))
+        inputs = List(
+          Key(SpecialKey.Right),
+          Key(SpecialKey.Right),
+          Key(SpecialKey.Esc)
+        )
       )
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       presentation = Presentation[IO](
@@ -181,4 +188,3 @@ class PresentationExecutorSpec extends CatsEffectSuite {
     }
   }
 }
-

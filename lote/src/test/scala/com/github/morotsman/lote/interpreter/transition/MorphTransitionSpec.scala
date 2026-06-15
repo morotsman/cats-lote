@@ -33,7 +33,10 @@ class MorphTransitionSpec extends CatsEffectSuite {
       written <- console.writtenRef.get
     } yield {
       assert(written.nonEmpty)
-      assert(written.head.contains("BBBB"), s"Expected final content 'BBBB', got: '${written.head}'")
+      assert(
+        written.head.contains("BBBB"),
+        s"Expected final content 'BBBB', got: '${written.head}'"
+      )
     }
   }
 
@@ -65,7 +68,10 @@ class MorphTransitionSpec extends CatsEffectSuite {
       _ <- transition.transition(from, to)
       written <- console.writtenRef.get
     } yield {
-      assert(written.length >= 2, s"Expected multiple writes, got ${written.length}")
+      assert(
+        written.length >= 2,
+        s"Expected multiple writes, got ${written.length}"
+      )
     }
   }
 
@@ -96,7 +102,9 @@ class MorphTransitionSpec extends CatsEffectSuite {
     } yield ()
   }
 
-  test("MorphTransition setupPosition places from-char as transformable and to-char as final") {
+  test(
+    "MorphTransition setupPosition places from-char as transformable and to-char as final"
+  ) {
     // Verify the logic directly
     val positions = List(
       CharacterPosition('A', inTransition = false, canTransform = true),
@@ -119,4 +127,3 @@ class MorphTransitionSpec extends CatsEffectSuite {
     assertEquals(result, None)
   }
 }
-

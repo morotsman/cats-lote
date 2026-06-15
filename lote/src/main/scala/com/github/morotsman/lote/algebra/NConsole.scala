@@ -3,7 +3,6 @@ package lote.algebra
 
 import com.github.morotsman.lote.model.{Alignment, Screen, ScreenAdjusted, UserInput}
 
-
 trait NConsole[F[_]] {
   def read(timeoutInMillis: Long): F[UserInput]
 
@@ -23,5 +22,6 @@ trait NConsole[F[_]] {
 }
 
 object NConsole {
-  @inline def apply[F[_]](implicit instance: NConsole[F]): NConsole[F] = instance
+  @inline def apply[F[_]](implicit instance: NConsole[F]): NConsole[F] =
+    instance
 }

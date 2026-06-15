@@ -3,4 +3,8 @@ package lote.model
 
 import com.github.morotsman.lote.algebra.{Slide, Transition}
 
-final case class SlideSpecification[F[_]](slide: Slide[F], out: Option[Transition[F]])
+final case class SlideSpecification[F[_]](
+    slide: Slide[F],
+    out: Option[Transition[F]],
+    title: Option[String] = None
+)

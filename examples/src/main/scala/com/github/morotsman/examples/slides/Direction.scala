@@ -6,4 +6,3 @@ case class DirectionDown() extends Direction
 case class DirectionRight() extends Direction
 case class DirectionLeft() extends Direction
 case class NoDirection() extends Direction
-

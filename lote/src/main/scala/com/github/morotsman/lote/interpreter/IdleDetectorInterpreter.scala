@@ -10,33 +10,37 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{FiniteDuration, DurationInt}
 
 case class IdleDetectorConfig(
-                               idleTimeout: FiniteDuration = 2.minutes
-                             )
+    idleTimeout: FiniteDuration = 2.minutes
+)
 
 private case class IdleDetectorState(
-                                      lastSlideChangeTime: Long,
-                                      lastContentChangeTime: Long,
-                                      lastRawContent: Option[String] = None,
-                                      isIdle: Boolean = false,
-                                      idleStartTime: Long = 0
-                                    )
+    lastSlideChangeTime: Long,
+    lastContentChangeTime: Long,
+    lastRawContent: Option[String] = None,
+    isIdle: Boolean = false,
+    idleStartTime: Long = 0
+)
 
 object IdleDetectorInterpreter {
 
-  def make[F[_] : Monad : Clock : Ref.Make](
-                                              config: IdleDetectorConfig = IdleDetectorConfig()
-                                            ): F[IdleDetector[F]] = for {
+  def make[F[_]: Monad: Clock: Ref.Make](
+      config: IdleDetectorConfig = IdleDetectorConfig()
+  ): F[IdleDetector[F]] = for {
     now <- Clock[F].realTime.map(_.toMillis)
-    state <- Ref[F].of(IdleDetectorState(lastSlideChangeTime = now, lastContentChangeTime = now))
+    state <- Ref[F].of(
+      IdleDetectorState(lastSlideChangeTime = now, lastContentChangeTime = now)
+    )
   } yield new IdleDetector[F] {
 
     override def notifyActivity(): F[Unit] = for {
       now <- Clock[F].realTime.map(_.toMillis)
-      _ <- state.update(_.copy(
-        lastSlideChangeTime = now,
-        lastContentChangeTime = now,
-        isIdle = false
-      ))
+      _ <- state.update(
+        _.copy(
+          lastSlideChangeTime = now,
+          lastContentChangeTime = now,
+          isIdle = false
+        )
+      )
     } yield ()
 
     override def onKeyPress(input: UserInput): F[Unit] = notifyActivity()
@@ -49,11 +53,18 @@ object IdleDetectorInterpreter {
       s <- state.get
       now <- Clock[F].realTime.map(_.toMillis)
       contentChanged = s.lastRawContent.exists(_ != content)
-      _ <- if (contentChanged) {
-        state.update(_.copy(lastContentChangeTime = now, lastRawContent = Some(content), isIdle = false))
-      } else {
-        state.update(_.copy(lastRawContent = Some(content)))
-      }
+      _ <-
+        if (contentChanged) {
+          state.update(
+            _.copy(
+              lastContentChangeTime = now,
+              lastRawContent = Some(content),
+              isIdle = false
+            )
+          )
+        } else {
+          state.update(_.copy(lastRawContent = Some(content)))
+        }
     } yield ()
 
     override def isIdle: F[Boolean] = for {
@@ -62,11 +73,12 @@ object IdleDetectorInterpreter {
       lastActivity = Math.max(s.lastSlideChangeTime, s.lastContentChangeTime)
       elapsed = FiniteDuration(now - lastActivity, TimeUnit.MILLISECONDS)
       idle = elapsed >= config.idleTimeout
-      _ <- if (idle && !s.isIdle) {
-        state.update(_.copy(isIdle = true, idleStartTime = now))
-      } else {
-        Monad[F].unit
-      }
+      _ <-
+        if (idle && !s.isIdle) {
+          state.update(_.copy(isIdle = true, idleStartTime = now))
+        } else {
+          Monad[F].unit
+        }
     } yield idle
 
     override def idleStartTime: F[Option[Long]] = for {
@@ -74,4 +86,3 @@ object IdleDetectorInterpreter {
     } yield if (s.isIdle) Some(s.idleStartTime) else None
   }
 }
-

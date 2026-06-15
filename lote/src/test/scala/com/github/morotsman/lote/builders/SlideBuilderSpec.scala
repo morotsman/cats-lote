@@ -96,4 +96,3 @@ class SlideBuilderSpec extends CatsEffectSuite {
     assertEquals(spec.out, Some(transition))
   }
 }
-

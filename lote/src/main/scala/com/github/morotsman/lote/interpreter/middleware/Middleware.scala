@@ -3,22 +3,21 @@ package com.github.morotsman.lote.interpreter.middleware
 import cats.Monad
 import cats.effect.Ref
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{IdleDetector, Middleware, NConsole, Overlay, Ticker, TickerSubscription}
-import com.github.morotsman.lote.model.{Alignment, MouseClick, MouseMove, Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.algebra.{Middleware, NConsole, Overlay, Ticker, TickerSubscription}
+import com.github.morotsman.lote.model.{Alignment, Screen, ScreenAdjusted, UserInput}
 
 case class MiddlewareState[F[_]](
-                                  overlays: List[Overlay[F]],
-                                  lastContent: Option[ScreenAdjusted] = None,
-                                  lastRendered: Option[String] = None,
-                                  subscription: Option[TickerSubscription[F]] = None
-                                )
+    overlays: List[Overlay[F]],
+    lastContent: Option[ScreenAdjusted] = None,
+    lastRendered: Option[String] = None,
+    subscription: Option[TickerSubscription[F]] = None
+)
 
 object Middleware {
-  def make[F[_] : Monad : Ref.Make](
-                                      console: NConsole[F],
-                                      ticker: Ticker[F],
-                                      idleDetector: IdleDetector[F]
-                                    ): F[Middleware[F]] =
+  def make[F[_]: Monad: Ref.Make](
+      console: NConsole[F],
+      ticker: Ticker[F]
+  ): F[Middleware[F]] =
     Ref[F].of(MiddlewareState[F](List.empty)).map { state =>
       new Middleware[F] {
 
@@ -26,22 +25,19 @@ object Middleware {
           state.update(_.copy(overlays = overlays))
         }
 
-        private def notifyContentChange(content: ScreenAdjusted): F[Unit] =
-          idleDetector.onContentChange(content.content)
+        private def notifyKeyPress(input: UserInput): F[Unit] = for {
+          middleWare <- state.get
+          _ <- middleWare.overlays.traverse_(_.onUserInput(input))
+        } yield ()
 
-        private def notifyKeyPress(input: UserInput): F[Unit] = input match {
-          case MouseClick(x, y) => idleDetector.onMouseClick(x, y)
-          case MouseMove(x, y) => idleDetector.onMouseMove(x, y)
-          case _ => idleDetector.onKeyPress(input)
-        }
-
-        private def applyMiddleware(screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
+        private def applyMiddleware(
+            screenAdjusted: ScreenAdjusted
+        ): F[ScreenAdjusted] = for {
           middleWare <- state.get
           c <- context
-          _ <- notifyContentChange(screenAdjusted)
           result <- {
             middleWare.overlays.foldLeft(Monad[F].pure(screenAdjusted)) { case (fsa, o) =>
-              fsa.flatMap(sa => o.applyOverlay(c, sa))
+              fsa.flatMap(sa => o.applyOverlay(c, sa, screenAdjusted))
             }
           }
         } yield result
@@ -53,23 +49,31 @@ object Middleware {
               withOverlay <- applyMiddleware(content)
               currentState <- state.get
               contentStillCurrent = currentState.lastContent.contains(content)
-              _ <- if (contentStillCurrent && !currentState.lastRendered.contains(withOverlay.content)) {
-                console.writeString(withOverlay) *>
-                  state.update(_.copy(lastRendered = Some(withOverlay.content)))
-              } else Monad[F].unit
+              _ <-
+                if (
+                  contentStillCurrent && !currentState.lastRendered.contains(
+                    withOverlay.content
+                  )
+                ) {
+                  console.writeString(withOverlay) *>
+                    state.update(
+                      _.copy(lastRendered = Some(withOverlay.content))
+                    )
+                } else Monad[F].unit
             } yield ()
           }
         } yield ()
 
         private def ensureSubscribed(): F[Unit] = for {
           s <- state.get
-          _ <- if (s.subscription.isEmpty) {
-            for {
-              sub <- ticker.subscribe(onTick)
-              _ <- state.update(_.copy(subscription = Some(sub)))
-              _ <- ticker.start
-            } yield ()
-          } else Monad[F].unit
+          _ <-
+            if (s.subscription.isEmpty) {
+              for {
+                sub <- ticker.subscribe(onTick)
+                _ <- state.update(_.copy(subscription = Some(sub)))
+                _ <- ticker.start
+              } yield ()
+            } else Monad[F].unit
         } yield ()
 
         override def read(timeoutInMillis: Long): F[UserInput] = for {
@@ -85,7 +89,10 @@ object Middleware {
         override def readInterruptible(): F[UserInput] =
           console.readInterruptible()
 
-        override def alignText(s: String, alignment: Alignment): F[ScreenAdjusted] =
+        override def alignText(
+            s: String,
+            alignment: Alignment
+        ): F[ScreenAdjusted] =
           console.alignText(s: String, alignment: Alignment)
 
         override def writeString(s: ScreenAdjusted): F[Unit] = for {

@@ -13,8 +13,7 @@ final case class MouseClick(x: Int, y: Int) extends UserInput
 
 final case class MouseMove(x: Int, y: Int) extends UserInput
 
-
 object SpecialKey extends Enumeration {
   type SpecialKey = Value
-  val Up, Down, Left, Right, Esc, Unknown, Timeout = Value
+  val Enter, Up, Down, Left, Right, Esc, Unknown, Timeout = Value
 }

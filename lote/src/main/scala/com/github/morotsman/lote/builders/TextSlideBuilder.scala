@@ -6,18 +6,21 @@ import com.github.morotsman.lote.builders.TextSlideBuilder.{BuildState, ContentA
 import com.github.morotsman.lote.interpreter.TextSlide
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, SlideSpecification, VerticalAlignment}
 
-final case class TextSlideBuilder[F[_] : Temporal: NConsole, State <: BuildState](
-                                                                     alignment: Option[Alignment],
-                                                                     content: String,
-                                                                     in: Option[Transition[F]],
-                                                                     out: Option[Transition[F]]
-                                                                   ) {
+final case class TextSlideBuilder[
+    F[_]: Temporal: NConsole,
+    State <: BuildState
+](
+    alignment: Option[Alignment],
+    content: String,
+    in: Option[Transition[F]],
+    out: Option[Transition[F]],
+    slideTitle: Option[String] = None
+) {
 
   def transition(
-                  transition: Transition[F] = null
-                ): TextSlideBuilder[F, State] =
+      transition: Transition[F] = null
+  ): TextSlideBuilder[F, State] =
     this.copy(out = Option(transition))
-
 
   def content(content: String): TextSlideBuilder[F, State with ContentAdded] =
     this.copy(content = content)
@@ -25,9 +28,18 @@ final case class TextSlideBuilder[F[_] : Temporal: NConsole, State <: BuildState
   def alignment(alignment: Alignment): TextSlideBuilder[F, State] =
     this.copy(alignment = Option(alignment))
 
+  def title(title: String): TextSlideBuilder[F, State] =
+    this.copy(slideTitle = Some(title))
+
   def build(): SlideSpecification[F] = SlideSpecification(
-    slide = TextSlide(content, alignment.getOrElse(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))),
-    out = out
+    slide = TextSlide(
+      content,
+      alignment.getOrElse(
+        Alignment(VerticalAlignment.Center, HorizontalAlignment.Center)
+      )
+    ),
+    out = out,
+    title = slideTitle
   )
 
 }
@@ -35,8 +47,10 @@ final case class TextSlideBuilder[F[_] : Temporal: NConsole, State <: BuildState
 object TextSlideBuilder {
   type WithContent = WithoutContent with ContentAdded
 
-  def apply[F[_] : Temporal]()(implicit console: NConsole[F]): TextSlideBuilder[F, WithoutContent] =
-    TextSlideBuilder(None, null, None, None)
+  def apply[F[_]: Temporal]()(implicit
+      console: NConsole[F]
+  ): TextSlideBuilder[F, WithoutContent] =
+    TextSlideBuilder(None, null, None, None, None)
 
   sealed trait BuildState
 
@@ -44,4 +58,3 @@ object TextSlideBuilder {
 
   sealed trait ContentAdded extends BuildState
 }
-

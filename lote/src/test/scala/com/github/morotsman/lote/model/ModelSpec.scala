@@ -11,7 +11,8 @@ class ModelSpec extends FunSuite {
   }
 
   test("Alignment stores vertical and horizontal alignment") {
-    val alignment = Alignment(VerticalAlignment.Center, HorizontalAlignment.Left)
+    val alignment =
+      Alignment(VerticalAlignment.Center, HorizontalAlignment.Left)
     assertEquals(alignment.verticalAlignment, VerticalAlignment.Center)
     assertEquals(alignment.horizontalAlignment, HorizontalAlignment.Left)
   }
@@ -25,7 +26,7 @@ class ModelSpec extends FunSuite {
     val input: UserInput = Character('a')
     input match {
       case Character(c) => assertEquals(c, 'a')
-      case _ => fail("Expected Character")
+      case _            => fail("Expected Character")
     }
   }
 
@@ -33,12 +34,13 @@ class ModelSpec extends FunSuite {
     val input: UserInput = Key(SpecialKey.Right)
     input match {
       case Key(k) => assertEquals(k, SpecialKey.Right)
-      case _ => fail("Expected Key")
+      case _      => fail("Expected Key")
     }
   }
 
   test("SpecialKey has all expected values") {
     val allKeys = SpecialKey.values
+    assert(allKeys.contains(SpecialKey.Enter))
     assert(allKeys.contains(SpecialKey.Up))
     assert(allKeys.contains(SpecialKey.Down))
     assert(allKeys.contains(SpecialKey.Left))
@@ -62,4 +64,3 @@ class ModelSpec extends FunSuite {
     assert(all.contains(HorizontalAlignment.Right))
   }
 }
-

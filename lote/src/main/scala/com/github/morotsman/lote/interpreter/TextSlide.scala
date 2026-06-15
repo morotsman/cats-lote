@@ -8,7 +8,10 @@ import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, ScreenAdjusted, UserInput, VerticalAlignment}
 
 object TextSlide {
-  def apply[F[_] : Monad: NConsole](slideContent: String, alignment: Alignment): Slide[F] =
+  def apply[F[_]: Monad: NConsole](
+      slideContent: String,
+      alignment: Alignment
+  ): Slide[F] =
     new Slide[F] {
       override def content: F[ScreenAdjusted] =
         NConsole[F].alignText(slideContent, alignment)
@@ -24,8 +27,11 @@ object TextSlide {
     }
 
   implicit class ToTextSlide(val s: String) {
-    def toSlide[F[_] : Temporal: NConsole](): Slide[F] =
-      TextSlide[F](s, Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+    def toSlide[F[_]: Temporal: NConsole](): Slide[F] =
+      TextSlide[F](
+        s,
+        Alignment(VerticalAlignment.Up, HorizontalAlignment.Center)
+      )
   }
 
 }

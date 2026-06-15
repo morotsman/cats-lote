@@ -14,26 +14,32 @@ trait ProgressBar[F[_]] extends Overlay[F] {
 
 object ProgressBar {
 
-  def make[F[_] : Monad : Ref.Make](
-                                                 totalSlides: Int,
-                                                 milestones: List[Milestone] = List.empty
-                                               ): F[ProgressBar[F]] = Ref[F].of(0).map { currentSlideRef =>
+  def make[F[_]: Monad: Ref.Make](
+      totalSlides: Int,
+      milestones: List[Milestone] = List.empty
+  ): F[ProgressBar[F]] = Ref[F].of(0).map { currentSlideRef =>
     new ProgressBar[F] {
 
       override def setCurrentSlide(index: Int): F[Unit] =
         currentSlideRef.set(index)
 
-
-      override def applyOverlay(context: Screen, screenAdjusted: ScreenAdjusted): F[ScreenAdjusted] = for {
+      override def applyOverlay(
+          context: Screen,
+          screenAdjusted: ScreenAdjusted,
+          originalContent: ScreenAdjusted
+      ): F[ScreenAdjusted] = for {
         currentIndex <- currentSlideRef.get
       } yield {
-        val indicators = (0 until totalSlides).map { i =>
-          if (i < currentIndex) "#"
-          else if (i == currentIndex) "0"
-          else "-"
-        }.mkString(" ")
+        val indicators = (0 until totalSlides)
+          .map { i =>
+            if (i < currentIndex) "#"
+            else if (i == currentIndex) "0"
+            else "-"
+          }
+          .mkString(" ")
 
-        val progressBarPadding = Math.max(0, (context.screenWidth - indicators.length) / 2)
+        val progressBarPadding =
+          Math.max(0, (context.screenWidth - indicators.length) / 2)
 
         // ANSI color codes
         val gray = "\u001b[90m"
@@ -46,7 +52,10 @@ object ProgressBar {
         def isActiveMilestone(m: Milestone): Boolean = {
           val mIdx = sortedMilestones.indexOf(m)
           val start = m.slideIndex
-          val end = if (mIdx < sortedMilestones.length - 1) sortedMilestones(mIdx + 1).slideIndex else totalSlides
+          val end =
+            if (mIdx < sortedMilestones.length - 1)
+              sortedMilestones(mIdx + 1).slideIndex
+            else totalSlides
           currentIndex >= start && currentIndex < end
         }
 
@@ -67,7 +76,8 @@ object ProgressBar {
             }
             sb.append(coloredLabel)
             // Advance currentPos by the visible label length (without ANSI codes)
-            val visibleLen = coloredLabel.replaceAll("\u001b\\[[0-9;]*m", "").length
+            val visibleLen =
+              coloredLabel.replaceAll("\u001b\\[[0-9;]*m", "").length
             currentPos += visibleLen
           }
           if (currentPos < context.screenWidth) {
@@ -83,13 +93,18 @@ object ProgressBar {
         val milestoneRowIndex = progressRowIndex - 1
 
         val padded = if (lines.length <= progressRowIndex) {
-          lines ++ Vector.fill(progressRowIndex - lines.length + 1)(" " * context.screenWidth)
+          lines ++ Vector.fill(progressRowIndex - lines.length + 1)(
+            " " * context.screenWidth
+          )
         } else {
           lines
         }
 
         val centered = {
-          " " * progressBarPadding + indicators + " " * Math.max(0, context.screenWidth - progressBarPadding - indicators.length)
+          " " * progressBarPadding + indicators + " " * Math.max(
+            0,
+            context.screenWidth - progressBarPadding - indicators.length
+          )
         }
 
         val updatedLines = padded
@@ -102,4 +117,3 @@ object ProgressBar {
   }
 
 }
-
