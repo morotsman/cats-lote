@@ -2,7 +2,7 @@
 
 Do you ever have the urge to create truly underwhelming presentations?
 
-Then this might be for you: A lo-tech presentation tool for making presentations in the terminal, built with Scala, [Cats Effect](https://typelevel.org/cats-effect/), and an unreasonable amount of functional programming, because why use PowerPoint when you can write a monad?
+Then this might be for you: A lo-tech presentation tool for making presentations in the terminal, built with Scala, [Cats Effect](https://typelevel.org/cats-effect/), and an unreasonable amount of functional programming, because why use PowerPoint when you can write a monad? 
 
 ## Features
 
@@ -40,6 +40,8 @@ Overlays that render on top of your slides, because your content alone clearly i
 - **ProgressBar** – Shows how far through the presentation you are. Gives your audience hope that it will eventually end. Supports named milestones for section markers.
 - **Quick Navigation** – Press `N` to pop up a slide list, use Up/Down arrows to browse, Enter to jump. For when you need to skip ahead before your audience falls asleep.
 - **Idle** – An idle-screen animation that activates when you stop presenting. Bugs crawl in from the edges, steal words from your slide, and eventually rearrange themselves to display the current time. It's more entertaining than most presentations.
+
+Pro tip: If you find the animations and transitions too smooth for your liking, use Microsoft Teams when presenting. That will guarantee a lousy frame rate, giving you the stuttering animations and transitions we've all come to love.
 
 ### 🏗️ Type-Safe Builder DSL
 
