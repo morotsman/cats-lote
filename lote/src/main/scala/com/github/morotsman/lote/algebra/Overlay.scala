@@ -10,6 +10,8 @@ trait Overlay[F[_]] {
       originalContent: ScreenAdjusted
   ): F[ScreenAdjusted]
 
-  def onUserInput(userInput: UserInput)(implicit F: Applicative[F]): F[Unit] =
+  def onUserInput(userInput: UserInput)(implicit F: Applicative[F]): F[Unit] = {
+    val _ = userInput
     F.unit
+  }
 }

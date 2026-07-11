@@ -63,6 +63,15 @@ Implement the `Slide[F]` trait to create fully custom, interactive slides that r
 
 A `Ticker` algebra provides a subscribe/publish mechanism for frame-by-frame animations. It's basically a game engine, except the game is "watching text move slowly."
 
+Also, in a shocking display of restraint, render cadence and animation speed are separate knobs:
+
+- **`withTickerInterval(...)`** – Controls how often the terminal redraws.
+- **`withFrameRate(...)`** – Same thing, but in FPS for people who prefer human-friendly numbers.
+- **`withAnimationStep(...)`** – Controls how quickly built-in animations advance.
+- **`withAnimationFrameRate(...)`** – Same thing, but in FPS so you can say "25 FPS" instead of "40 milliseconds" like someone who has accepted their fate.
+
+So if you want smoother rendering without turning your snake into a caffeinated railgun, you can do that now.
+
 ### 🐍 ASCII Art
 
 The GrabTransition features a multi-frame animated ASCII snake with crawling, mouth-opening, biting, and dragging animations. Peak software engineering.
@@ -83,17 +92,44 @@ The GrabTransition features a multi-frame animated ASCII snake with crawling, mo
 git clone https://github.com/morotsman/cats-lote.git
 cd cats-lote
 
-# Start sbt
-sbt
-
 # Run the example presentation (prepare to be underwhelmed)
-examples/runMain com.github.morotsman.examples.Session1
+sbt "examples/runMain com.github.morotsman.examples.Example1"
+```
+
+The example is configured with a fairly sensible balance:
+
+- `withFrameRate(60)` for smoother redraws
+- `withAnimationFrameRate(25)` for animation speed that doesn't look like it just discovered espresso
+
+### Build & Test
+
+Verified from this repo:
+
+```bash
+# Compile everything from scratch
+sbt clean compile
+
+# Run the full test suite
+sbt test
+
+# Clean build + tests
+sbt clean test
+```
+
+If `sbt clean` leaves you with a transient error about creating files under `target/streams`, recreate the missing directories and retry:
+
+```bash
+mkdir -p examples/target/streams/_global/ivyConfiguration/_global/streams
+mkdir -p lote/target/streams/_global/ivyConfiguration/_global/streams
+mkdir -p project/target/streams/_global/ivyConfiguration/_global/streams
+
+sbt test
 ```
 
 ### Navigation
 
 - Use `←` / `→` arrow keys to navigate between slides
-- Press `Esc` to exit (no judgement)
+- Press `Esc` to leave the presentation immediately (no judgement)
 - Press `N` to toggle quick navigation overlay, then `↑` / `↓` to browse and `Enter` to jump
 
 ## Quick Example
@@ -113,6 +149,8 @@ object MyPresentation extends IOApp.Simple {
       .withProgressBar()
       .withQuickNavigation()
       .withIdleAnimation(idleTimeout = 2.minutes)
+      .withFrameRate(60)
+      .withAnimationFrameRate(25)
       .addTextSlide { implicit ctx => import ctx._
         _.content("Hello, Terminal!")
           .title("Intro")
@@ -125,11 +163,77 @@ object MyPresentation extends IOApp.Simple {
           .transition(FallingCharactersTransition())
           .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
       }
-      .addExitSlide("Thanks for watching!")
       .run()
   }
 }
 ```
+
+## Animation Tuning
+
+Because terminal rendering is not exactly Pixar, here are the two settings you'll most likely want to tweak:
+
+- **`withTickerInterval(...)`** – redraw frequency
+- **`withFrameRate(...)`** – redraw frequency, but in FPS
+- **`withAnimationStep(...)`** – built-in animation speed
+- **`withAnimationFrameRate(...)`** – built-in animation speed, but in FPS
+
+Example:
+
+```scala
+SessionBuilder[IO]()
+  .withFrameRate(60)
+  .withAnimationFrameRate(25)
+```
+
+Same thing, if milliseconds are more your style for some reason:
+
+```scala
+SessionBuilder[IO]()
+  .withTickerInterval(16.millis)
+  .withAnimationStep(40.millis)
+```
+
+Some practical settings:
+
+- **Smoother rendering, normal animation speed**
+  - `.withTickerInterval(16.millis)`
+  - `.withAnimationStep(40.millis)`
+- **Less terminal pressure, normal animation speed**
+  - `.withTickerInterval(40.millis)`
+  - `.withAnimationStep(40.millis)`
+- **Smoother rendering, faster built-in animations**
+  - `.withTickerInterval(16.millis)`
+  - `.withAnimationStep(20.millis)`
+- **Smoother rendering, slower built-in animations**
+  - `.withTickerInterval(16.millis)`
+  - `.withAnimationStep(60.millis)`
+
+If you set `.withTickerInterval(1.milli)`, the terminal will do its best, which is adorable, but not especially effective.
+
+If you prefer FPS, the rough conversions are:
+
+- `60 FPS` ≈ `16.67 ms`
+- `30 FPS` ≈ `33.33 ms`
+- `25 FPS` = `40 ms`
+
+### Recommended Presets
+
+If tweaking two knobs sounds dangerously close to system administration, here are a few presets:
+
+- **Demo mode** – smooth enough to look intentional, restrained enough to not melt your terminal
+  - `.withFrameRate(60)`
+  - `.withAnimationFrameRate(25)`
+- **Slightly dramatic mode** – smoother redraws, faster transitions, more "behold my ASCII art" energy
+  - `.withFrameRate(60)`
+  - `.withAnimationFrameRate(41.67)`
+- **Laptop fan diplomacy mode** – less redraw pressure, normal animation speed, fewer opportunities for your machine to file a complaint
+  - `.withFrameRate(25)`
+  - `.withAnimationFrameRate(25)`
+- **Leisurely snake mode** – same smooth redraws, but the built-in animations take their sweet time getting anywhere
+  - `.withFrameRate(60)`
+  - `.withAnimationFrameRate(16.67)`
+
+In short: lower ticker interval = smoother redraws, lower animation step = faster built-in animations, and lower self-respect = trying `1.milli` again to see if maybe this time it works out.
 
 ### Interactive Slides with `addSlideF`
 

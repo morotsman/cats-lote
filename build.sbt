@@ -1,4 +1,3 @@
-ThisBuild / name := "cats-lote"
 ThisBuild / scalaVersion := "2.13.15"
 ThisBuild / version := "0.0.1-SNAPSHOT"
 
@@ -49,4 +48,10 @@ lazy val examples = (project in file("examples"))
     scalacOptions ++= Seq(
       "-Ymacro-annotations"
     )
+  )
+
+lazy val root = (project in file("."))
+  .aggregate(lote, examples)
+  .settings(
+    name := "cats-lote"
   )

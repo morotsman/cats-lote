@@ -99,8 +99,6 @@ object PresentationExecutorInterpreter {
                     current.slide.stopShow >>
                       currentWork.cancel >>
                       NConsole[F].clear() >>
-                      presentation.exitSlide.fold(Monad[F].unit)(_.startShow) >>
-                      NConsole[F].clear() >>
                       Monad[F].pure(Either.right((currentIndex, true, currentWork)))
                   case _ =>
                     val cur = presentation.slideSpecifications(currentIndex)

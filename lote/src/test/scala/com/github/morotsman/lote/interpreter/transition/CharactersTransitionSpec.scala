@@ -1,7 +1,7 @@
 package com.github.morotsman.lote.interpreter.transition
 
 import cats.effect.IO
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Ticker}
+import com.github.morotsman.lote.algebra.{AnimationSettings, NConsole, Slide, Ticker}
 import com.github.morotsman.lote.interpreter.ticker.TickerInterpreter
 import com.github.morotsman.lote.model._
 import com.github.morotsman.lote.support.TestNConsole
@@ -13,7 +13,7 @@ import scala.concurrent.duration.FiniteDuration
 class CharactersTransitionSpec extends CatsEffectSuite {
 
   // Override default timeout for transition tests
-  override val munitTimeout: Duration = 10.seconds
+  override val munitIOTimeout: Duration = 10.seconds
 
   /** Creates a slide that returns fixed ScreenAdjusted content (no alignment/padding)
     */
@@ -41,9 +41,9 @@ class CharactersTransitionSpec extends CatsEffectSuite {
 
   // getNewIndex: returns None to remove the transformable character (revealing the final one underneath)
   private def inPlaceNewIndex(
-      screen: Screen,
-      index: Int,
-      cp: CharacterPosition
+      _screen: Screen,
+      _index: Int,
+      _cp: CharacterPosition
   ): Option[Int] = None
 
   test("CharactersTransition completes and shows the target slide") {
@@ -132,24 +132,45 @@ class CharactersTransitionSpec extends CatsEffectSuite {
 
   private def runTransition(accelerator: Double): IO[FiniteDuration] = for {
     console <- TestNConsole.make(screen = Screen(4, 1))
-    nc = console: NConsole[IO]
-    ticker <- TickerInterpreter.make[IO](interval = 5.millis)(
-      implicitly,
-      implicitly,
-      implicitly,
-      implicitly
-    )
+    implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+    ticker <- TickerInterpreter.make[IO](interval = 5.millis)
+    implicit0(tk: Ticker[IO]) = ticker
     from = fixedSlide("ABCD")
     to = fixedSlide("WXYZ")
     transition = CharactersTransition[IO](
       selectAccelerator = accelerator,
       setupPosition = simpleSetupPosition,
       getNewIndex = inPlaceNewIndex
-    )(implicitly, implicitly, nc, ticker)
+    )
     start <- IO.monotonic
     _ <- transition.transition(from, to)
     end <- IO.monotonic
   } yield end - start
+
+  private def runTransitionWithAnimationStep(
+      animationStep: FiniteDuration,
+      tickerInterval: FiniteDuration
+  ): IO[FiniteDuration] = {
+    implicit val animationSettings: AnimationSettings =
+      AnimationSettings(animationStep)
+
+    for {
+      console <- TestNConsole.make(screen = Screen(4, 1))
+      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      ticker <- TickerInterpreter.make[IO](interval = tickerInterval)
+      implicit0(tk: Ticker[IO]) = ticker
+      from = fixedSlide("ABCD")
+      to = fixedSlide("WXYZ")
+      transition = CharactersTransition[IO](
+        selectAccelerator = 1.1,
+        setupPosition = simpleSetupPosition,
+        getNewIndex = inPlaceNewIndex
+      )
+      start <- IO.monotonic
+      _ <- transition.transition(from, to)
+      end <- IO.monotonic
+    } yield end - start
+  }
 
   test("CharactersTransition higher selectAccelerator completes faster") {
     for {
@@ -180,6 +201,18 @@ class CharactersTransitionSpec extends CatsEffectSuite {
       cleared <- console.clearedRef.get
     } yield {
       assert(cleared >= 1, s"Expected at least one clear(), got $cleared")
+    }
+  }
+
+  test("CharactersTransition animation step controls speed independently of ticker") {
+    for {
+      fastAnimation <- runTransitionWithAnimationStep(10.millis, 40.millis)
+      slowAnimation <- runTransitionWithAnimationStep(80.millis, 40.millis)
+    } yield {
+      assert(
+        fastAnimation < slowAnimation,
+        s"Expected smaller animation step ($fastAnimation) to complete faster than larger step ($slowAnimation)"
+      )
     }
   }
 }

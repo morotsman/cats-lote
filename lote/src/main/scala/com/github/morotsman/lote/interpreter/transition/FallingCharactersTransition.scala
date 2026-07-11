@@ -1,28 +1,31 @@
 package com.github.morotsman.lote.interpreter.transition
 
 import cats.Monad
-import cats.effect.{Concurrent, Ref}
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Ticker, Transition}
+import cats.effect.{Ref, Temporal}
+import com.github.morotsman.lote.algebra.{AnimationSettings, NConsole, Slide, Ticker, Transition}
 import com.github.morotsman.lote.model.{Screen, UserInput}
 
 object FallingCharactersTransition {
 
-  def apply[F[_]: Concurrent: Ref.Make: NConsole: Ticker](
+  def apply[F[_]: Temporal: Ref.Make: NConsole: Ticker](
       gravity: Double = 1.2,
       selectAccelerator: Double = 1.2
-  ): Transition[F] = new Transition[F] {
+  )(implicit animationSettings: AnimationSettings): Transition[F] = new Transition[F] {
 
     def setupPosition(
         fromCharacter: Char,
         toCharacter: Char
-    ): List[CharacterPosition] = List(
-      CharacterPosition(
-        fromCharacter,
-        inTransition = false,
-        canTransform = true
-      ),
-      CharacterPosition(' ', inTransition = false, canTransform = false)
-    )
+    ): List[CharacterPosition] = {
+      val _ = toCharacter
+      List(
+        CharacterPosition(
+          fromCharacter,
+          inTransition = false,
+          canTransform = true
+        ),
+        CharacterPosition(' ', inTransition = false, canTransform = false)
+      )
+    }
 
     def getNewIndex(
         screen: Screen,

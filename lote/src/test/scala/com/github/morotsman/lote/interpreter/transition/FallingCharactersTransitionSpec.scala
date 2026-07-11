@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 
 class FallingCharactersTransitionSpec extends CatsEffectSuite {
 
-  override val munitTimeout: Duration = 10.seconds
+  override val munitIOTimeout: Duration = 10.seconds
 
   private def fixedSlide(text: String): Slide[IO] = new Slide[IO] {
     override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
@@ -125,12 +125,12 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
   test(
     "FallingCharactersTransition setupPosition creates falling and replacement chars"
   ) {
-    // Verify the setup directly
-    val transition = new Object {
-      def setupPosition(
-          fromCharacter: Char,
-          _toCharacter: Char
-      ): List[CharacterPosition] = List(
+    def setupPosition(
+        fromCharacter: Char,
+        toCharacter: Char
+    ): List[CharacterPosition] = {
+      val _ = toCharacter
+      List(
         CharacterPosition(
           fromCharacter,
           inTransition = false,
@@ -140,12 +140,12 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
       )
     }
 
-    val positions = transition.setupPosition('A', 'B')
+    val positions = setupPosition('A', 'B')
     assertEquals(positions.length, 2)
-    assertEquals(positions(0).character, 'A')
-    assert(positions(0).canTransform)
-    assertEquals(positions(1).character, ' ')
-    assert(!positions(1).canTransform)
+    assertEquals(positions.head.character, 'A')
+    assert(positions.head.canTransform)
+    assertEquals(positions.last.character, ' ')
+    assert(!positions.last.canTransform)
   }
 
   test("FallingCharactersTransition getNewIndex moves characters downward") {
@@ -160,8 +160,7 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
       }
 
     // At tick 0, acceleration = 0, so character stays in place
-    val cp0 =
-      CharacterPosition('X', inTransition = true, canTransform = true, tick = 0)
+    val cp0 = CharacterPosition('X', inTransition = true, canTransform = true)
     assertEquals(getNewIndex(5, cp0), Some(5))
 
     // At tick 1, acceleration = 1.2, toInt = 1, moves down by (10+1)*1 = 11

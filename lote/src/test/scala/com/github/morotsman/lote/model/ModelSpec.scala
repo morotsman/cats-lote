@@ -41,6 +41,7 @@ class ModelSpec extends FunSuite {
   test("SpecialKey has all expected values") {
     val allKeys = SpecialKey.values
     assert(allKeys.contains(SpecialKey.Enter))
+    assert(allKeys.contains(SpecialKey.Space))
     assert(allKeys.contains(SpecialKey.Up))
     assert(allKeys.contains(SpecialKey.Down))
     assert(allKeys.contains(SpecialKey.Left))

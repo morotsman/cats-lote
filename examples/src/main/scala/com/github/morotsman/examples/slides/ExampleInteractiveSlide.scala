@@ -1,21 +1,22 @@
 package com.github.morotsman.examples.slides
 
 import cats.Monad
-import cats.effect.{Concurrent, Ref}
+import cats.effect.{Ref, Temporal}
 import cats.effect.std.Queue
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Ticker, TickerSubscription}
+import com.github.morotsman.lote.algebra.{AnimationSettings, NConsole, Slide, Ticker, TickerSubscription}
+import com.github.morotsman.lote.interpreter.animation.FixedStep
 import com.github.morotsman.lote.model._
 
 import scala.util.Random
 
 object ExampleInteractiveSlide {
 
-  def make[F[_]: Monad: Ref.Make: NConsole: Ticker](
+  def make[F[_]: Monad: NConsole](
       animator: Animator[F]
-  ): F[Slide[F]] = {
+  ): Slide[F] = {
 
-    Monad[F].pure(new Slide[F] {
+    new Slide[F] {
       override def content: F[ScreenAdjusted] =
         NConsole[F].alignText(
           "",
@@ -43,7 +44,7 @@ object ExampleInteractiveSlide {
         case _ =>
           Monad[F].unit
       }
-    })
+    }
   }
 }
 
@@ -69,12 +70,13 @@ case class AnimatorState(
 
 object Animator {
 
-  def make[F[_]: Concurrent: Ref.Make: NConsole: Ticker](): F[Animator[F]] = {
+  def make[F[_]: Temporal: Ref.Make: NConsole: Ticker]()(implicit animationSettings: AnimationSettings): F[Animator[F]] = {
 
     for {
       queue <- Queue.unbounded[F, Direction]
       stateRef <- Ref[F].of(Option.empty[AnimatorState])
       subscriptionRef <- Ref[F].of(Option.empty[TickerSubscription[F]])
+      stepperRef <- FixedStep.makeRef[F]
     } yield new Animator[F] {
 
       private def growWorm(
@@ -91,6 +93,7 @@ object Animator {
                 case DirectionRight() => last.index - 1
                 case DirectionUp()    => last.index + screenWidth
                 case DirectionDown()  => last.index - screenWidth
+                case NoDirection()    => last.index
               },
               symbol = '?'
             )
@@ -127,6 +130,8 @@ object Animator {
                     } else {
                       screenWidth + oldSegment.index - screenLength
                     }
+                  case NoDirection() =>
+                    oldSegment.index
                 }
               )
               (oldSegment.direction, newSegment +: acc)
@@ -176,23 +181,34 @@ object Animator {
       // with state and limiting direction changes to one per frame (avoiding 180° turns that would
       // cause instant self-collision). The trade-off is up to ~40ms input latency, which is imperceptible.
       private val onTick: F[Unit] = for {
+        nrOfSteps <- FixedStep.consumeSteps(stepperRef)
         maybeState <- stateRef.get
         _ <- maybeState.traverse_ { s =>
-          if (!s.running) Monad[F].unit
+          if (nrOfSteps <= 0 || !s.running) Monad[F].unit
           else if (hasSelfCollision(s.worm)) {
             stateRef.update(_.map(_.copy(running = false)))
           } else {
             for {
-              maybeUserInput <- queue.tryTake
               screen <- NConsole[F].context
-              updatedState = updateWormState(
-                s,
-                maybeUserInput,
-                screen.screenWidth
-              )
-              _ <- NConsole[F].writeString(
-                renderScreen(updatedState, screen.screenWidth)
-              )
+              updatedState <- (0 until nrOfSteps).toList.foldLeftM(s) {
+                case (currentState, _) if !currentState.running =>
+                  Monad[F].pure(currentState)
+                case (currentState, _) if hasSelfCollision(currentState.worm) =>
+                  Monad[F].pure(currentState.copy(running = false))
+                case (currentState, _) =>
+                  queue.tryTake.map { maybeUserInput =>
+                    updateWormState(
+                      currentState,
+                      maybeUserInput,
+                      screen.screenWidth
+                    )
+                  }
+              }
+              _ <- if (updatedState.running)
+                NConsole[F].writeString(
+                  renderScreen(updatedState, screen.screenWidth)
+                )
+              else Monad[F].unit
               _ <- stateRef.set(Some(updatedState))
             } yield ()
           }
@@ -219,6 +235,7 @@ object Animator {
             )
           )
         )
+        _ <- FixedStep.reset(stepperRef)
         sub <- Ticker[F].subscribe(onTick)
         _ <- subscriptionRef.set(Some(sub))
         _ <- Ticker[F].start

@@ -24,14 +24,20 @@ import com.github.morotsman.lote.interpreter.nconsole.{IdleAwareNConsole, NConso
 import com.github.morotsman.lote.interpreter.ticker.TickerInterpreter
 import com.github.morotsman.lote.model.Presentation
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.{DurationInt, FiniteDuration, NANOSECONDS}
 
-/** Provides implicit NConsole and Ticker instances for use inside slide builder functions. This is passed to the user's
-  * builder lambdas so transitions and other components that require these typeclasses can be constructed.
+/** Provides implicit NConsole, Ticker, and AnimationSettings instances for use inside slide builder functions. This is
+  * passed to the user's builder lambdas so transitions and other components that require these typeclasses can be
+  * constructed.
   */
-class SlideContext[F[_]](val console: NConsole[F], val ticker: Ticker[F]) {
+class SlideContext[F[_]](
+    val console: NConsole[F],
+    val ticker: Ticker[F],
+    val animationSettings: AnimationSettings
+) {
   implicit def nConsole: NConsole[F] = console
   implicit def tickerInstance: Ticker[F] = ticker
+  implicit def animationSettingsInstance: AnimationSettings = animationSettings
 }
 
 /** A high-level builder that encapsulates all the wiring needed to run a presentation with middleware.
@@ -46,6 +52,8 @@ class SlideContext[F[_]](val console: NConsole[F], val ticker: Ticker[F]) {
   *   .withProgressBar()
   *   .withQuickNavigation()
   *   .withIdleAnimation()
+  *   .withFrameRate(60)
+  *   .withAnimationFrameRate(25)
   *   .addTextSlide { implicit ctx => import ctx._
   *     _.content("Hello").title("Intro").transition(ReplaceTransition(' '))
   *   }
@@ -57,7 +65,6 @@ class SlideContext[F[_]](val console: NConsole[F], val ticker: Ticker[F]) {
   */
 case class SessionBuilder[F[_]: Async: Ref.Make] private (
     private val slideSteps: List[SessionBuilder.SlideStep[F]],
-    private val exitSlideConfig: Option[SessionBuilder.ExitSlideConfig[F]],
     private val timerDuration: Option[FiniteDuration],
     private val progressBarEnabled: Boolean,
     private val quickNavigationEnabled: Boolean,
@@ -66,13 +73,14 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     private val idleOverlayConfig: IdleOverlayConfig,
     private val customOverlays: List[F[Overlay[F]]],
     private val onSlideChange: Option[Int => F[Unit]],
-    private val tickerInterval: FiniteDuration
+    private val tickerInterval: FiniteDuration,
+    private val animationStep: FiniteDuration
 ) {
 
   // -- Slide building --
 
   /** Adds a custom interactive slide using the SlideBuilder DSL. The builder function receives a `SlideContext`
-    * providing implicit `NConsole` and `Ticker` instances.
+    * providing implicit `NConsole`, `Ticker`, and `AnimationSettings` instances.
     */
   def addSlide(
       slideBuilder: SlideContext[F] => SlideBuilder[F, WithoutSlide] => SlideBuilder[F, WithContentSlide]
@@ -82,8 +90,8 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
   /** Adds an effectful custom slide. Use this for interactive slides that require effectful construction (e.g.,
     * allocating Refs, Queues, etc.).
     *
-    * The function receives a `SlideContext` providing implicit `NConsole` and `Ticker` instances. Returns a builder
-    * function wrapped in `F[_]`.
+    * The function receives a `SlideContext` providing implicit `NConsole`, `Ticker`, and `AnimationSettings`
+    * instances. Returns a builder function wrapped in `F[_]`.
     *
     * Example:
     * {{{
@@ -100,7 +108,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     this.copy(slideSteps = slideSteps :+ SessionBuilder.EffectfulSlide(slideBuilder))
 
   /** Adds a text-based slide using the TextSlideBuilder DSL. The builder function receives a `SlideContext` providing
-    * implicit `NConsole` and `Ticker` instances needed for creating transitions.
+    * implicit `NConsole`, `Ticker`, and `AnimationSettings` instances needed for creating transitions.
     *
     * Example:
     * {{{
@@ -113,14 +121,6 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
       textSlideBuilder: SlideContext[F] => TextSlideBuilder[F, WithoutContent] => TextSlideBuilder[F, WithContent]
   ): SessionBuilder[F] =
     this.copy(slideSteps = slideSteps :+ SessionBuilder.TextSlideStep(textSlideBuilder))
-
-  /** Adds a slide to show when the user exits the presentation (presses Esc). */
-  def addExitSlide(slide: Slide[F]): SessionBuilder[F] =
-    this.copy(exitSlideConfig = Some(SessionBuilder.ExitSlideInstance(slide)))
-
-  /** Adds a text exit slide. */
-  def addExitSlide(s: String): SessionBuilder[F] =
-    this.copy(exitSlideConfig = Some(SessionBuilder.ExitSlideText(s)))
 
   // -- Middleware configuration --
 
@@ -168,13 +168,44 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
   def onSlideChanged(callback: Int => F[Unit]): SessionBuilder[F] =
     this.copy(onSlideChange = Some(callback))
 
-  /** Configures the ticker interval (default 40ms ≈ 25fps). */
+  /** Configures the ticker interval (default 40ms ≈ 25fps).
+    *
+    * This primarily affects render/update cadence. Built-in transitions advance on a fixed simulation step so their
+    * speed stays stable when you change the ticker interval.
+    */
   def withTickerInterval(interval: FiniteDuration): SessionBuilder[F] =
     this.copy(tickerInterval = interval)
 
+  /** Configures render cadence in frames per second.
+    *
+    * This is a convenience alternative to `withTickerInterval(...)` for people who prefer thinking in FPS instead of
+    * milliseconds, which is to say, almost everyone.
+    */
+  def withFrameRate(frameRate: Double): SessionBuilder[F] =
+    this.copy(tickerInterval = SessionBuilder.fpsToDuration(frameRate))
+
+  /** Configures how quickly built-in animations advance.
+    *
+    * This is independent of `withTickerInterval`: a lower animation step makes transitions move faster, while a higher
+    * step makes them move slower.
+    */
+  def withAnimationStep(step: FiniteDuration): SessionBuilder[F] = {
+    require(step > DurationInt(0).millis, "Animation step must be greater than 0ms")
+    this.copy(animationStep = step)
+  }
+
+  /** Configures built-in animation speed in frames per second.
+    *
+    * This is a convenience alternative to `withAnimationStep(...)`. Higher FPS means built-in transitions and example
+    * animations advance faster; lower FPS means they take life a bit less personally.
+    */
+  def withAnimationFrameRate(frameRate: Double): SessionBuilder[F] =
+    this.copy(animationStep = SessionBuilder.fpsToDuration(frameRate))
+
   // -- Execution --
 
-  /** Builds and runs the presentation session. Returns when the presentation is finished (user presses Esc).
+  /** Builds and runs the presentation session. Returns when the presenter leaves the presentation, typically by
+    * pressing `Esc`.
     *
     * This method handles all the infrastructure setup:
     *   - Terminal console with resource management
@@ -267,7 +298,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
 
   private def buildPresentation(console: NConsole[F], ticker: Ticker[F]): F[Presentation[F]] = {
     implicit val nc: NConsole[F] = console
-    val ctx = new SlideContext[F](console, ticker)
+    val ctx = new SlideContext[F](console, ticker, AnimationSettings(animationStep))
 
     slideSteps
       .traverse {
@@ -284,15 +315,8 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
           }
       }
       .map { specs =>
-        val exitSlide = exitSlideConfig.map {
-          case SessionBuilder.ExitSlideInstance(slide) => slide
-          case SessionBuilder.ExitSlideText(text) =>
-            import com.github.morotsman.lote.interpreter.TextSlide.ToTextSlide
-            text.toSlide()
-        }
         Presentation(
           slideSpecifications = specs,
-          exitSlide = exitSlide,
           overlays = List.empty
         )
       }
@@ -301,11 +325,18 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
 
 object SessionBuilder {
 
+  private[builders] def fpsToDuration(frameRate: Double): FiniteDuration = {
+    require(frameRate > 0.0, "Frame rate must be greater than 0")
+    require(!frameRate.isNaN, "Frame rate must be a valid number")
+    require(!frameRate.isInfinity, "Frame rate must be finite")
+
+    FiniteDuration(Math.round(1000000000.0 / frameRate), NANOSECONDS)
+  }
+
   /** Creates a new SessionBuilder ready for configuration. */
   def apply[F[_]: Async: Ref.Make](): SessionBuilder[F] =
     new SessionBuilder[F](
       slideSteps = List.empty,
-      exitSlideConfig = None,
       timerDuration = None,
       progressBarEnabled = false,
       quickNavigationEnabled = false,
@@ -314,7 +345,8 @@ object SessionBuilder {
       idleOverlayConfig = IdleOverlayConfig(),
       customOverlays = List.empty,
       onSlideChange = None,
-      tickerInterval = 40.millis
+      tickerInterval = 40.millis,
+      animationStep = AnimationSettings.DefaultStep
     )
 
   // Internal ADT for storing slide configurations
@@ -331,8 +363,4 @@ object SessionBuilder {
   private[builders] case class EffectfulSlide[F[_]](
       f: SlideContext[F] => F[SlideBuilder[F, WithoutSlide] => SlideBuilder[F, WithContentSlide]]
   ) extends SlideStep[F]
-
-  private[builders] sealed trait ExitSlideConfig[F[_]]
-  private[builders] case class ExitSlideInstance[F[_]](slide: Slide[F]) extends ExitSlideConfig[F]
-  private[builders] case class ExitSlideText[F[_]](text: String) extends ExitSlideConfig[F]
 }

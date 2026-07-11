@@ -8,7 +8,7 @@ import com.github.morotsman.lote.model._
 object StepByStepSlide {
 
   def make[F[_]: Temporal: NConsole](stages: Vector[String]): F[Slide[F]] = {
-    val hint = "                              [press any key to continue]"
+    val hint = "\n\n[press any space to continue]"
     val stagesWithHint = stages.zipWithIndex.map { case (s, i) =>
       val withLeadingLine = "\n" + s
       if (i < stages.size - 1) withLeadingLine + "\n" + hint
@@ -35,13 +35,12 @@ object StepByStepSlide {
             _ <- NConsole[F].writeString(c)
           } yield ()
 
-        override def stopShow: F[Unit] =
-          Temporal[F].unit
+        override def stopShow: F[Unit] = for {
+          _ <- stageRef.set(0)
+        } yield ()
 
         override def userInput(input: UserInput): F[Unit] = input match {
-          case Key(k) if k == SpecialKey.Left || k == SpecialKey.Right =>
-            Temporal[F].unit
-          case _ =>
+          case Key(k) if k == SpecialKey.Space  =>
             for {
               stage <- stageRef.get
               nextStage = math.min(stage + 1, stagesWithHint.size - 1)
@@ -55,6 +54,8 @@ object StepByStepSlide {
               )
               _ <- NConsole[F].writeString(aligned)
             } yield ()
+          case _ =>
+            Temporal[F].unit
         }
       }
     }
