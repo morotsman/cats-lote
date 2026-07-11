@@ -236,38 +236,37 @@ object GrabTransition {
               GrabStepResult(renderedFrame = None, nextPhase = Done, completed = true)
           }
         }
-        onTick = for {
-          nrOfSteps <- FixedStep.consumeSteps(stepperRef)
-          _ <-
-            if (nrOfSteps <= 0) Monad[F].unit
-            else {
-              for {
-                phase <- phaseRef.get
-                result =
-                  (0 until nrOfSteps).foldLeft(
-                    (phase, Option.empty[ScreenAdjusted], false)
-                  ) { case ((currentPhase, renderedFrame, completed), _) =>
-                    if (completed) {
-                      (currentPhase, renderedFrame, true)
-                    } else {
-                      val stepResult = advancePhase(currentPhase)
-                      (
-                        stepResult.nextPhase,
-                        stepResult.renderedFrame.orElse(renderedFrame),
-                        stepResult.completed
-                      )
-                    }
+        onTick = { (nrOfSteps: Int) =>
+          if (nrOfSteps <= 0) Monad[F].unit
+          else {
+            for {
+              phase <- phaseRef.get
+              result =
+                (0 until nrOfSteps).foldLeft(
+                  (phase, Option.empty[ScreenAdjusted], false)
+                ) { case ((currentPhase, renderedFrame, completed), _) =>
+                  if (completed) {
+                    (currentPhase, renderedFrame, true)
+                  } else {
+                    val stepResult = advancePhase(currentPhase)
+                    (
+                      stepResult.nextPhase,
+                      stepResult.renderedFrame.orElse(renderedFrame),
+                      stepResult.completed
+                    )
                   }
-                (nextPhase, renderedFrame, completed) = result
-                _ <- phaseRef.set(nextPhase)
-                _ <- renderedFrame.traverse_(frame =>
-                  NConsole[F].clear() *> NConsole[F].writeString(frame)
-                )
-                _ <- if (completed) done.complete(()).attempt.void else Monad[F].unit
-              } yield ()
-            }
-        } yield ()
-        sub <- Ticker[F].subscribe(onTick)
+                }
+              (nextPhase, renderedFrame, completed) = result
+              _ <- phaseRef.set(nextPhase)
+              _ <- renderedFrame.traverse_(frame =>
+                NConsole[F].clear() *> NConsole[F].writeString(frame)
+              )
+              _ <- if (completed) done.complete(()).attempt.void else Monad[F].unit
+            } yield ()
+          }
+        }
+        tickerCallback = FixedStep.consumeSteps(stepperRef).flatMap(onTick)
+        sub <- Ticker[F].subscribe(tickerCallback)
         _ <- Ticker[F].start
         _ <- done.get.guarantee(sub.cancel)
         _ <- NConsole[F].clear()

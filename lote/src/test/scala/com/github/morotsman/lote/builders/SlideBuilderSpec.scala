@@ -48,14 +48,14 @@ class SlideBuilderSpec extends CatsEffectSuite {
     assertEquals(spec.out, Some(transition))
   }
 
-  test("SlideBuilder.transition with null sets out to None") {
+  test("SlideBuilder.title sets the slide title") {
     val slide = makeSlide("hello")
     val spec = SlideBuilder[IO]()
       .addSlide(slide)
-      .transition(null)
+      .title("Intro")
       .build()
 
-    assertEquals(spec.out, None)
+    assertEquals(spec.title, Some("Intro"))
   }
 
   test("SlideBuilder preserves slide content through build") {

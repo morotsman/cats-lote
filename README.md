@@ -32,12 +32,12 @@ Built-in ANSI color constants so you can make your terminal presentations almost
 - Bold variants for when you really need to make a point
 - Reset code for when you've gone too far
 
-### 🧩 Middleware & Overlays
+### 🧩 Overlays
 
 Overlays that render on top of your slides, because your content alone clearly isn't enough:
 
 - **Timer** – A countdown timer so you know exactly how much of your audience's time you're wasting.
-- **ProgressBar** – Shows how far through the presentation you are. Gives your audience hope that it will eventually end. Supports named milestones for section markers.
+- **ProgressBar** – Shows how far through the presentation you are. Gives your audience hope that it will eventually end. Supports named milestones for section markers via `.withProgressBar(List(Milestone(...)))`.
 - **Quick Navigation** – Press `N` to pop up a slide list, use Up/Down arrows to browse, Enter to jump. For when you need to skip ahead before your audience falls asleep.
 - **Idle** – An idle-screen animation that activates when you stop presenting. Bugs crawl in from the edges, steal words from your slide, and eventually rearrange themselves to display the current time. It's more entertaining than most presentations.
 
@@ -47,9 +47,16 @@ Pro tip: If you find the animations and transitions too smooth for your liking, 
 
 A type-safe builder pattern using phantom types, because if you're going to build a presentation tool in Scala, you might as well make the compiler yell at you for forgetting a slide:
 
-- **SessionBuilder** – The high-level API that wires everything together: slides, transitions, middleware, overlays, and execution. Just call `.run()` and try to contain your excitement.
+- **SessionBuilder** – The high-level API that wires everything together: slides, transitions, overlays, and execution. Just call `.run()` and try to contain your excitement.
 - **TextSlideBuilder** – Quickly create text-based slides with content, alignment, and transitions.
 - **SlideBuilder** – Add custom interactive slides with their own logic, for when plain text isn't over-engineered enough.
+
+The safety guarantees are now explicit:
+
+- `TextSlideBuilder.build()` is only available after `.content(...)`
+- `SlideBuilder.build()` is only available after `.addSlide(...)`
+- `PresentationBuilder.build()` is only available after at least one slide has been added
+- `SessionBuilder.run()` still validates at runtime that the session is not empty
 
 ### 🖥️ Interactive Slides
 
@@ -57,7 +64,7 @@ Implement the `Slide[F]` trait to create fully custom, interactive slides that r
 
 ### 📋 Step-by-Step Slides
 
-`StepByStepSlide` lets you reveal content progressively, press any key to advance to the next stage. Perfect for bullet points you want to dramatically unveil one at a time, as if each one is a plot twist.
+`StepByStepSlide` lets you reveal content progressively; press any key to advance to the next stage. Perfect for bullet points you want to dramatically unveil one at a time, as if each one is a plot twist.
 
 ### ⚡ Ticker-Based Animation Engine
 
@@ -85,18 +92,71 @@ The GrabTransition features a multi-frame animated ASCII snake with crawling, mo
 - A terminal (obviously)
 - Low expectations
 
-### Running the Example
+### Running the Examples
 
 ```bash
 # Clone the repo
 git clone https://github.com/morotsman/cats-lote.git
 cd cats-lote
 
-# Run the example presentation (prepare to be underwhelmed)
-sbt "examples/runMain com.github.morotsman.examples.Example1"
+# Run the tiny "is this thing alive?" example
+sbt "examples/runMain com.github.morotsman.examples.MinimalExample"
+
+# Add titles to plain text slides
+sbt "examples/runMain com.github.morotsman.examples.TitlesExample"
+
+# Place text in different parts of the terminal
+sbt "examples/runMain com.github.morotsman.examples.AlignmentExample"
+
+# Add transitions between slides
+sbt "examples/runMain com.github.morotsman.examples.TransitionsExample"
+
+# Build and use a custom transition
+sbt "examples/runMain com.github.morotsman.examples.CustomTransitionExample"
+
+# Turn on overlays and session-wide settings
+sbt "examples/runMain com.github.morotsman.examples.SessionFeaturesExample"
+
+# Register a custom overlay for the whole presentation
+sbt "examples/runMain com.github.morotsman.examples.CustomOverlayExample"
+
+# Build a stateful overlay with effectful setup
+sbt "examples/runMain com.github.morotsman.examples.EffectfulOverlayExample"
+
+# Build an effectful custom slide with step-by-step reveal
+sbt "examples/runMain com.github.morotsman.examples.StepByStepExample"
+
+# Focus on a single interactive slide with WASD controls
+sbt "examples/runMain com.github.morotsman.examples.InteractiveSlideExample"
+
+# Run the full showcase example with overlays, transitions, step-by-step slides,
+# interactive slides, and other suspiciously elaborate terminal behavior
+sbt "examples/runMain com.github.morotsman.examples.AdvancedExample"
 ```
 
-The example is configured with a fairly sensible balance:
+If you want a gradual path through the API, run the examples in this order:
+
+1. `MinimalExample` - the smallest possible presentation with two text slides
+2. `TitlesExample` - adds slide titles and shows how quick navigation uses them
+3. `AlignmentExample` - shows how to position content on screen
+4. `TransitionsExample` - introduces slide transitions
+5. `CustomTransitionExample` - shows how to build a user-defined transition
+6. `SessionFeaturesExample` - enables timer, progress bar, quick navigation, and frame-rate settings
+7. `CustomOverlayExample` - shows how to register a user-defined overlay
+8. `EffectfulOverlayExample` - shows how to allocate and register a stateful overlay effectfully
+9. `StepByStepExample` - introduces `addSlideF` with a custom step-by-step slide
+10. `InteractiveSlideExample` - focuses on custom interactivity and WASD input handling
+11. `AdvancedExample` - gives a user-friendly overview of the smaller examples and features in one deck
+
+There is also a dedicated guide in `examples/README.md` with run commands, notes on what to pay attention to in each example, and lightweight screenshot/GIF suggestions for future docs.
+
+When an example enables quick navigation, press `N` to open it, use `↑` / `↓` to move, press `Enter` to jump to the highlighted slide, and press `N` again to leave navigation mode.
+
+If you just want the shortest path from "clone repo" to "text is moving in my terminal," start with `MinimalExample`.
+
+If you want the version that ties the smaller examples together and gives you a user-friendly overview of the feature set in one place, end with `AdvancedExample`.
+
+The showcase example is configured with a fairly sensible balance:
 
 - `withFrameRate(60)` for smoother redraws
 - `withAnimationFrameRate(25)` for animation speed that doesn't look like it just discovered espresso
@@ -137,35 +197,30 @@ sbt test
 ```scala
 import cats.effect._
 import com.github.morotsman.lote.builders.SessionBuilder
-import com.github.morotsman.lote.interpreter.transition._
-import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
-
-import scala.concurrent.duration.DurationInt
+import com.github.morotsman.lote.interpreter.middleware.Milestone
 
 object MyPresentation extends IOApp.Simple {
-  override def run(): IO[Unit] = {
+  override def run(): IO[Unit] =
     SessionBuilder[IO]()
-      .withTimer(15.minutes)
-      .withProgressBar()
-      .withQuickNavigation()
-      .withIdleAnimation(idleTimeout = 2.minutes)
-      .withFrameRate(60)
-      .withAnimationFrameRate(25)
-      .addTextSlide { implicit ctx => import ctx._
-        _.content("Hello, Terminal!")
-          .title("Intro")
-          .transition(MorphTransition())
-          .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
-      }
-      .addTextSlide { implicit ctx => import ctx._
-        _.content("Goodbye!")
-          .title("Outro")
-          .transition(FallingCharactersTransition())
-          .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
-      }
+      .addTextSlide(_ => _.content("Hello, Terminal!"))
+      .addTextSlide(_ => _.content("Goodbye!"))
       .run()
-  }
 }
+```
+
+If that feels almost offensively straightforward, good. That means the compiler has not yet had time to develop opinions about your presentation.
+
+When you're ready for the more over-engineered version, `AdvancedExample` shows transitions, overlays, and interactive slides in one place.
+
+If you want section markers in the progress bar, you can do this:
+
+```scala
+SessionBuilder[IO]()
+  .withProgressBar(List(
+    Milestone("Intro", 0),
+    Milestone("Demo", 3),
+    Milestone("Q&A", 7)
+  ))
 ```
 
 ## Animation Tuning
@@ -270,7 +325,7 @@ cats-lote/
 │       ├── algebra/       # Core traits (Slide, Transition, Middleware, etc.)
 │       ├── builders/      # Type-safe builder DSL (SessionBuilder, TextSlideBuilder, SlideBuilder)
 │       ├── interpreter/   # Implementations
-│       │   ├── middleware/    # Timer, ProgressBar, QuickNavigation, Idle
+│       │   ├── middleware/    # Internal overlay implementations: Timer, ProgressBar, QuickNavigation, Idle
 │       │   └── transition/   # Morph, Falling, Replace, Grab
 │       ├── model/         # Data types (Alignment, Screen, Presentation)
 │       └── util/          # Colors and helpers

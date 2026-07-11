@@ -7,8 +7,14 @@ import com.github.morotsman.lote.model._
 
 object StepByStepSlide {
 
+  private def shouldAdvance(input: UserInput): Boolean = input match {
+    case Character(_)                    => true
+    case Key(k) if k != SpecialKey.Timeout => true
+    case _                               => false
+  }
+
   def make[F[_]: Temporal: NConsole](stages: Vector[String]): F[Slide[F]] = {
-    val hint = "\n\n[press any space to continue]"
+    val hint = "\n\n[press any key to continue]"
     val stagesWithHint = stages.zipWithIndex.map { case (s, i) =>
       val withLeadingLine = "\n" + s
       if (i < stages.size - 1) withLeadingLine + "\n" + hint
@@ -40,7 +46,7 @@ object StepByStepSlide {
         } yield ()
 
         override def userInput(input: UserInput): F[Unit] = input match {
-          case Key(k) if k == SpecialKey.Space  =>
+          case userInput if shouldAdvance(userInput) =>
             for {
               stage <- stageRef.get
               nextStage = math.min(stage + 1, stagesWithHint.size - 1)

@@ -5,6 +5,7 @@ import com.github.morotsman.lote.algebra.IdleDetector
 import com.github.morotsman.lote.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
 import com.github.morotsman.lote.model._
 import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.util.Colors
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
@@ -156,5 +157,30 @@ class IdleSpec extends CatsEffectSuite {
         "Expected idle state after same content repeated"
       )
     }
+  }
+
+  test("Idle ANSI support treats colored stolen text as fully blank") {
+    val coloredLine = s"${Colors.bright}Hello${Colors.reset}"
+
+    val blanked = IdleAnsiSupport.applyStolen(
+      Array(coloredLine),
+      List(StolenWord(0, 0, 5))
+    )
+
+    assertEquals(IdleAnsiSupport.stripAnsi(blanked.head), "     ")
+    assert(!IdleAnsiSupport.hasVisibleText(blanked.head))
+  }
+
+  test("Idle ANSI support overlays bug text using visible columns") {
+    val coloredLine = s"${Colors.bright}ABCDE${Colors.reset}"
+
+    val overlaid = IdleAnsiSupport.overlayText(
+      coloredLine,
+      startCol = 1,
+      text = "@Z",
+      screenWidth = 5
+    )
+
+    assertEquals(IdleAnsiSupport.stripAnsi(overlaid), "A@ZDE")
   }
 }

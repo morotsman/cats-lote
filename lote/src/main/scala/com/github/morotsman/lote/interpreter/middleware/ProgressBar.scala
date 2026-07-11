@@ -5,6 +5,7 @@ import cats.effect.Ref
 import cats.implicits._
 import com.github.morotsman.lote.algebra.Overlay
 import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
+import com.github.morotsman.lote.util.Colors
 
 case class Milestone(label: String, slideIndex: Int)
 
@@ -13,6 +14,54 @@ trait ProgressBar[F[_]] extends Overlay[F] {
 }
 
 object ProgressBar {
+
+  private def maxRenderableColumn(screenWidth: Int): Int =
+    if (screenWidth <= 1) 0 else screenWidth - 2
+
+  private def maxMilestoneStart(screenWidth: Int, labelLength: Int): Int =
+    if (screenWidth <= labelLength) 0
+    else Math.max(0, screenWidth - labelLength - 1)
+
+  private def anchorPositions(
+      screenWidth: Int,
+      totalSlides: Int
+  ): Vector[Int] =
+    if (totalSlides <= 0 || screenWidth <= 0) Vector.empty
+    else if (totalSlides == 1) Vector(Math.min(screenWidth / 2, maxRenderableColumn(screenWidth)))
+    else
+      (0 until totalSlides).toVector.map { index =>
+        Math.round(index.toDouble * maxRenderableColumn(screenWidth).toDouble / (totalSlides - 1).toDouble).toInt
+      }
+
+  private def milestoneStartPositions(
+      screenWidth: Int,
+      totalSlides: Int,
+      milestones: List[Milestone]
+  ): Vector[Int] = {
+    val labels = milestones.map(_.label)
+    val lengths = labels.map(_.length).toVector
+    val anchors = anchorPositions(screenWidth, totalSlides)
+
+    val idealStarts = milestones.map { m =>
+      val anchor = anchors.lift(m.slideIndex).getOrElse(0)
+      val preferred = anchor - m.label.length / 2
+      Math.max(0, Math.min(maxMilestoneStart(screenWidth, m.label.length), preferred))
+    }.toVector
+
+    val leftAdjusted = idealStarts.indices.foldLeft(Vector.empty[Int]) { (acc, idx) =>
+      val start = idealStarts(idx)
+      val minStart =
+        acc.lastOption.map(previous => previous + lengths(idx - 1) + 1).getOrElse(0)
+      acc :+ Math.max(start, minStart)
+    }
+
+    leftAdjusted.indices.reverse.foldLeft(leftAdjusted) { (positions, idx) =>
+      val maxStart =
+        if (idx == positions.length - 1) maxMilestoneStart(screenWidth, lengths(idx))
+        else Math.max(0, positions(idx + 1) - lengths(idx) - 1)
+      positions.updated(idx, Math.min(positions(idx), maxStart))
+    }
+  }
 
   def make[F[_]: Monad: Ref.Make](
       totalSlides: Int,
@@ -30,21 +79,29 @@ object ProgressBar {
       ): F[ScreenAdjusted] = for {
         currentIndex <- currentSlideRef.get
       } yield {
-        val indicators = (0 until totalSlides)
-          .map { i =>
-            if (i < currentIndex) "#"
-            else if (i == currentIndex) "0"
-            else "-"
-          }
-          .mkString(" ")
-
-        val progressBarPadding =
-          Math.max(0, (context.screenWidth - indicators.length) / 2)
-
         // ANSI color codes
-        val gray = "\u001b[90m"
-        val bright = "\u001b[97m"
-        val reset = "\u001b[0m"
+        val anchors = anchorPositions(context.screenWidth, totalSlides)
+        val centered = {
+          val cells = Array.fill(context.screenWidth)(" ")
+          anchors.zipWithIndex.dropRight(1).foreach { case (leftPos, i) =>
+            val rightPos = anchors(i + 1)
+            val line =
+              if (i < currentIndex) Colors.bright + "━" + Colors.reset
+              else Colors.gray + "─" + Colors.reset
+            ((leftPos + 1) until rightPos).foreach { pos =>
+              if (pos >= 0 && pos < cells.length) cells(pos) = line
+            }
+          }
+          anchors.zipWithIndex.foreach { case (pos, i) =>
+            if (pos >= 0 && pos < cells.length) {
+              cells(pos) =
+                if (i < currentIndex) Colors.bright + "●" + Colors.reset
+                else if (i == currentIndex) Colors.bold + Colors.bright + "◉" + Colors.reset
+                else Colors.gray + "○" + Colors.reset
+            }
+          }
+          cells.mkString
+        }
 
         // Determine which milestone is active based on current slide
         val sortedMilestones = milestones.sortBy(_.slideIndex)
@@ -61,10 +118,14 @@ object ProgressBar {
 
         // Build milestone row with colors
         val milestoneRow = if (milestones.nonEmpty) {
-          val parts = sortedMilestones.map { m =>
-            val pos = progressBarPadding + m.slideIndex * 2
-            val color = if (isActiveMilestone(m)) bright else gray
-            (pos, color + m.label + reset)
+          val positions = milestoneStartPositions(
+            context.screenWidth,
+            totalSlides,
+            sortedMilestones
+          )
+          val parts = sortedMilestones.zip(positions).map { case (m, pos) =>
+            val color = if (isActiveMilestone(m)) Colors.bright else Colors.gray
+            (pos, color + m.label + Colors.reset)
           }
           // Build the row by inserting colored labels at correct positions
           val sb = new StringBuilder
@@ -100,12 +161,6 @@ object ProgressBar {
           lines
         }
 
-        val centered = {
-          " " * progressBarPadding + indicators + " " * Math.max(
-            0,
-            context.screenWidth - progressBarPadding - indicators.length
-          )
-        }
 
         val updatedLines = padded
           .updated(progressRowIndex, centered)

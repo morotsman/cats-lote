@@ -5,6 +5,7 @@ import cats.{Applicative, Monad}
 import cats.implicits._
 import com.github.morotsman.lote.algebra.Overlay
 import com.github.morotsman.lote.model.{Character, Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
+import com.github.morotsman.lote.util.Colors
 
 case class NavigationSubscriber[F[_]](id: Long, callback: Int => F[Unit])
 
@@ -21,8 +22,9 @@ private case class QuickNavigationState[F[_]](
 )
 
 trait QuickNavigation[F[_]] extends Overlay[F] {
-  def setTiles(titles: Vector[String]): F[Unit]
+  def setTitles(titles: Vector[String]): F[Unit]
   def subscribe(subscriber: NavigationSubscriber[F]): F[NavigationSubscription[F]]
+  def onSlideChange(currentIndex: Int): F[Unit]
 }
 
 object QuickNavigation {
@@ -32,16 +34,11 @@ object QuickNavigation {
     Ref[F].of(QuickNavigationState[F]()).map { quickNavigationState =>
       new QuickNavigation[F] {
 
-        // ANSI color codes (same as ProgressBar)
-        private val gray = "\u001b[90m"
-        private val bright = "\u001b[97m"
-        private val reset = "\u001b[0m"
-
         private def formatNavLink(title: String, length: Int, selected: Boolean): String = {
           if (selected) {
-            bright + "> " + title + " " * (length - title.length) + reset
+            Colors.bright + "> " + title + " " * (length - title.length) + Colors.reset
           } else {
-            gray + "  " + title + " " * (length - title.length) + reset
+            Colors.gray + "  " + title + " " * (length - title.length) + Colors.reset
           }
         }
 
@@ -103,7 +100,7 @@ object QuickNavigation {
             }
           } yield ()
 
-        override def setTiles(titles: Vector[String]): F[Unit] =
+        override def setTitles(titles: Vector[String]): F[Unit] =
           for {
             currentState <- quickNavigationState.get
             _ <- quickNavigationState.set(
@@ -127,6 +124,18 @@ object QuickNavigation {
             override def cancel: F[Unit] =
               quickNavigationState.update(s => s.copy(subscribers = s.subscribers.filterNot(_.id == subscriber.id)))
           }
+
+        override def onSlideChange(currentIndex: Int): F[Unit] =
+          for {
+            currentState <- quickNavigationState.get
+            _ <- if (currentState.currentIndex != currentIndex) {
+              quickNavigationState.set(
+                currentState.copy(
+                  currentIndex = currentIndex,
+                )
+              )
+            } else Monad[F].unit
+          } yield ()
       }
     }
   }

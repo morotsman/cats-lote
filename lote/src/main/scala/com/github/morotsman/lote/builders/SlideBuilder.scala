@@ -1,40 +1,62 @@
 package com.github.morotsman.lote.builders
 
 import com.github.morotsman.lote.algebra.{Slide, Transition}
-import com.github.morotsman.lote.builders
 import com.github.morotsman.lote.builders.SlideBuilder.{BuildState, SlideAdded}
 import com.github.morotsman.lote.model.SlideSpecification
 
-final case class SlideBuilder[F[_], State <: BuildState](
-    slide: Slide[F],
-    right: Option[Transition[F]],
-    slideTitle: Option[String] = None
+/** Builder for custom slides.
+  *
+  * Uses a phantom-type state parameter to ensure `build()` is only available after `addSlide(...)` has been called.
+  * This means incomplete builders are rejected by the compiler rather than relying on runtime placeholder values.
+  */
+final class SlideBuilder[F[_], State <: BuildState] private (
+    private val currentSlide: Option[Slide[F]],
+    private val currentTransition: Option[Transition[F]],
+    private val currentTitle: Option[String]
 ) {
 
+  private def copy[NextState <: BuildState](
+      slide: Option[Slide[F]] = currentSlide,
+      transition: Option[Transition[F]] = currentTransition,
+      slideTitle: Option[String] = currentTitle
+  ): SlideBuilder[F, NextState] =
+    new SlideBuilder[F, NextState](slide, transition, slideTitle)
+
   def transition(
-      right: Transition[F] = null
+      right: Transition[F]
   ): SlideBuilder[F, State] =
-    this.copy(right = Option(right))
+    this.copy[State](transition = Some(right))
 
   def title(title: String): SlideBuilder[F, State] =
-    this.copy(slideTitle = Some(title))
+    this.copy[State](slideTitle = Some(title))
 
   def addSlide(slide: Slide[F]): SlideBuilder[F, State with SlideAdded] =
-    this.copy(slide = slide)
+    this.copy[State with SlideAdded](slide = Some(slide))
 
-  def build(): SlideSpecification[F] = SlideSpecification(
-    slide = slide,
-    out = right,
-    title = slideTitle
-  )
+  /** Finalizes the slide specification.
+    *
+    * This method is only available after `addSlide(...)` has been called, enforced by the `State <:< SlideAdded`
+    * evidence parameter.
+    */
+  def build()(implicit ev: State <:< SlideAdded): SlideSpecification[F] = {
+    val _ = ev
+    SlideSpecification(
+      slide = currentSlide.getOrElse(
+        throw new IllegalStateException("SlideBuilder.build called before a slide was added")
+      ),
+      out = currentTransition,
+      title = currentTitle
+    )
+  }
 
 }
 
 object SlideBuilder {
   type WithContentSlide = WithoutSlide with SlideAdded
 
+  /** Creates a new custom slide builder in the `WithoutSlide` state. */
   def apply[F[_]](): SlideBuilder[F, WithoutSlide] =
-    builders.SlideBuilder(null, None, None)
+    new SlideBuilder[F, WithoutSlide](None, None, None)
 
   sealed trait BuildState
 
