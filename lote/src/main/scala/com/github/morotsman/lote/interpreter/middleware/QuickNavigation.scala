@@ -99,7 +99,7 @@ object QuickNavigation {
                 )
               case Key(SpecialKey.Enter) if currentState.showQuickNavigation =>
                 currentState.subscribers.traverse_(_.callback(currentState.currentIndex))
-              case _ => Monad[F].pure()
+              case _ => Monad[F].unit
             }
           } yield ()
 
@@ -113,7 +113,7 @@ object QuickNavigation {
                 subscribers = currentState.subscribers
               )
             )
-          } yield ();
+          } yield ()
 
         override def subscribe(subscriber: NavigationSubscriber[F]): F[NavigationSubscription[F]] =
           for {

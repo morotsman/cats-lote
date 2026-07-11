@@ -1,10 +1,11 @@
 package com.github.morotsman.lote.interpreter.transition
 
 import cats.Monad
-import cats.effect.{Concurrent, Deferred, Ref}
+import cats.effect.{Deferred, Ref, Temporal}
 import cats.effect.implicits._
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Ticker, Transition}
+import com.github.morotsman.lote.algebra.{AnimationSettings, NConsole, Slide, Ticker, Transition}
+import com.github.morotsman.lote.interpreter.animation.FixedStep
 import com.github.morotsman.lote.model.{ScreenAdjusted, UserInput}
 
 import scala.util.Random
@@ -119,9 +120,15 @@ object GrabTransition {
   case class DragOut(step: Int, totalSteps: Int, grabberRow: Int, startCol: Int) extends GrabPhase
   case object Done extends GrabPhase
 
-  def apply[F[_]: Concurrent: Ref.Make: NConsole: Ticker](
+  private case class GrabStepResult(
+      renderedFrame: Option[ScreenAdjusted],
+      nextPhase: GrabPhase,
+      completed: Boolean = false
+  )
+
+  def apply[F[_]: Temporal: Ref.Make: NConsole: Ticker](
       stepSize: Int = 2
-  ): Transition[F] = new Transition[F] {
+  )(implicit animationSettings: AnimationSettings): Transition[F] = new Transition[F] {
 
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
       for {
@@ -148,10 +155,15 @@ object GrabTransition {
           targetCol
         )
         phaseRef <- Ref[F].of(initialPhase)
+        stepperRef <- FixedStep.makeRef[F]
         done <- Deferred[F, Unit]
-        onTick = for {
-          phase <- phaseRef.get
-          _ <- phase match {
+        holdFrames = Vector(4, 5, 3)
+        cumulativeBiteFrames = holdFrames.scanLeft(0)(_ + _).tail
+        totalBiteFrames = cumulativeBiteFrames.last
+        dragOutTotalSteps =
+          Math.max(1, (screen.screenWidth + snakeWidth) / stepSize)
+        advancePhase = { (phase: GrabPhase) =>
+          phase match {
             case CrawlIn(step, totalSteps, spawnRow, tRow, tCol) =>
               val crawlFrames = Vector(snakeCrawlLeft1, snakeCrawlLeft2)
               val frameIndex = step % crawlFrames.length
@@ -167,34 +179,25 @@ object GrabTransition {
                 col,
                 snakeArt
               )
-              NConsole[F].clear() *> NConsole[F].writeString(
-                ScreenAdjusted(content)
-              ) *> (
-                if (step >= totalSteps) phaseRef.set(Bite(0))
-                else
-                  phaseRef.set(
-                    CrawlIn(step + 1, totalSteps, spawnRow, tRow, tCol)
-                  )
+
+              GrabStepResult(
+                renderedFrame = Some(ScreenAdjusted(content)),
+                nextPhase =
+                  if (step >= totalSteps) Bite(0)
+                  else CrawlIn(step + 1, totalSteps, spawnRow, tRow, tCol)
               )
             case Bite(frame) =>
               val scenes =
                 Vector(snakeMouthOpenArt, snakeMouthWideArt, snakeBiteArt)
-              val holdFrames =
-                Vector(4, 5, 3) // how many ticks to hold each frame
-              // Calculate cumulative frames
-              val cumulative = holdFrames.scanLeft(0)(_ + _).tail
-              val totalBiteFrames = cumulative.last
+
               if (frame >= totalBiteFrames) {
-                phaseRef.set(
-                  DragOut(
-                    0,
-                    Math.max(1, (screen.screenWidth + snakeWidth) / stepSize),
-                    snakeTargetRow,
-                    targetCol
-                  )
+                GrabStepResult(
+                  renderedFrame = None,
+                  nextPhase =
+                    DragOut(0, dragOutTotalSteps, snakeTargetRow, targetCol)
                 )
               } else {
-                val sceneIdx = cumulative.indexWhere(_ > frame)
+                val sceneIdx = cumulativeBiteFrames.indexWhere(_ > frame)
                 val snakeArt = scenes(sceneIdx)
                 val content = renderScene(
                   lines1,
@@ -204,9 +207,10 @@ object GrabTransition {
                   targetCol,
                   snakeArt
                 )
-                NConsole[F].clear() *> NConsole[F].writeString(
-                  ScreenAdjusted(content)
-                ) *> phaseRef.set(Bite(frame + 1))
+                GrabStepResult(
+                  renderedFrame = Some(ScreenAdjusted(content)),
+                  nextPhase = Bite(frame + 1)
+                )
               }
             case DragOut(step, totalSteps, grabberRow, sCol) =>
               val crawlFrames = Vector(snakeCrawlRight1, snakeCrawlRight2)
@@ -223,17 +227,45 @@ object GrabTransition {
                 snakeArt,
                 dragOffset
               )
-              NConsole[F].clear() *> NConsole[F].writeString(
-                ScreenAdjusted(content)
-              ) *> (
-                if (step >= totalSteps)
-                  phaseRef.set(Done) *> done.complete(()).void
-                else
-                  phaseRef.set(DragOut(step + 1, totalSteps, grabberRow, sCol))
+              GrabStepResult(
+                renderedFrame = Some(ScreenAdjusted(content)),
+                nextPhase = if (step >= totalSteps) Done else DragOut(step + 1, totalSteps, grabberRow, sCol),
+                completed = step >= totalSteps
               )
             case Done =>
-              Monad[F].unit
+              GrabStepResult(renderedFrame = None, nextPhase = Done, completed = true)
           }
+        }
+        onTick = for {
+          nrOfSteps <- FixedStep.consumeSteps(stepperRef)
+          _ <-
+            if (nrOfSteps <= 0) Monad[F].unit
+            else {
+              for {
+                phase <- phaseRef.get
+                result =
+                  (0 until nrOfSteps).foldLeft(
+                    (phase, Option.empty[ScreenAdjusted], false)
+                  ) { case ((currentPhase, renderedFrame, completed), _) =>
+                    if (completed) {
+                      (currentPhase, renderedFrame, true)
+                    } else {
+                      val stepResult = advancePhase(currentPhase)
+                      (
+                        stepResult.nextPhase,
+                        stepResult.renderedFrame.orElse(renderedFrame),
+                        stepResult.completed
+                      )
+                    }
+                  }
+                (nextPhase, renderedFrame, completed) = result
+                _ <- phaseRef.set(nextPhase)
+                _ <- renderedFrame.traverse_(frame =>
+                  NConsole[F].clear() *> NConsole[F].writeString(frame)
+                )
+                _ <- if (completed) done.complete(()).attempt.void else Monad[F].unit
+              } yield ()
+            }
         } yield ()
         sub <- Ticker[F].subscribe(onTick)
         _ <- Ticker[F].start

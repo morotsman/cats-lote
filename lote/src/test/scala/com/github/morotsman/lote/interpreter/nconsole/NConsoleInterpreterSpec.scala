@@ -36,6 +36,14 @@ class NConsoleInterpreterSpec extends CatsEffectSuite {
     } yield assertEquals(result, Character('a'))
   }
 
+  test("read returns Key(Space) for space input") {
+    val terminal = new FakeTerminal(inputs = List(' '.toInt))
+    val console = NConsoleInterpreter.make[IO](terminal)
+    for {
+      result <- console.read()
+    } yield assertEquals(result, Key(SpecialKey.Space))
+  }
+
   test("read returns Key(Right) for escape sequence") {
     // ESC [ C = Right arrow
     val terminal = new FakeTerminal(inputs = List(27, '['.toInt, 'C'.toInt))

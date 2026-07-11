@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 
 class ReplaceTransitionSpec extends CatsEffectSuite {
 
-  override val munitTimeout: Duration = 10.seconds
+  override val munitIOTimeout: Duration = 10.seconds
 
   private def fixedSlide(text: String): Slide[IO] = new Slide[IO] {
     override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
@@ -111,9 +111,9 @@ class ReplaceTransitionSpec extends CatsEffectSuite {
       CharacterPosition('*', inTransition = false, canTransform = false)
     )
 
-    assertEquals(positions(0).character, 'A')
-    assert(positions(0).canTransform)
-    assertEquals(positions(1).character, '*')
-    assert(!positions(1).canTransform)
+    assertEquals(positions.head.character, 'A')
+    assert(positions.head.canTransform)
+    assertEquals(positions.last.character, '*')
+    assert(!positions.last.canTransform)
   }
 }

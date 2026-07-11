@@ -12,6 +12,7 @@ object JLineTerminal {
     val reader = jlineTerminal.reader()
     jlineTerminal.enterRawMode()
     jlineTerminal.puts(Capability.clear_screen)
+    jlineTerminal.writer().print("\u001b[?25l")
 
     // Enable mouse tracking: X10 compatibility mode + any-event tracking + SGR extended coordinates
     val writer = jlineTerminal.writer()
@@ -23,6 +24,7 @@ object JLineTerminal {
     def disableMouseTracking(): Unit = {
       try {
         val out = System.out
+        out.print("\u001b[?25h")
         out.print("\u001b[?1003l")
         out.print("\u001b[?1000l")
         out.print("\u001b[?1006l")
@@ -64,6 +66,9 @@ object JLineTerminal {
     })
     Runtime.getRuntime.addShutdownHook(shutdownHook)
 
+    val renderLock = new AnyRef
+    var previousFrame = Vector.empty[String]
+
     new Terminal {
       override def read(timeoutInMillis: Long): Int =
         reader.read(timeoutInMillis)
@@ -71,8 +76,16 @@ object JLineTerminal {
       override val height: Int = jlineTerminal.getHeight
       override def flush(): Unit = jlineTerminal.flush()
       override def write(s: String): Unit = {
-        print("\u001b[H")
-        println(s)
+        renderLock.synchronized {
+          val (nextFrame, command): (Vector[String], String) =
+            com.github.morotsman.lote.interpreter.nconsole.AnsiFrameRenderer
+              .render(previousFrame, s, width, height)
+          previousFrame = nextFrame
+          if (command.nonEmpty) {
+            writer.print(command)
+            writer.flush()
+          }
+        }
       }
       override def close(): Unit = {
         // Restore previous signal handler
@@ -83,6 +96,7 @@ object JLineTerminal {
         catch { case _: IllegalStateException => }
         // Disable mouse tracking before closing
         val w = jlineTerminal.writer()
+        w.print("\u001b[?25h")
         w.print("\u001b[?1003l")
         w.print("\u001b[?1000l")
         w.print("\u001b[?1006l")

@@ -1,13 +1,13 @@
 package com.github.morotsman.lote.interpreter.transition
 
 import cats.Monad
-import cats.effect.{Concurrent, Ref}
-import com.github.morotsman.lote.algebra.{NConsole, Slide, Ticker, Transition}
+import cats.effect.{Ref, Temporal}
+import com.github.morotsman.lote.algebra.{AnimationSettings, NConsole, Slide, Ticker, Transition}
 import com.github.morotsman.lote.model.{Screen, UserInput}
 
 object MorphTransition {
 
-  def apply[F[_]: Concurrent: Ref.Make: NConsole: Ticker](): Transition[F] =
+  def apply[F[_]: Temporal: Ref.Make: NConsole: Ticker]()(implicit animationSettings: AnimationSettings): Transition[F] =
     new Transition[F] {
 
       def setupPosition(

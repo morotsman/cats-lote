@@ -18,7 +18,6 @@ class BuilderSpec extends CatsEffectSuite {
         .build()
     } yield {
       assertEquals(presentation.slideSpecifications.length, 2)
-      assertEquals(presentation.exitSlide, None)
     }
   }
 
@@ -36,25 +35,6 @@ class BuilderSpec extends CatsEffectSuite {
     }
   }
 
-  test("PresentationBuilder supports exit slide") {
-    for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      exitSlide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] =
-          IO.pure(ScreenAdjusted("Bye"))
-        override def startShow: IO[Unit] = IO.unit
-        override def stopShow: IO[Unit] = IO.unit
-        override def userInput(input: UserInput): IO[Unit] = IO.unit
-      }
-      presentation = PresentationBuilder[IO]()
-        .addTextSlide(_.content("Slide 1"))
-        .addExitSlide(exitSlide)
-        .build()
-    } yield {
-      assert(presentation.exitSlide.isDefined)
-    }
-  }
 
   test("TextSlideBuilder builds slide with custom alignment") {
     for {

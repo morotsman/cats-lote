@@ -1,9 +1,8 @@
 package com.github.morotsman.lote.interpreter.ticker
 
-import cats.Monad
 import cats.effect.{Ref, Temporal}
 import cats.effect.implicits._
-import cats.effect.kernel.{Fiber, Spawn}
+import cats.effect.kernel.Fiber
 import cats.implicits._
 import com.github.morotsman.lote.algebra.{Ticker, TickerSubscription}
 
@@ -20,7 +19,7 @@ case class TickerState[F[_]](
 
 object TickerInterpreter {
 
-  def make[F[_]: Monad: Temporal: Spawn: Ref.Make](
+  def make[F[_]: Temporal: Ref.Make](
       interval: FiniteDuration = 40.millis
   ): F[Ticker[F]] =
     Ref[F].of(TickerState[F]()).map { state =>
@@ -31,7 +30,7 @@ object TickerInterpreter {
           s <- state.get
           _ <- s.subscribers.traverse_(_.callback)
           running <- state.get.map(_.running)
-          _ <- if (running) tickLoop() else Monad[F].unit
+          _ <- if (running) tickLoop() else Temporal[F].unit
         } yield ()
 
         override def subscribe(callback: F[Unit]): F[TickerSubscription[F]] =
@@ -46,7 +45,7 @@ object TickerInterpreter {
         override def start: F[Unit] = for {
           s <- state.get
           _ <-
-            if (s.running) Monad[F].unit
+            if (s.running) Temporal[F].unit
             else
               for {
                 _ <- state.update(_.copy(running = true))

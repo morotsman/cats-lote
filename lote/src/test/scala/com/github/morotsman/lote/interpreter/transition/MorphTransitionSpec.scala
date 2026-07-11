@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 
 class MorphTransitionSpec extends CatsEffectSuite {
 
-  override val munitTimeout: Duration = 10.seconds
+  override val munitIOTimeout: Duration = 10.seconds
 
   private def fixedSlide(text: String): Slide[IO] = new Slide[IO] {
     override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
@@ -111,10 +111,10 @@ class MorphTransitionSpec extends CatsEffectSuite {
       CharacterPosition('B', inTransition = false, canTransform = false)
     )
 
-    assertEquals(positions(0).character, 'A')
-    assert(positions(0).canTransform)
-    assertEquals(positions(1).character, 'B')
-    assert(!positions(1).canTransform)
+    assertEquals(positions.head.character, 'A')
+    assert(positions.head.canTransform)
+    assertEquals(positions.last.character, 'B')
+    assert(!positions.last.canTransform)
   }
 
   test("MorphTransition getNewIndex always returns None") {

@@ -61,6 +61,8 @@ object NConsoleInterpreter {
             }
           } else if (input.toInt == 65534) {
             Key(SpecialKey.Timeout)
+          } else if (input == ' ') {
+            Key(SpecialKey.Space)
           } else if (input == '\r' || input == '\n') {
             Key(SpecialKey.Enter)
           } else {

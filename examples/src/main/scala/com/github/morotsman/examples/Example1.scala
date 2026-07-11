@@ -3,7 +3,7 @@ package com.github.morotsman.examples
 import cats.effect._
 import com.github.morotsman.examples.slides.{Agenda, Animator, Bye, ExampleInteractiveSlide, Start}
 import com.github.morotsman.lote.interpreter.StepByStepSlide
-import com.github.morotsman.lote.builders.{SessionBuilder, SlideContext, TextSlideBuilder}
+import com.github.morotsman.lote.builders.{SessionBuilder, SlideBuilder, SlideContext, TextSlideBuilder}
 import com.github.morotsman.lote.interpreter.transition.{
   FallingCharactersTransition,
   MorphTransition,
@@ -13,14 +13,16 @@ import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, Vertical
 
 import scala.concurrent.duration.DurationInt
 
-object Session1 extends IOApp.Simple {
+object Example1 extends IOApp.Simple {
 
-  override def run(): IO[Unit] = {
+  override def run: IO[Unit] = {
     SessionBuilder[IO]()
       .withTimer(30.minutes)
       .withProgressBar()
       .withQuickNavigation()
-      .withIdleAnimation(idleTimeout = 2.minutes)
+      .withIdleAnimation(idleTimeout = 5.seconds)
+      .withFrameRate(60)
+      .withAnimationFrameRate(25)
       .addTextSlide { implicit ctx =>
         import ctx._
         _.content(Start())
@@ -56,17 +58,21 @@ object Session1 extends IOApp.Simple {
             )
           )
         } yield {
-          _.addSlide(slide).title("Step by Step")
+          (builder: SlideBuilder[IO, SlideBuilder.WithoutSlide]) =>
+            builder.addSlide(slide).title("Step by Step")
         }
       }
-      .addSlideF { implicit ctx =>
+      // explicit types to clarify
+      .addSlideF { (ctx: SlideContext[IO]) =>
         import ctx._
-        for {
-          animator <- Animator.make[IO]()
-          slide <- ExampleInteractiveSlide.make[IO](animator)
-        } yield {
-          _.addSlide(slide).title("Interactive")
-        }
+        val result: IO[SlideBuilder[IO, SlideBuilder.WithoutSlide] => SlideBuilder[IO, SlideBuilder.WithContentSlide]] =
+          for {
+            animator <- Animator.make[IO]()
+          } yield { (builder: SlideBuilder[IO, SlideBuilder.WithoutSlide]) =>
+            val slide = ExampleInteractiveSlide.make[IO](animator)
+            builder.addSlide(slide).title("Interactive")
+          }
+        result
       }
       .addTextSlide { implicit ctx =>
         import ctx._
@@ -75,7 +81,6 @@ object Session1 extends IOApp.Simple {
           .transition(FallingCharactersTransition())
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
-      .addExitSlide("Thanks for watching!")
       .run()
   }
 

@@ -1,7 +1,7 @@
 package com.github.morotsman.lote.interpreter
 
 import cats.effect.IO
-import com.github.morotsman.lote.algebra.NConsole
+import com.github.morotsman.lote.algebra.{NConsole, Slide}
 import com.github.morotsman.lote.model._
 import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
@@ -24,8 +24,7 @@ class PresentationExecutorSpec extends CatsEffectSuite {
             ),
             out = None
           )
-        ),
-        exitSlide = None
+        )
       )
       executor <- PresentationExecutorInterpreter.make[IO](presentation)
       _ <- executor.start()
@@ -61,8 +60,7 @@ class PresentationExecutorSpec extends CatsEffectSuite {
             ),
             out = None
           )
-        ),
-        exitSlide = None
+        )
       )
       executor <- PresentationExecutorInterpreter.make[IO](
         presentation,
@@ -100,8 +98,7 @@ class PresentationExecutorSpec extends CatsEffectSuite {
             ),
             out = None
           )
-        ),
-        exitSlide = None
+        )
       )
       executor <- PresentationExecutorInterpreter.make[IO](
         presentation,
@@ -138,14 +135,47 @@ class PresentationExecutorSpec extends CatsEffectSuite {
             ),
             out = None
           )
-        ),
-        exitSlide = None
+        )
       )
       executor <- PresentationExecutorInterpreter.make[IO](presentation)
       _ <- executor.start()
       written <- console.writtenRef.get
     } yield {
       assert(written.forall(_.contains("Only Slide")))
+    }
+  }
+
+  test("PresentationExecutor forwards Space special key to the current slide") {
+    for {
+      receivedInputs <- IO.ref(List.empty[UserInput])
+      console <- TestNConsole.make(
+        screen = Screen(20, 5),
+        inputs = List(Key(SpecialKey.Space), Key(SpecialKey.Esc))
+      )
+      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      slide = new Slide[IO] {
+        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Slide 1"))
+
+        override def startShow: IO[Unit] = IO.unit
+
+        override def stopShow: IO[Unit] = IO.unit
+
+        override def userInput(input: UserInput): IO[Unit] =
+          receivedInputs.update(_ :+ input)
+      }
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(
+            slide = slide,
+            out = None
+          )
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](presentation)
+      _ <- executor.start()
+      inputs <- receivedInputs.get
+    } yield {
+      assertEquals(inputs, List(Key(SpecialKey.Space)))
     }
   }
 
@@ -173,8 +203,7 @@ class PresentationExecutorSpec extends CatsEffectSuite {
             ),
             out = None
           )
-        ),
-        exitSlide = None
+        )
       )
       executor <- PresentationExecutorInterpreter.make[IO](
         presentation,

@@ -1,11 +1,10 @@
 package com.github.morotsman
 package lote.model
 
-import com.github.morotsman.lote.algebra.{Overlay, Slide}
+import com.github.morotsman.lote.algebra.Overlay
 
 case class Presentation[F[_]](
     slideSpecifications: List[SlideSpecification[F]],
-    exitSlide: Option[Slide[F]] = None,
     overlays: List[Overlay[F]] = List.empty
 ) {
   def titles: Vector[String] = slideSpecifications.zipWithIndex.map { case (spec, index) =>
