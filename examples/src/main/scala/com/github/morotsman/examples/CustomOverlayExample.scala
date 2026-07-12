@@ -4,8 +4,6 @@ import cats.effect.{IO, IOApp}
 import com.github.morotsman.examples.slides.CornerLabelOverlay
 import com.github.morotsman.lote.builders.SessionBuilder
 
-import scala.concurrent.duration.DurationInt
-
 object CustomOverlayExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
