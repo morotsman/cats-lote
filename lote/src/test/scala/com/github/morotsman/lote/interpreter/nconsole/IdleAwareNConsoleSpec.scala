@@ -1,8 +1,9 @@
 package com.github.morotsman.lote.interpreter.nconsole
 
 import cats.effect.IO
-import com.github.morotsman.lote.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
-import com.github.morotsman.lote.model._
+import com.github.morotsman.lote.api.{Character, Key, MouseClick, MouseMove, Screen, ScreenAdjusted, SpecialKey}
+import com.github.morotsman.lote.internal.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
+import com.github.morotsman.lote.internal.interpreter.nconsole.IdleAwareNConsole
 import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
 

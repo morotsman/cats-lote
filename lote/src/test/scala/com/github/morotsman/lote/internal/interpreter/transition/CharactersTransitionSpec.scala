@@ -1,0 +1,233 @@
+package com.github.morotsman.lote.internal.interpreter.transition
+
+import cats.effect.IO
+import com.github.morotsman.lote.api.{AnimationSettings, Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
+import com.github.morotsman.lote.api.spi.Slide
+import com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreter
+import com.github.morotsman.lote.support.TestNConsole
+import munit.CatsEffectSuite
+
+import scala.concurrent.duration._
+import scala.concurrent.duration.FiniteDuration
+
+class CharactersTransitionSpec extends CatsEffectSuite {
+
+  // Override default timeout for transition tests
+  override val munitIOTimeout: Duration = 10.seconds
+
+  /** Creates a slide that returns fixed ScreenAdjusted content (no alignment/padding)
+    */
+  private def fixedSlide(text: String): Slide[IO] = new Slide[IO] {
+    override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
+    override def startShow: IO[Unit] = IO.unit
+    override def stopShow: IO[Unit] = IO.unit
+    override def userInput(input: UserInput): IO[Unit] = IO.unit
+  }
+
+  // setupPosition: if chars differ, create two entries - one transformable (to be removed) and one final
+  private def simpleSetupPosition(
+      from: Char,
+      to: Char
+  ): List[CharacterPosition] = {
+    if (from == to) {
+      List(CharacterPosition(from, inTransition = false, canTransform = false))
+    } else {
+      List(
+        CharacterPosition(from, inTransition = false, canTransform = true),
+        CharacterPosition(to, inTransition = false, canTransform = false)
+      )
+    }
+  }
+
+  // getNewIndex: returns None to remove the transformable character (revealing the final one underneath)
+  private def inPlaceNewIndex(
+      _screen: Screen,
+      _index: Int,
+      _cp: CharacterPosition
+  ): Option[Int] = {
+    val _ = (_screen, _index, _cp)
+    None
+  }
+
+  test("CharactersTransition completes and shows the target slide") {
+    for {
+      console <- TestNConsole.make(screen = Screen(4, 1))
+      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
+      animationSettings = AnimationSettings(5.millis)
+      from = fixedSlide("AAAA")
+      to = fixedSlide("BBBB")
+      transition = CharactersTransition.create[IO](
+        selectAccelerator = 100.0,
+        setupPosition = simpleSetupPosition,
+        getNewIndex = inPlaceNewIndex,
+        console = console,
+        ticker = ticker,
+        animationSettings = animationSettings
+      )
+      _ <- transition.transition(from, to)
+      written <- console.writtenRef.get
+    } yield {
+      assert(written.nonEmpty, "Expected content to be written")
+      // Last write is the final "to" slide
+      assert(
+        written.head.contains("BBBB"),
+        s"Expected final write to contain 'BBBB', got: '${written.head}'"
+      )
+    }
+  }
+
+  test("CharactersTransition writes intermediate frames") {
+    for {
+      console <- TestNConsole.make(screen = Screen(4, 1))
+      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
+      animationSettings = AnimationSettings(5.millis)
+      from = fixedSlide("XXXX")
+      to = fixedSlide("YYYY")
+      transition = CharactersTransition.create[IO](
+        selectAccelerator = 100.0,
+        setupPosition = simpleSetupPosition,
+        getNewIndex = inPlaceNewIndex,
+        console = console,
+        ticker = ticker,
+        animationSettings = animationSettings
+      )
+      _ <- transition.transition(from, to)
+      written <- console.writtenRef.get
+    } yield {
+      // initial write + at least one tick write + final write
+      assert(
+        written.length >= 2,
+        s"Expected multiple writes, got ${written.length}"
+      )
+    }
+  }
+
+  test("CharactersTransition with identical slides completes immediately") {
+    for {
+      console <- TestNConsole.make(screen = Screen(4, 1))
+      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
+      animationSettings = AnimationSettings(5.millis)
+      from = fixedSlide("SAME")
+      to = fixedSlide("SAME")
+      transition = CharactersTransition.create[IO](
+        selectAccelerator = 100.0,
+        setupPosition = simpleSetupPosition,
+        getNewIndex = inPlaceNewIndex,
+        console = console,
+        ticker = ticker,
+        animationSettings = animationSettings
+      )
+      _ <- transition.transition(from, to)
+      written <- console.writtenRef.get
+    } yield {
+      assert(written.nonEmpty)
+    }
+  }
+
+  test("CharactersTransition userInput is a no-op") {
+    for {
+      console <- TestNConsole.make(screen = Screen(4, 1))
+      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
+      animationSettings = AnimationSettings(5.millis)
+      transition = CharactersTransition.create[IO](
+        selectAccelerator = 100.0,
+        setupPosition = simpleSetupPosition,
+        getNewIndex = inPlaceNewIndex,
+        console = console,
+        ticker = ticker,
+        animationSettings = animationSettings
+      )
+      _ <- transition.userInput(Key(SpecialKey.Right))
+    } yield ()
+  }
+
+  private def runTransition(accelerator: Double): IO[FiniteDuration] = for {
+    console <- TestNConsole.make(screen = Screen(4, 1))
+    ticker <- TickerInterpreter.make[IO](interval = 5.millis)
+    animationSettings = AnimationSettings(5.millis)
+    from = fixedSlide("ABCD")
+    to = fixedSlide("WXYZ")
+    transition = CharactersTransition.create[IO](
+      selectAccelerator = accelerator,
+      setupPosition = simpleSetupPosition,
+      getNewIndex = inPlaceNewIndex,
+      console = console,
+      ticker = ticker,
+      animationSettings = animationSettings
+    )
+    start <- IO.monotonic
+    _ <- transition.transition(from, to)
+    end <- IO.monotonic
+  } yield end - start
+
+  private def runTransitionWithAnimationStep(
+      animationStep: FiniteDuration,
+      tickerInterval: FiniteDuration
+  ): IO[FiniteDuration] = {
+    val animationSettings = AnimationSettings(animationStep)
+
+    for {
+      console <- TestNConsole.make(screen = Screen(4, 1))
+      ticker <- TickerInterpreter.make[IO](interval = tickerInterval)
+      from = fixedSlide("ABCD")
+      to = fixedSlide("WXYZ")
+      transition = CharactersTransition.create[IO](
+        selectAccelerator = 1.1,
+        setupPosition = simpleSetupPosition,
+        getNewIndex = inPlaceNewIndex,
+        console = console,
+        ticker = ticker,
+        animationSettings = animationSettings
+      )
+      start <- IO.monotonic
+      _ <- transition.transition(from, to)
+      end <- IO.monotonic
+    } yield end - start
+  }
+
+  test("CharactersTransition higher selectAccelerator completes faster") {
+    for {
+      fastDuration <- runTransition(100.0)
+      slowDuration <- runTransition(1.1)
+    } yield {
+      assert(
+        fastDuration <= slowDuration,
+        s"Expected fast ($fastDuration) <= slow ($slowDuration)"
+      )
+    }
+  }
+
+  test("CharactersTransition clears screen during transition") {
+    for {
+      console <- TestNConsole.make(screen = Screen(4, 1))
+      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
+      animationSettings = AnimationSettings(5.millis)
+      from = fixedSlide("AAAA")
+      to = fixedSlide("BBBB")
+      transition = CharactersTransition.create[IO](
+        selectAccelerator = 100.0,
+        setupPosition = simpleSetupPosition,
+        getNewIndex = inPlaceNewIndex,
+        console = console,
+        ticker = ticker,
+        animationSettings = animationSettings
+      )
+      _ <- transition.transition(from, to)
+      cleared <- console.clearedRef.get
+    } yield {
+      assert(cleared >= 1, s"Expected at least one clear(), got $cleared")
+    }
+  }
+
+  test("CharactersTransition animation step controls speed independently of ticker") {
+    for {
+      fastAnimation <- runTransitionWithAnimationStep(10.millis, 40.millis)
+      slowAnimation <- runTransitionWithAnimationStep(80.millis, 40.millis)
+    } yield {
+      assert(
+        fastAnimation < slowAnimation,
+        s"Expected smaller animation step ($fastAnimation) to complete faster than larger step ($slowAnimation)"
+      )
+    }
+  }
+}

@@ -1,6 +1,6 @@
 package com.github.morotsman.lote.support
 
-import com.github.morotsman.lote.model._
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Screen, VerticalAlignment}
 import munit.CatsEffectSuite
 
 class NConsoleAlignmentSpec extends CatsEffectSuite {

@@ -3,8 +3,8 @@ package com.github.morotsman.examples.slides
 import cats.{Applicative, Monad}
 import cats.effect.Ref
 import cats.implicits._
-import com.github.morotsman.lote.algebra.Overlay
-import com.github.morotsman.lote.model.{Character, Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
+import com.github.morotsman.lote.api.{Character, Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
+import com.github.morotsman.lote.api.spi.Overlay
 
 final case class InputStatus(count: Int, lastInput: String)
 

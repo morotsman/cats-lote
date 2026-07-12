@@ -2,36 +2,36 @@ package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
 import com.github.morotsman.examples.slides.CornerLabelOverlay
-import com.github.morotsman.lote.builders.SessionBuilder
+import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object CustomOverlayExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
     SessionBuilder[IO]()
       .addOverlay(CornerLabelOverlay[IO]("CUSTOM OVERLAY"))
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """This example adds a custom overlay to the session.
             |
-            |An overlay is a small component that rewrites rendered output
-            |before it is shown on screen.
+            |An overlay rewrites rendered output before it hits the screen,
+            |which is a polite way of saying it draws on top of your slides whether they like it or not.
             |
-            |Look in the top-right corner of every slide:
-            |the label stays visible as you move through the deck.""".stripMargin
+            |Look in the top-right corner — the label stays visible on every slide,
+            |quietly insisting on its own relevance.""".stripMargin
         ).title("What It Is")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """You register an overlay once with `addOverlay(...)`.
             |
-            |After that, it is applied every time a slide is rendered,
-            |so it can stay visible across the whole presentation.
+            |After that, it runs every time a slide is rendered,
+            |so it stays visible across the whole presentation.
             |
             |That makes overlays a good fit for labels, timers, badges,
-            |and other repeated session-wide information.""".stripMargin
+            |and other information that refuses to wait its turn.""".stripMargin
         ).title("How To Use It")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """The `Overlay[F]` interface gives you two hooks:
             |
@@ -39,26 +39,29 @@ object CustomOverlayExample extends IOApp.Simple {
             |2. `onUserInput(...)` can react to keys and other input events
             |
             |This example only uses `applyOverlay(...)`,
-            |because the corner label is static.""".stripMargin
+            |because the corner label has no ambitions beyond being seen.""".stripMargin
         ).title("Overlay Interface")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
-          """The code stays small because the overlay does only three things:
+          """The code does exactly three things:
             |
             |1. read the screen width from the context
-            |2. update the top rendered line with a badge
-            |3. return the modified `ScreenAdjusted` value
+            |2. stamp a badge into the top line
+            |3. return the modified `ScreenAdjusted`
             |
-            |That is the core pattern for simple decorative overlays.""".stripMargin
+            |That's the whole pattern for simple decorative overlays.
+            |Ornamentation without a side quest.""".stripMargin
         ).title("How The Code Works")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
-          """Static overlays are a good fit for labels, badges, and simple decorations.
+          """Static overlays are a good fit for labels, badges, and simple decorations
+            |that don't need to think.
             |
             |If your overlay needs state or setup work,
-            |the next example shows the effectful version of the same idea.""".stripMargin
+            |the next example shows the effectful version,
+            |because even a label can eventually develop a personality.""".stripMargin
         ).title("What To Try Next")
       }
       .run()

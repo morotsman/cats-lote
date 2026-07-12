@@ -4,9 +4,10 @@ import cats.Monad
 import cats.effect.{Ref, Temporal}
 import cats.effect.std.Queue
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{AnimationSettings, NConsole, Slide, Ticker, TickerSubscription}
-import com.github.morotsman.lote.interpreter.animation.FixedStep
-import com.github.morotsman.lote.model._
+import com.github.morotsman.lote.api.{Alignment, AnimationSettings, Character, HorizontalAlignment, ScreenAdjusted, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.builders.ContextualF
+import com.github.morotsman.lote.api.support.FixedStep
+import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription}
 
 import scala.util.Random
 
@@ -21,13 +22,22 @@ object ExampleInteractiveSlide {
     *   - `userInput` translates keys into domain-specific commands
     */
 
-  def make[F[_]: Monad: NConsole](
-      animator: Animator[F]
-  ): Slide[F] = {
+  def contextual[F[_]: Temporal: Ref.Make]()(implicit monad: Monad[F]): ContextualF[F, Slide[F]] =
+    ContextualF { ctx =>
+      def buildSlide(animator: Animator[F]): Slide[F] =
+        fromAnimator[F](animator, ctx.console)(monad)
+
+      Animator.create[F](ctx.console, ctx.ticker, ctx.animationSettings).map(buildSlide)
+    }
+
+  def fromAnimator[F[_]](
+      animator: Animator[F],
+      console: NConsole[F]
+  )(implicit monad: Monad[F]): Slide[F] = {
 
     new Slide[F] {
       override def content: F[ScreenAdjusted] =
-        NConsole[F].alignText(
+        console.alignText(
           "",
           Alignment(
             VerticalAlignment.Center,
@@ -51,7 +61,7 @@ object ExampleInteractiveSlide {
         case Character(c) if c == 'd' =>
           animator.changeDirection(DirectionRight())
         case _ =>
-          Monad[F].unit
+          monad.unit
       }
     }
   }
@@ -79,7 +89,11 @@ case class AnimatorState(
 
 object Animator {
 
-  def make[F[_]: Temporal: Ref.Make: NConsole: Ticker]()(implicit animationSettings: AnimationSettings): F[Animator[F]] = {
+  def create[F[_]: Temporal: Ref.Make](
+      console: NConsole[F],
+      ticker: Ticker[F],
+      animationSettings: AnimationSettings
+  ): F[Animator[F]] = {
 
     for {
       queue <- Queue.unbounded[F, Direction]
@@ -216,7 +230,7 @@ object Animator {
                 stateRef.update(_.map(_.copy(running = false)))
               } else {
                 for {
-                  screen <- NConsole[F].context
+                  screen <- console.context
                   updatedState <- (0 until nrOfSteps).toList.foldLeftM(s) {
                     case (currentState, _) if !currentState.running =>
                       Monad[F].pure(currentState)
@@ -232,7 +246,7 @@ object Animator {
                       }
                   }
                   _ <- if (updatedState.running)
-                    NConsole[F].writeString(
+                    console.writeString(
                       renderScreen(updatedState, screen.screenWidth)
                     )
                   else Monad[F].unit
@@ -246,10 +260,10 @@ object Animator {
       // `FixedStep.consumeSteps(...)` turns wall-clock time into zero or more simulation steps,
       // and `onTick` applies those steps to the current game state.
       private val tickerCallback: F[Unit] =
-        FixedStep.consumeSteps(stepperRef).flatMap(onTick)
+        FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap(onTick)
 
       override def animate(): F[Unit] = for {
-        screen <- NConsole[F].context
+        screen <- console.context
         screenSize = screen.screenWidth * (screen.screenHeight - 1)
         emptyScreen = Vector.fill(screenSize)(' ')
         heartIndexes = List.fill(500)(Random.nextInt(screenSize)).toSet
@@ -272,9 +286,9 @@ object Animator {
         // slide becomes active.
         _ <- FixedStep.reset(stepperRef)
         // Subscribing here means the game starts advancing only while this slide is active.
-        sub <- Ticker[F].subscribe(tickerCallback)
+        sub <- ticker.subscribe(tickerCallback)
         _ <- subscriptionRef.set(Some(sub))
-        _ <- Ticker[F].start
+        _ <- ticker.start
       } yield ()
 
       override def stop(): F[Unit] = for {
