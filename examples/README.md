@@ -36,9 +36,9 @@ Use this section to pick the example that best matches what you want to try next
 
 If you want to go beyond the built-in features, start by looking at the main type each example is built around:
 
-- A custom transition implements `Transition[F]`, which lets you define how one slide changes into the next and how the transition reacts to input.
-- A custom overlay implements `Overlay[F]`, which lets you add content around rendered slides and optionally react to input.
-- A custom slide implements `Slide[F]`, which lets you control rendering, lifecycle hooks, and input handling.
+- A custom transition implements the public `Transition[F]` SPI, which lets you define how one slide changes into the next and how the transition reacts to input.
+- A custom overlay implements the public `Overlay[F]` SPI, which lets you add content around rendered slides and optionally react to input.
+- A custom slide implements the public `Slide[F]` SPI, which lets you control rendering, lifecycle hooks, and input handling.
 
 The examples build on each other in this order:
 
@@ -74,7 +74,7 @@ When reading the custom examples, keep the same four questions in mind:
 - Useful for understanding how sparse content can still feel intentional.
 
 ### `TransitionsExample`
-- Introduces `.transition(...)` on text slides.
+- Introduces built-in transition helpers like `.replaceTransition(...)`, `.morphTransition()`, and `.fallingCharactersTransition()` on text slides.
 - Shows `ReplaceTransition`, `MorphTransition`, and `FallingCharactersTransition` separately.
 - Helps you choose between the built-in transitions based on the kind of presentation flow you want, not just the visual effect.
 - Keeps the deck simple so the transition itself is the main thing to notice.
@@ -109,10 +109,10 @@ When reading the custom examples, keep the same four questions in mind:
 - Useful when an overlay needs state, subscriptions, or other effectful setup.
 
 ### `StepByStepExample`
-- Introduces `addSlideF` for effectful slide construction.
-- Uses `StepByStepSlide.make` to reveal content progressively.
-- Explains that the slide is built from a sequence of stages, with one stage per reveal step.
-- Bridges the gap between plain text slides and fully interactive custom slides.
+- Shows how `addTextSlide` supports progressive reveal directly.
+- Uses `.content(...)`, `.step(...)`, `.separator(...)`, and `.hint(...)` to build staged text slides.
+- Explains that the slide is built from an initial body plus later revealed fragments.
+- Bridges the gap between plain text slides and fully interactive custom slides without dropping into the lower-level custom slide API.
 
 ### `InteractiveSlideExample`
 - Focuses only on the interactive slide, without the rest of the advanced showcase around it.

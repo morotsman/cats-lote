@@ -1,11 +1,11 @@
-package com.github.morotsman.lote.interpreter.middleware
+package com.github.morotsman.lote.internal.interpreter.middleware
 
 import cats.effect.IO
-import com.github.morotsman.lote.algebra.IdleDetector
-import com.github.morotsman.lote.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
-import com.github.morotsman.lote.model._
+import com.github.morotsman.lote.api.{Key, Screen, ScreenAdjusted, SpecialKey}
+import com.github.morotsman.lote.internal.algebra.IdleDetector
+import com.github.morotsman.lote.internal.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
+import com.github.morotsman.lote.internal.util.Colors
 import com.github.morotsman.lote.support.TestNConsole
-import com.github.morotsman.lote.util.Colors
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._

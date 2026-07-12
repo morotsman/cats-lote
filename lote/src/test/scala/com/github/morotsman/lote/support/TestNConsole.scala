@@ -2,8 +2,8 @@ package com.github.morotsman.lote.support
 
 import cats.effect.IO
 import cats.effect.Ref
-import com.github.morotsman.lote.algebra.NConsole
-import com.github.morotsman.lote.model._
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Key, Screen, ScreenAdjusted, SpecialKey, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.spi.NConsole
 
 /** A test implementation of NConsole that records interactions and allows injecting user inputs for testing purposes.
   */

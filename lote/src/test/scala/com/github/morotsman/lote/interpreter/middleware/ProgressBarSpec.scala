@@ -1,7 +1,8 @@
 package com.github.morotsman.lote.interpreter.middleware
 
 import cats.effect.IO
-import com.github.morotsman.lote.model._
+import com.github.morotsman.lote.api.{Milestone, Screen, ScreenAdjusted}
+import com.github.morotsman.lote.internal.interpreter.middleware.ProgressBar
 import munit.CatsEffectSuite
 
 class ProgressBarSpec extends CatsEffectSuite {

@@ -1,8 +1,9 @@
 package com.github.morotsman.lote.interpreter.middleware
 
 import cats.effect.IO
-import com.github.morotsman.lote.algebra.{Overlay, Ticker, TickerSubscription}
-import com.github.morotsman.lote.model._
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Screen, ScreenAdjusted, VerticalAlignment}
+import com.github.morotsman.lote.api.spi.{Overlay, Ticker, TickerSubscription}
+import com.github.morotsman.lote.internal.interpreter.middleware.Middleware
 import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
 

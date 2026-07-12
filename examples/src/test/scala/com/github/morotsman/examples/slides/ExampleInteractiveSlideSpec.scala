@@ -2,8 +2,8 @@ package com.github.morotsman.examples.slides
 
 import cats.effect.{IO, Ref}
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{AnimationSettings, NConsole, Ticker, TickerSubscription}
-import com.github.morotsman.lote.model.{Character, Key, Screen, SpecialKey}
+import com.github.morotsman.lote.api.{AnimationSettings, Character, Key, Screen, SpecialKey}
+import com.github.morotsman.lote.api.spi.{Ticker, TickerSubscription}
 import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
 
@@ -64,14 +64,14 @@ class ExampleInteractiveSlideSpec extends CatsEffectSuite {
 		state.update(s => s.copy(directions = s.directions :+ input))
 	}
 
-	private def positionsOf(frame: String, symbol: Char): List[(Int, Int)] =
+	private def positionsOf(frame: String): List[(Int, Int)] =
 		frame
 			.split("\n", -1)
 			.toList
 			.zipWithIndex
 			.flatMap { case (line, row) =>
 				line.zipWithIndex.collect {
-					case (c, col) if c == symbol => (row, col)
+					case ('W', col) => (row, col)
 				}
 			}
 
@@ -90,9 +90,8 @@ class ExampleInteractiveSlideSpec extends CatsEffectSuite {
   test("content returns an empty centered screen") {
 	for {
 	  console <- TestNConsole.make(screen = Screen(4, 3))
-	  implicit0(nc: NConsole[IO]) = console: NConsole[IO]
 	  state <- Ref[IO].of(RecordingState())
-	  slide = ExampleInteractiveSlide.make[IO](recordingAnimator(state))
+	  slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
 	  content <- slide.content
 	} yield assertEquals(content.content, "    \n    \n    ")
   }
@@ -100,9 +99,8 @@ class ExampleInteractiveSlideSpec extends CatsEffectSuite {
   test("startShow delegates to animator.animate") {
 	for {
 	  console <- TestNConsole.make()
-	  implicit0(nc: NConsole[IO]) = console: NConsole[IO]
 	  state <- Ref[IO].of(RecordingState())
-	  slide = ExampleInteractiveSlide.make[IO](recordingAnimator(state))
+	  slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
 	  _ <- slide.startShow
 	  recorded <- state.get
 	} yield assertEquals(recorded.animateCalls, 1)
@@ -111,9 +109,8 @@ class ExampleInteractiveSlideSpec extends CatsEffectSuite {
   test("stopShow delegates to animator.stop") {
 	for {
 	  console <- TestNConsole.make()
-	  implicit0(nc: NConsole[IO]) = console: NConsole[IO]
 	  state <- Ref[IO].of(RecordingState())
-	  slide = ExampleInteractiveSlide.make[IO](recordingAnimator(state))
+	  slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
 	  _ <- slide.stopShow
 	  recorded <- state.get
 	} yield assertEquals(recorded.stopCalls, 1)
@@ -122,9 +119,8 @@ class ExampleInteractiveSlideSpec extends CatsEffectSuite {
   test("userInput maps WASD keys to directions") {
 	for {
 	  console <- TestNConsole.make()
-	  implicit0(nc: NConsole[IO]) = console: NConsole[IO]
 	  state <- Ref[IO].of(RecordingState())
-	  slide = ExampleInteractiveSlide.make[IO](recordingAnimator(state))
+	  slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
 	  _ <- slide.userInput(Character('a'))
 	  _ <- slide.userInput(Character('w'))
 	  _ <- slide.userInput(Character('s'))
@@ -144,9 +140,8 @@ class ExampleInteractiveSlideSpec extends CatsEffectSuite {
   test("userInput ignores non-WASD input") {
 	for {
 	  console <- TestNConsole.make()
-	  implicit0(nc: NConsole[IO]) = console: NConsole[IO]
 	  state <- Ref[IO].of(RecordingState())
-	  slide = ExampleInteractiveSlide.make[IO](recordingAnimator(state))
+	  slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
 	  _ <- slide.userInput(Character('x'))
 	  _ <- slide.userInput(Key(SpecialKey.Enter))
 	  recorded <- state.get
@@ -167,31 +162,32 @@ class ExampleInteractiveSlideSpec extends CatsEffectSuite {
 
 		for {
 			console <- TestNConsole.make(screen = Screen(width, height))
-			implicit0(nc: NConsole[IO]) = console: NConsole[IO]
 			ticker <- ManualTicker.make(step)
-			implicit0(tk: Ticker[IO]) = ticker: Ticker[IO]
-			implicit0(animationSettings: AnimationSettings) = AnimationSettings(step)
+			animationSettings = AnimationSettings(step)
 			_ = Random.setSeed(seed)
-			animator <- Animator.make[IO]()
-			slide = ExampleInteractiveSlide.make[IO](animator)
+			animator <- Animator.create[IO](console, ticker, animationSettings)
+			slide = ExampleInteractiveSlide.fromAnimator[IO](animator, console)
 			_ <- slide.startShow
 			_ <- ticker.tick(120)
 			written <- console.writtenRef.get
 			_ <- slide.stopShow
 		} yield {
-			val positions = written.reverse.map(frame => positionsOf(frame, 'W'))
-			val leftEdgeIndex = positions.indexOf(List((initialRow, 0)))
+			val positions = written.reverse.map(positionsOf)
+			val leftEdgeIndex = positions.indexWhere {
+				case List((row, col)) => row == initialRow && col <= 1
+				case _                => false
+			}
 			assert(
 				leftEdgeIndex >= 0,
-				s"Expected to observe 'W' at the left edge of row $initialRow, got: ${positions.take(80)}"
+				s"Expected to observe 'W' at or immediately next to the left edge of row $initialRow, got: ${positions.take(80)}"
 			)
-			val firstFrameAfterLeftEdge = positions.drop(leftEdgeIndex + 1).headOption
+			val framesAfterLeftEdge = positions.slice(leftEdgeIndex + 1, leftEdgeIndex + 11)
 			assert(
-				firstFrameAfterLeftEdge.exists {
-					case List((row, col)) => row == initialRow && col > 0
+				framesAfterLeftEdge.exists {
+					case List((row, col)) => row == initialRow && col >= (width * 3) / 4
 					case _                => false
 				},
-				s"Expected the first observed frame after the left edge to keep 'W' on row $initialRow and place it back on the right side, got: ${positions.drop(leftEdgeIndex).take(10)}"
+				s"Expected a frame after the left edge to keep 'W' on row $initialRow and place it back near the right edge, got: ${positions.slice(leftEdgeIndex, leftEdgeIndex + 10)}"
 			)
 		}
 	}

@@ -4,9 +4,10 @@ import cats.Monad
 import cats.effect.{Deferred, Ref, Temporal}
 import cats.effect.implicits._
 import cats.implicits._
-import com.github.morotsman.lote.algebra.{AnimationSettings, NConsole, Slide, Ticker, Transition}
-import com.github.morotsman.lote.interpreter.animation.FixedStep
-import com.github.morotsman.lote.model.{ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.api.{AnimationSettings, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.api.builders.Contextual
+import com.github.morotsman.lote.api.support.FixedStep
+import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription, Transition}
 
 object SweepRightTransition {
 
@@ -21,9 +22,17 @@ object SweepRightTransition {
     * `columnsPerStep` is the simulation increment: larger values make the wipe finish in fewer updates.
     */
 
-  def apply[F[_]: Temporal: Ref.Make: Ticker](
-      columnsPerStep: Int = 3
-  )(implicit console: NConsole[F], animationSettings: AnimationSettings): Transition[F] = {
+  def contextual[F[_]: Temporal: Ref.Make](columnsPerStep: Int = 3): Contextual[F, Transition[F]] =
+    Contextual { ctx =>
+      create[F](columnsPerStep, ctx.console, ctx.ticker, ctx.animationSettings)
+    }
+
+  def create[F[_]: Temporal: Ref.Make](
+      columnsPerStep: Int = 3,
+      console: NConsole[F],
+      ticker: Ticker[F],
+      animationSettings: AnimationSettings
+  ): Transition[F] = {
     require(columnsPerStep > 0, "columnsPerStep must be greater than 0")
 
     def normalizeLine(line: String, width: Int): String = {
@@ -63,7 +72,7 @@ object SweepRightTransition {
           stepperRef <- FixedStep.makeRef[F]
           done <- Deferred[F, Unit]
           onTick =
-            FixedStep.consumeSteps(stepperRef).flatMap { nrOfSteps =>
+            FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap { nrOfSteps =>
               if (nrOfSteps <= 0) {
                 Monad[F].unit
               } else {
@@ -93,9 +102,9 @@ object SweepRightTransition {
               }
             }
           maybeSub <-
-            if (screen.screenWidth <= 0) Monad[F].pure(Option.empty[com.github.morotsman.lote.algebra.TickerSubscription[F]])
-            else Ticker[F].subscribe(onTick).map(sub => Option(sub))
-          _ <- maybeSub.traverse_(_ => Ticker[F].start)
+            if (screen.screenWidth <= 0) Monad[F].pure(Option.empty[TickerSubscription[F]])
+            else ticker.subscribe(onTick).map(Option(_))
+          _ <- maybeSub.traverse_(_ => ticker.start)
           _ <-
             if (screen.screenWidth <= 0) Monad[F].unit
             else done.get.guarantee(maybeSub.traverse_(_.cancel))
@@ -104,7 +113,7 @@ object SweepRightTransition {
 
       override def userInput(input: UserInput): F[Unit] = {
         val _ = input
-        Temporal[F].unit
+        Monad[F].unit
       }
     }
   }

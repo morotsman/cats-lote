@@ -1,56 +1,50 @@
 package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
-import com.github.morotsman.lote.builders.{SessionBuilder, SlideBuilder}
-import com.github.morotsman.lote.interpreter.StepByStepSlide
+import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object StepByStepExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
     SessionBuilder[IO]()
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """This example shows a slide that reveals content in stages.
             |
             |That is useful when you want to control pacing
-            |without splitting one idea across many separate slides.""".stripMargin
+            |without splitting one idea across many separate slides and calling that a narrative structure.""".stripMargin
         ).title("What It Is")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
-          """The example is attached with `addSlideF(...)` instead of `addTextSlide(...)`.
+          """Step-by-step slides use the same builder as ordinary text slides.
             |
-            |Use that form when building the slide needs effects
-            |or when you want to insert a custom `Slide[F]`.""".stripMargin
+            |Start with `content(...)`, then add `step(...)`
+            |for each reveal you want to show next, because duplicating whole slides builds character but not efficiency.""".stripMargin
         ).title("How To Use It")
       }
-      .addSlideF { implicit ctx =>
-        import ctx._
-        StepByStepSlide.make[IO](
-          Vector(
-            "Step 1: Explain the problem you want to solve.",
-            "Step 1: Explain the problem you want to solve.\nStep 2: Show the smallest useful API.",
-            "Step 1: Explain the problem you want to solve.\nStep 2: Show the smallest useful API.\nStep 3: Add more detail only when the audience is ready."
-          )
-        ).map { slide =>
-          (builder: SlideBuilder[IO, SlideBuilder.WithoutSlide]) =>
-            builder.addSlide(slide).title("Step By Step")
-        }
+      .addTextSlide {
+        _.content("Step 1: Explain the problem you want to solve.")
+          .separator("\n")
+          .step("Step 2: Show the smallest useful API.")
+          .step("Step 3: Add more detail only when the audience is ready.")
+          .hint("[press any key to continue]")
+          .title("Step By Step")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
-          """The code works by giving `StepByStepSlide.make(...)`
-            |a vector of stages.
+          """The code works by combining the initial `content(...)`
+            |with each later `step(...)`.
             |
-            |Each input event advances to the next stage,
-            |so the audience sees one idea at a time.""".stripMargin
+            |`separator(...)` controls how the pieces join,
+            |and `hint(...)` controls the continue message, in case the audience needed help noticing there was more slide coming.""".stripMargin
         ).title("How The Code Works")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """This pattern works well for staged reveals, outlines, and teaching slides.
             |
-            |AdvancedExample goes one step further with a fully interactive slide.""".stripMargin
+            |AdvancedExample goes one step further with a fully interactive slide, because eventually plain text starts asking for a hobby.""".stripMargin
         ).title("What To Try Next")
       }
       .run()

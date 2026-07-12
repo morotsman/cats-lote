@@ -1,0 +1,9 @@
+package com.github.morotsman.lote.internal.model
+
+import com.github.morotsman.lote.api.spi.{Slide, Transition}
+
+private[lote] final case class SlideSpecification[F[_]](
+    slide: Slide[F],
+    out: Option[Transition[F]],
+    title: Option[String] = None
+)

@@ -51,20 +51,23 @@ A type-safe builder pattern using phantom types, because if you're going to buil
 - **TextSlideBuilder** – Quickly create text-based slides with content, alignment, and transitions.
 - **SlideBuilder** – Add custom interactive slides with their own logic, for when plain text isn't over-engineered enough.
 
-The safety guarantees are now explicit:
+Built-in transitions have convenience helpers on the slide builders, so for common cases you can write things like `.morphTransition()`, `.replaceTransition(' ')`, `.fallingCharactersTransition()`, or `.grabTransition()` instead of manually constructing the transition value yourself.
+
+If you want to build your own transition, the supported extension point is the public `Transition[F]` SPI. If you want to build your own interactive slide, the supported extension point is the public `Slide[F]` SPI.
+
+The safety guarantees are:
 
 - `TextSlideBuilder.build()` is only available after `.content(...)`
 - `SlideBuilder.build()` is only available after `.addSlide(...)`
-- `PresentationBuilder.build()` is only available after at least one slide has been added
-- `SessionBuilder.run()` still validates at runtime that the session is not empty
+- `SessionBuilder.run()` validates at runtime that the session is not empty
 
 ### 🖥️ Interactive Slides
 
-Implement the `Slide[F]` trait to create fully custom, interactive slides that respond to user keyboard input. Finally, audience participation that doesn't involve eye contact.
+Implement the public `Slide[F]` SPI to create fully custom, interactive slides that respond to user keyboard input. Finally, audience participation that doesn't involve eye contact.
 
 ### 📋 Step-by-Step Slides
 
-`StepByStepSlide` lets you reveal content progressively; press any key to advance to the next stage. Perfect for bullet points you want to dramatically unveil one at a time, as if each one is a plot twist.
+`addTextSlide` supports progressive reveal directly. Start with `.content(...)`, add `.step(...)` for each new reveal, and optionally use `.separator(...)` and `.hint(...)` to control formatting and the continue prompt.
 
 ### ⚡ Ticker-Based Animation Engine
 
@@ -77,7 +80,7 @@ Also, in a shocking display of restraint, render cadence and animation speed are
 - **`withAnimationStep(...)`** – Controls how quickly built-in animations advance.
 - **`withAnimationFrameRate(...)`** – Same thing, but in FPS so you can say "25 FPS" instead of "40 milliseconds" like someone who has accepted their fate.
 
-So if you want smoother rendering without turning your snake into a caffeinated railgun, you can do that now.
+So if you want smoother rendering without turning your snake into a caffeinated railgun, you can do that.
 
 ### 🐍 ASCII Art
 
@@ -196,7 +199,7 @@ sbt test
 
 ```scala
 import cats.effect._
-import com.github.morotsman.lote.builders.SessionBuilder
+import com.github.morotsman.lote.api.builders.SessionBuilder
 import com.github.morotsman.lote.interpreter.middleware.Milestone
 
 object MyPresentation extends IOApp.Simple {
@@ -290,23 +293,22 @@ If tweaking two knobs sounds dangerously close to system administration, here ar
 
 In short: lower ticker interval = smoother redraws, lower animation step = faster built-in animations, and lower self-respect = trying `1.milli` again to see if maybe this time it works out.
 
-### Interactive Slides with `addSlideF`
+### Progressive Text Slides
 
-For slides that need effectful construction (allocating `Ref`s, building stateful components), use `addSlideF`:
+For text slides that reveal more content step by step, stay in `addTextSlide` and use the staged text DSL:
 
 ```scala
-.addSlideF { implicit ctx => import ctx._
-  for {
-    slide <- StepByStepSlide.make[IO](Vector(
-      "First point",
-      "First point\nSecond point",
-      "First point\nSecond point\nThird point, mic drop"
-    ))
-  } yield {
-    _.addSlide(slide).title("Agenda")
-  }
+.addTextSlide {
+  _.content("First point")
+    .separator("\n")
+    .step("Second point")
+    .step("Third point, mic drop")
+    .hint("[press any key to continue]")
+    .title("Agenda")
 }
 ```
+
+Use `addSlideF` when a slide genuinely needs effectful construction, such as allocating `Ref`s, queues, or custom interactive state.
 
 ## Tech Stack
 
@@ -322,8 +324,10 @@ For slides that need effectful construction (allocating `Ref`s, building statefu
 cats-lote/
 ├── lote/          # Core library
 │   └── src/main/scala/com/github/morotsman/lote/
-│       ├── algebra/       # Core traits (Slide, Transition, Middleware, etc.)
-│       ├── builders/      # Type-safe builder DSL (SessionBuilder, TextSlideBuilder, SlideBuilder)
+│       ├── algebra/       # Core runtime traits (Middleware, Ticker, etc.)
+│       ├── api/
+│       │   ├── builders/  # Public builder DSL (SessionBuilder, TextSlideBuilder, SlideBuilder)
+│       │   └── spi/       # Public extension points like Slide, Transition, and Overlay
 │       ├── interpreter/   # Implementations
 │       │   ├── middleware/    # Internal overlay implementations: Timer, ProgressBar, QuickNavigation, Idle
 │       │   └── transition/   # Morph, Falling, Replace, Grab

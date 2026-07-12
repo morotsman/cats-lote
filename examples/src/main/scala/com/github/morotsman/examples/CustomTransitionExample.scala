@@ -2,8 +2,8 @@ package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
 import com.github.morotsman.examples.slides.SweepRightTransition
-import com.github.morotsman.lote.builders.SessionBuilder
-import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, VerticalAlignment}
+import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object CustomTransitionExample extends IOApp.Simple {
 
@@ -11,8 +11,7 @@ object CustomTransitionExample extends IOApp.Simple {
     SessionBuilder[IO]()
       .withFrameRate(60)
       .withAnimationFrameRate(30)
-      .addTextSlide { implicit ctx =>
-        import ctx._
+      .addTextSlide {
         _.content(
           """This example introduces a custom transition.
             |
@@ -20,13 +19,12 @@ object CustomTransitionExample extends IOApp.Simple {
             |attached to a slide with `.transition(...)`.
             |
             |Leave this slide to watch a simple wipe reveal the next slide
-            |from left to right.""".stripMargin
+            |from left to right, because horizontal motion still counts as spectacle in a terminal.""".stripMargin
         ).title("What It Is")
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-          .transition(SweepRightTransition())
+          .transition(SweepRightTransition.contextual[IO]())
       }
-      .addTextSlide { implicit ctx =>
-        import ctx._
+      .addTextSlide {
         _.content(
           """Using one looks almost exactly like using a built-in transition:
             |
@@ -34,12 +32,12 @@ object CustomTransitionExample extends IOApp.Simple {
             |2. attach it with `.transition(...)`
             |3. let the session timing settings drive the animation
             |
-            |This slide leaves with the same custom wipe again.""".stripMargin
+            |This slide leaves with the same custom wipe again, because one dramatic entrance is rarely enough.""".stripMargin
         ).title("How To Use It")
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-          .transition(SweepRightTransition(columnsPerStep = 5))
+          .transition(SweepRightTransition.contextual[IO](columnsPerStep = 5))
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """The `Transition[F]` interface has two jobs:
             |
@@ -47,12 +45,12 @@ object CustomTransitionExample extends IOApp.Simple {
             |2. `userInput(input)` can react to input while the transition runs
             |
             |This wipe keeps `userInput` as a no-op,
-            |so all of the work happens in `transition(...)`.""".stripMargin
+            |so all of the work happens in `transition(...)`, where the actual showing off lives.""".stripMargin
         )
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
           .title("Transition Interface")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """The wipe itself works in three small steps:
             |
@@ -60,12 +58,12 @@ object CustomTransitionExample extends IOApp.Simple {
             |2. build a frame that mixes both slides row by row
             |3. reveal a few more columns on each animation step until the next slide fills the screen
             |
-            |That is often enough for a polished text transition.""".stripMargin
+            |That is often enough for a polished text transition, or at least enough to look suspiciously deliberate.""".stripMargin
         )
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
           .title("How The Code Works")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """This transition uses the same session timing model as the built-in ones:
             |
@@ -73,7 +71,7 @@ object CustomTransitionExample extends IOApp.Simple {
             |- `withAnimationFrameRate(...)` changes how quickly the wipe advances
             |- `columnsPerStep` changes how much is revealed per update
             |
-            |Those three values give you most of the feel of the animation.""".stripMargin
+            |Those three values give you most of the feel of the animation, which is a polite way of saying you can make it tasteful or ridiculous.""".stripMargin
         )
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
           .title("What To Tweak")

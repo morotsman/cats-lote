@@ -1,17 +1,9 @@
 package com.github.morotsman.examples
 
 import cats.effect._
-import com.github.morotsman.examples.slides.{Animator, Bye, ExampleInteractiveSlide, Start, SweepRightTransition}
-import com.github.morotsman.lote.builders.{SessionBuilder, SlideBuilder}
-import com.github.morotsman.lote.interpreter.StepByStepSlide
-import com.github.morotsman.lote.interpreter.transition.{
-  FallingCharactersTransition,
-  GrabTransition,
-  MorphTransition,
-  ReplaceTransition
-}
-import com.github.morotsman.lote.interpreter.middleware.Milestone
-import com.github.morotsman.lote.model.{Alignment, HorizontalAlignment, VerticalAlignment}
+import com.github.morotsman.examples.slides.{Bye, ExampleInteractiveSlide, SweepRightTransition}
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Milestone, VerticalAlignment}
+import com.github.morotsman.lote.api.builders.SessionBuilder
 
 import scala.concurrent.duration.DurationInt
 
@@ -20,25 +12,84 @@ object AdvancedExample extends IOApp.Simple {
   override def run: IO[Unit] = {
     SessionBuilder[IO]()
       .withTimer(30.minutes)
-      .withProgressBar(List(
-        Milestone("Start", 0),
-        Milestone("Overlays", 1),
-        Milestone("Titles", 6),
-        Milestone("Alignment", 7),
-        Milestone("Transitions", 8),
-        Milestone("Custom", 12),
-        Milestone("Interactive", 15),
-        Milestone("Bye", 17)
-      ))
+      .withProgressBar(
+        List(
+          Milestone("Start", 0),
+          Milestone("Agenda", 1),
+          Milestone("Slides", 2),
+          Milestone("Overlays", 4),
+          Milestone("Titles", 9),
+          Milestone("Alignment", 10),
+          Milestone("Transitions", 11),
+          Milestone("Custom", 15),
+          Milestone("Interactive", 18),
+          Milestone("Summary", 19),
+          Milestone("Bye", 20)
+        )
+      )
       .withQuickNavigation()
       .withIdleAnimation(idleTimeout = 5.minutes)
       .withFrameRate(60)
       .withAnimationFrameRate(25)
-      .addTextSlide { _ =>
-        _.content(Start())
+      .addTextSlide {
+        _.content("""
+                    |_________     _________________________         .____    ______________________________
+                    |\_   ___ \   /  _  \__    ___/   _____/         |    |   \_____  \__    ___/\_   _____/
+                    |/    \  \/  /  /_\  \|    |  \_____  \   ______ |    |    /   |   \|    |    |    __)_
+                    |\     \____/    |    \    |  /        \ /_____/ |    |___/    |    \    |    |        \
+                    | \______  /\____|__  /____| /_______  /         |_______ \_______  /____|   /_______  /
+                    |        \/         \/               \/                  \/       \/                 \/
+                    |
+                    |
+                    |
+                    |
+                    |""".stripMargin)
           .title("Start")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
+        _.content(
+          """
+            |Agenda:
+            |
+            |- text slides and staged reveals
+            |- overlays for timing, navigation, and progress
+            |- titles, alignment, and transitions
+            |- custom overlays and custom transitions
+            |- interactive slides
+            |
+            |In other words, we are about to spend several slides proving that a terminal can absolutely develop a personality if left unsupervised.""".stripMargin
+        ).title("Agenda")
+      }
+      .addTextSlide {
+        _.content(
+          """
+            |Text slides are the simplest way to build a slide in lote.
+            |
+            |Use them when you want to focus on:
+            |- the text itself
+            |- alignment
+            |- titles
+            |- transitions
+            |
+            |Most of this walkthrough uses text slides,
+            |because sometimes a string in the right place is enough software engineering for one day.""".stripMargin
+        ).title("Text Slides")
+      }
+      .addTextSlide {
+        _.content(
+          """
+            |A text slide can also reveal more content one step at a time.
+            |
+            |That is useful when you want to control pacing
+            |without turning one idea into three nearly identical slides and pretending that was the plan all along.""".stripMargin
+        )
+          .separator("\n\n")
+          .step("Step 1: Start with the smallest useful message.")
+          .step("Step 2: Add more detail only when the audience is ready for it.")
+          .step("Step 3: Keep the same slide, but reveal it gradually so your outline does not breed in public.")
+          .title("Step By Step")
+      }
+      .addTextSlide {
         _.content(
           """
             |An overlay adds information around the slide content
@@ -51,10 +102,10 @@ object AdvancedExample extends IOApp.Simple {
             |- decorations or status information
             |
             |This deck uses several built-in overlays,
-            |and the next few slides explain them one by one.""".stripMargin
+            |and the next few slides explain them one by one, because even text can benefit from accessories.""".stripMargin
         ).title("Overlays")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """
             |The timer overlay shows how much presentation time is left.
@@ -64,10 +115,10 @@ object AdvancedExample extends IOApp.Simple {
             |- you want a steady pace without checking a separate clock
             |
             |In this deck, the timer is enabled once on the session
-            |and stays visible across all slides.""".stripMargin
+            |and stays visible across all slides, quietly reminding you that time remains a concept.""".stripMargin
         ).title("Timer Overlay")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """
             |The progress bar overlay shows where you are in the deck.
@@ -77,10 +128,10 @@ object AdvancedExample extends IOApp.Simple {
             |- how far through the presentation you are
             |- which section you are currently in
             |
-            |This is especially helpful in longer presentations.""".stripMargin
+            |This is especially helpful in longer presentations, or any deck that risks becoming an expedition.""".stripMargin
         ).title("Progress Bar Overlay")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """
             |Quick navigation gives you a menu of slides
@@ -91,10 +142,10 @@ object AdvancedExample extends IOApp.Simple {
             |and `N` again to close it.
             |
             |It becomes much more useful once your slides have titles,
-            |which is the next feature in this walkthrough.""".stripMargin
+            |which is the next feature in this walkthrough, because unnamed slides are a bold lifestyle choice.""".stripMargin
         ).title("Quick Navigation Overlay")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """
             |Idle animation adds motion when the presentation sits still
@@ -103,10 +154,10 @@ object AdvancedExample extends IOApp.Simple {
             |It can help a paused deck feel less frozen,
             |which is useful during demos, questions, or breaks.
             |
-            |In this deck, it starts after 5 minutes of inactivity.""".stripMargin
+            |In this deck, it starts after 5 minutes of inactivity, once the terminal has had enough of your silence.""".stripMargin
         ).title("Idle Animation Overlay")
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """
             |Titles give each slide a stable name.
@@ -115,11 +166,10 @@ object AdvancedExample extends IOApp.Simple {
             |
             |Press `N` to open quick navigation.
             |Use `↑` / `↓` to move, `Enter` to jump,
-            |and `N` again to close the menu.""".stripMargin
+            |and `N` again to close the menu before it learns too much.""".stripMargin
         ).title("Titles")
       }
-      .addTextSlide { implicit ctx =>
-        import ctx._
+      .addTextSlide {
         _.content(
           """
             |Alignment controls where content appears on the screen.
@@ -127,26 +177,24 @@ object AdvancedExample extends IOApp.Simple {
             |a note, or a summary feel deliberately placed.
             |
             |This is also the first slide that defines a transition,
-            |so the next slide will be the first one where you see a transition in action.""".stripMargin
+            |so the next slide will be the first one where you see a transition in action, because placement alone was apparently too calm.""".stripMargin
         ).title("Alignment")
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-          .transition(ReplaceTransition(' '))
+          .replaceTransition(' ')
       }
-      .addTextSlide { implicit ctx =>
-        import ctx._
+      .addTextSlide {
         _.content(
           """
             |The transition that brought you here was `ReplaceTransition`.
             |
             |Use it when you want a direct change from one slide to the next.
             |
-            |Leave this slide to see `MorphTransition` next.""".stripMargin
+            |Leave this slide to see `MorphTransition` next, which is the same idea with slightly better bedside manner.""".stripMargin
         ).title("ReplaceTransition")
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-          .transition(MorphTransition())
+          .morphTransition()
       }
-      .addTextSlide { implicit ctx =>
-        import ctx._
+      .addTextSlide {
         _.content(
           """
             |The transition that brought you here was `MorphTransition`.
@@ -154,36 +202,35 @@ object AdvancedExample extends IOApp.Simple {
             |Use it when the next slide builds naturally on the current one
             |and you want the text to change more smoothly.
             |
-            |Leave this slide to see `FallingCharactersTransition` next.""".stripMargin
+            |Leave this slide to see `FallingCharactersTransition` next, because subtlety can only survive for so long.""".stripMargin
         ).title("MorphTransition")
-          .transition(FallingCharactersTransition())
+          .fallingCharactersTransition()
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
       }
-      .addTextSlide { implicit ctx =>
-        import ctx._
+      .addTextSlide {
         _.content(
           """
             |The transition that brought you here was `FallingCharactersTransition`.
             |
             |Use it when you want a playful or dramatic way to clear the screen.
             |
-            |Leave this slide to see `GrabTransition` next.""".stripMargin
+            |Leave this slide to see `GrabTransition` next, which is what happens when a transition develops ambitions.""".stripMargin
         ).title("FallingCharactersTransition")
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-          .transition(GrabTransition())
+          .grabTransition()
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """
             |The transition that brought you here was `GrabTransition`.
             |
             |Use it when you want a transition with a strong visual personality.
             |
-            |That completes the built-in transition tour.""".stripMargin
+            |That completes the built-in transition tour, which is more emotional range than most decks attempt.""".stripMargin
         ).title("GrabTransition")
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
       }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """
           |You can also create custom overlays:
@@ -191,12 +238,13 @@ object AdvancedExample extends IOApp.Simple {
             |- In `CustomOverlayExample` we show a simple overlay that adds the same decoration to every slide
             |
             |- In `EffectfulOverlayExample` we show a stateful overlay that updates while the slide stays on screen
+            |
+            |Because once a corner label works, the natural next step is giving it opinions.
             """.stripMargin
         ).title("Custom Overlays")
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
       }
-      .addTextSlide { implicit ctx =>
-        import ctx._
+      .addTextSlide {
         _.content(
           """
           |You can also create your own transitions.
@@ -204,32 +252,12 @@ object AdvancedExample extends IOApp.Simple {
             |This slide leaves with a custom left-to-right wipe,
             |showing that your own transitions can plug in just like the built-in ones.
             |
-            |If you want to study it in isolation, run `CustomTransitionExample`.""".stripMargin
+            |If you want to study it in isolation, run `CustomTransitionExample`, where the wipe receives the attention it clearly feels it deserves.""".stripMargin
         ).title("Custom Transition")
-          .transition(SweepRightTransition())
+          .transition(SweepRightTransition.contextual[IO]())
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
       }
-      .addSlideF { implicit ctx =>
-        import ctx._
-        for {
-          slide <- StepByStepSlide.make[IO](
-            Vector(
-              "The library has support for slides that gradually relevel it's content",
-
-              "Step 1: Start with the smallest possible text slide.",
-              "Step 1: Start with the smallest possible text slide.\nStep 2: Add titles, alignment, transitions, and overlays when they help the audience.",
-              "Step 1: Start with the smallest possible text slide.\nStep 2: Add titles, alignment, transitions, and overlays when they help the audience.\nStep 3: Reach for custom slides when you want different behavior, like step-by-step reveal."
-            )
-          )
-        } yield {
-          (builder: SlideBuilder[IO, SlideBuilder.WithoutSlide]) =>
-            builder
-              .addSlide(slide)
-              .title("Step By Step")
-              .transition(MorphTransition())
-        }
-      }
-      .addTextSlide { _ =>
+      .addTextSlide {
         _.content(
           """
 
@@ -243,23 +271,32 @@ object AdvancedExample extends IOApp.Simple {
             |- collect the ? characters
             |- avoid running into yourself
             |
-            |If you want this concept in isolation, run InteractiveSlideExample.""".stripMargin
+            |If you want this concept in isolation, run InteractiveSlideExample, where a slide finally gets hobbies.""".stripMargin
         ).title("Introducing Interactive Slides")
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
       }
-      .addSlideF { implicit ctx =>
-        import ctx._
-        for {
-          animator <- Animator.make[IO]()
-        } yield { (builder: SlideBuilder[IO, SlideBuilder.WithoutSlide]) =>
-          val slide = ExampleInteractiveSlide.make[IO](animator)
-          builder
-            .addSlide(slide)
-            .title("Interactive")
-        }
+      .addSlideF {
+        _.addSlideF(ExampleInteractiveSlide.contextual[IO]())
+          .map(
+            _.title("Interactive")
+          )
       }
-      .addTextSlide { implicit ctx =>
-        import ctx._
+      .addTextSlide {
+        _.content(
+          """
+            |Summary:
+            |
+            |- text slides cover the common case
+            |- staged reveals help with pacing
+            |- overlays add deck-level information
+            |- transitions and alignment shape presentation feel
+            |- custom slides are there for the moment plain text starts wanting side quests
+            |
+            |So the overall model is fairly small, right up until you decide the terminal should also be entertaining.""".stripMargin
+        ).title("Summary")
+          .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+      }
+      .addTextSlide {
         _.content(
           Bye() +
             """
@@ -267,14 +304,13 @@ object AdvancedExample extends IOApp.Simple {
               |Where to go next:
               |
               |Try the smaller examples when you want one concept at a time,
-              |and come back to AdvancedExample when you want the full overview.
+              |and come back to AdvancedExample when you want the full overview and a terminal that is trying a little too hard.
               |""".stripMargin
         ).title("Bye")
-          .transition(FallingCharactersTransition())
+          .fallingCharactersTransition()
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
       .run()
   }
 
 }
-

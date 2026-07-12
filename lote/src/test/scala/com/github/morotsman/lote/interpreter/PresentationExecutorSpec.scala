@@ -1,18 +1,30 @@
 package com.github.morotsman.lote.interpreter
 
 import cats.effect.IO
-import com.github.morotsman.lote.algebra.{NConsole, Slide}
-import com.github.morotsman.lote.model._
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Key, Screen, ScreenAdjusted, SpecialKey, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.spi.{NConsole, Slide}
+import com.github.morotsman.lote.internal.interpreter.PresentationExecutorInterpreter
+import com.github.morotsman.lote.internal.TextSlide
+import com.github.morotsman.lote.internal.model.{Presentation, SlideSpecification}
 import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
+
+import scala.concurrent.duration._
 
 class PresentationExecutorSpec extends CatsEffectSuite {
 
   test("PresentationExecutor starts and shows first slide") {
+    def waitForWrite(console: TestNConsole, attemptsLeft: Int): IO[Unit] =
+      console.writtenRef.get.flatMap { written =>
+        if (written.nonEmpty) IO.unit
+        else if (attemptsLeft <= 0) IO.raiseError(new RuntimeException("Timed out waiting for first slide render"))
+        else IO.sleep(10.millis) *> waitForWrite(console, attemptsLeft - 1)
+      }
+
     for {
       console <- TestNConsole.make(
         screen = Screen(20, 5),
-        inputs = List(Key(SpecialKey.Esc))
+        inputs = Nil
       )
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       presentation = Presentation[IO](
@@ -27,7 +39,10 @@ class PresentationExecutorSpec extends CatsEffectSuite {
         )
       )
       executor <- PresentationExecutorInterpreter.make[IO](presentation)
-      _ <- executor.start()
+      runFiber <- executor.start().start
+      _ <- waitForWrite(console, attemptsLeft = 50)
+      _ <- console.inputsRef.set(List(Key(SpecialKey.Esc)))
+      _ <- runFiber.joinWithNever
       written <- console.writtenRef.get
       cleared <- console.clearedRef.get
     } yield {

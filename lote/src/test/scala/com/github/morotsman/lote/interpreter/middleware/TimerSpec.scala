@@ -1,7 +1,8 @@
 package com.github.morotsman.lote.interpreter.middleware
 
 import cats.effect.IO
-import com.github.morotsman.lote.model._
+import com.github.morotsman.lote.api.{Screen, ScreenAdjusted}
+import com.github.morotsman.lote.internal.interpreter.middleware.Timer
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._

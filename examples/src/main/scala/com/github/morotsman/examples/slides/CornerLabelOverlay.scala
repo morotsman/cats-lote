@@ -1,8 +1,8 @@
 package com.github.morotsman.examples.slides
 
 import cats.Applicative
-import com.github.morotsman.lote.algebra.Overlay
-import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
+import com.github.morotsman.lote.api.{Screen, ScreenAdjusted}
+import com.github.morotsman.lote.api.spi.Overlay
 
 object CornerLabelOverlay {
 
