@@ -14,6 +14,7 @@ import com.github.morotsman.lote.interpreter.{
 import com.github.morotsman.lote.interpreter.middleware.{
   Idle,
   IdleOverlayConfig,
+  Milestone,
   Middleware,
   NavigationSubscriber,
   ProgressBar,
@@ -40,10 +41,16 @@ class SlideContext[F[_]](
   implicit def animationSettingsInstance: AnimationSettings = animationSettings
 }
 
-/** A high-level builder that encapsulates all the wiring needed to run a presentation with middleware.
+/** A high-level builder that encapsulates all the wiring needed to run a presentation with overlays.
   *
-  * Instead of manually creating a ticker, idle detector, middleware layer, and presentation executor, you can use the
+  * Instead of manually creating a ticker, idle detector, overlay layer, and presentation executor, you can use the
   * SessionBuilder to configure everything declaratively and then call `run()`.
+  *
+  * The nested slide-builder lambdas are type-checked:
+  *   - `addTextSlide(...)` requires a `TextSlideBuilder` that has had `content(...)` supplied
+  *   - `addSlide(...)` / `addSlideF(...)` require a `SlideBuilder` that has had `addSlide(...)` supplied
+  *
+  * `run()` still performs a runtime check that at least one slide was added to the session.
   *
   * Example:
   * {{{
@@ -67,6 +74,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     private val slideSteps: List[SessionBuilder.SlideStep[F]],
     private val timerDuration: Option[FiniteDuration],
     private val progressBarEnabled: Boolean,
+    private val progressBarMilestones: List[Milestone],
     private val quickNavigationEnabled: Boolean,
     private val idleEnabled: Boolean,
     private val idleDetectorConfig: IdleDetectorConfig,
@@ -122,15 +130,19 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
   ): SessionBuilder[F] =
     this.copy(slideSteps = slideSteps :+ SessionBuilder.TextSlideStep(textSlideBuilder))
 
-  // -- Middleware configuration --
+  // -- Overlay configuration --
 
   /** Adds a countdown timer overlay showing remaining presentation time. */
   def withTimer(allocatedTime: FiniteDuration): SessionBuilder[F] =
     this.copy(timerDuration = Some(allocatedTime))
 
-  /** Adds a progress bar overlay at the bottom of the screen. */
-  def withProgressBar(): SessionBuilder[F] =
-    this.copy(progressBarEnabled = true)
+  /** Adds a progress bar overlay at the bottom of the screen.
+    *
+    * @param milestones
+    *   optional named markers to display above the bar for sections like "Intro", "Demo", or "Q&A"
+    */
+  def withProgressBar(milestones: List[Milestone] = List.empty): SessionBuilder[F] =
+    this.copy(progressBarEnabled = true, progressBarMilestones = milestones)
 
   /** Adds a quick navigation overlay (press 'N' to toggle, arrows + Enter to navigate). */
   def withQuickNavigation(): SessionBuilder[F] =
@@ -153,16 +165,17 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
       idleOverlayConfig = overlayConfig
     )
 
-  /** Adds a custom overlay (middleware) created by the user. The effect will be evaluated during session setup.
+  /** Adds a custom overlay created by the user. The effect will be evaluated during session setup.
     *
     * Use this for overlays that require effectful construction (e.g., those that allocate Refs).
     */
-  def addMiddleware(overlay: F[Overlay[F]]): SessionBuilder[F] =
+  def addOverlay(overlay: F[Overlay[F]]): SessionBuilder[F] =
     this.copy(customOverlays = customOverlays :+ overlay)
 
   /** Adds a custom overlay that doesn't require effectful construction. */
-  def addMiddleware(overlay: Overlay[F]): SessionBuilder[F] =
+  def addOverlay(overlay: Overlay[F]): SessionBuilder[F] =
     this.copy(customOverlays = customOverlays :+ Async[F].pure(overlay))
+
 
   /** Sets a callback invoked on each slide change with the new slide index. */
   def onSlideChanged(callback: Int => F[Unit]): SessionBuilder[F] =
@@ -239,7 +252,10 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
         // Build middleware overlays
         timerOverlay <- timerDuration.traverse(d => Timer.make[F](d))
         progressBar <-
-          if (progressBarEnabled) ProgressBar.make[F](totalSlides).map(Some(_))
+          if (progressBarEnabled)
+            ProgressBar
+              .make[F](totalSlides, milestones = progressBarMilestones)
+              .map(Some(_))
           else Monad[F].pure(None: Option[ProgressBar[F]])
         quickNavigation <-
           if (quickNavigationEnabled) QuickNavigation.make[F]().map(Some(_))
@@ -254,13 +270,12 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
           progressBar.map(x => x: Overlay[F]),
           timerOverlay,
           quickNavigation.map(x => x: Overlay[F]),
-          idleOverlay.map(x => x: Overlay[F])
-        ).flatten ++ customOverlayInstances
+        ).flatten ++ customOverlayInstances ++ idleOverlay.toList
         _ <- consoleWithMiddleware.addOverlays(allOverlays)
 
         // Wire up quick navigation titles
         _ <- quickNavigation match {
-          case Some(qn) => qn.setTiles(presentation.titles)
+          case Some(qn) => qn.setTitles(presentation.titles)
           case None     => Monad[F].unit
         }
 
@@ -277,8 +292,12 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
               val idleNotify =
                 if (idleEnabled) idleDetector.notifyActivity()
                 else Monad[F].unit
+              val quickNavigationNotify = quickNavigation match {
+                case Some(qn) => qn.onSlideChange(index)
+                case None     => Monad[F].unit
+              }
               val userCallback = onSlideChange.fold(Monad[F].unit)(_(index))
-              progressUpdate *> idleNotify *> userCallback
+              progressUpdate *> idleNotify *> quickNavigationNotify *> userCallback
             }
           )
         }
@@ -339,6 +358,7 @@ object SessionBuilder {
       slideSteps = List.empty,
       timerDuration = None,
       progressBarEnabled = false,
+      progressBarMilestones = List.empty,
       quickNavigationEnabled = false,
       idleEnabled = false,
       idleDetectorConfig = IdleDetectorConfig(),

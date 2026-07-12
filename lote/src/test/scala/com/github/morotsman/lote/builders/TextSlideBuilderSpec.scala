@@ -101,16 +101,16 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
     }
   }
 
-  test("TextSlideBuilder.transition with null sets out to None") {
+  test("TextSlideBuilder.title sets the slide title") {
     for {
       console <- TestNConsole.make(screen = Screen(40, 10))
       implicit0(nc: NConsole[IO]) = console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Test")
-        .transition(null)
+        .title("Intro")
         .build()
     } yield {
-      assertEquals(spec.out, None)
+      assertEquals(spec.title, Some("Intro"))
     }
   }
 

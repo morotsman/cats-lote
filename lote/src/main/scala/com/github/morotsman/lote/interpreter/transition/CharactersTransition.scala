@@ -159,34 +159,33 @@ object CharactersTransition {
         done <- Deferred[F, Unit]
         _ <- NConsole[F].writeString(slide1)
         _ <- if (isFinished(initialState)) done.complete(()).void else Monad[F].unit
-        onTick = for {
-          nrOfSteps <- FixedStep.consumeSteps(stepperRef)
-          _ <-
-            if (nrOfSteps <= 0) {
-              Monad[F].unit
-            } else {
-              for {
-                screen <- NConsole[F].context
-                currentState <- stateRef.get
-                updatedState =
-                  (0 until nrOfSteps).foldLeft(currentState) { case (state, _) =>
-                    if (isFinished(state)) state else advanceState(screen, state)
-                  }
-                _ <- stateRef.set(updatedState)
-                _ <-
-                  if (isFinished(updatedState)) {
-                    NConsole[F].clear() *> done.complete(()).attempt.void
-                  } else {
-                    NConsole[F].clear() *> NConsole[F].writeString(
-                      render(updatedState)
-                    )
-                  }
-              } yield ()
-            }
-        } yield ()
+        onTick = { (nrOfSteps: Int) =>
+          if (nrOfSteps <= 0) {
+            Monad[F].unit
+          } else {
+            for {
+              screen <- NConsole[F].context
+              currentState <- stateRef.get
+              updatedState =
+                (0 until nrOfSteps).foldLeft(currentState) { case (state, _) =>
+                  if (isFinished(state)) state else advanceState(screen, state)
+                }
+              _ <- stateRef.set(updatedState)
+              _ <-
+                if (isFinished(updatedState)) {
+                  NConsole[F].clear() *> done.complete(()).attempt.void
+                } else {
+                  NConsole[F].clear() *> NConsole[F].writeString(
+                    render(updatedState)
+                  )
+                }
+            } yield ()
+          }
+        }
+        tickerCallback = FixedStep.consumeSteps(stepperRef).flatMap(onTick)
         maybeSub <-
           if (isFinished(initialState)) Monad[F].pure(Option.empty[com.github.morotsman.lote.algebra.TickerSubscription[F]])
-          else Ticker[F].subscribe(onTick).map(sub => Option(sub))
+          else Ticker[F].subscribe(tickerCallback).map(sub => Option(sub))
         _ <- maybeSub.traverse_(_ => Ticker[F].start)
         _ <- done.get.guarantee(maybeSub.traverse_(_.cancel))
         _ <- NConsole[F].writeString(slide2)

@@ -21,6 +21,135 @@ case class Bug(
 
 case class StolenWord(row: Int, startCol: Int, length: Int)
 
+private[middleware] object IdleAnsiSupport {
+
+  private case class VisibleCell(prefix: String, char: Char)
+  private case class ParsedLine(cells: Vector[VisibleCell], trailingAnsi: String) {
+    def visibleText: String = cells.map(_.char).mkString
+  }
+
+  def stripAnsi(line: String): String =
+    parseLine(line).visibleText
+
+  def hasVisibleText(line: String): Boolean =
+    parseLine(line).cells.exists(_.char != ' ')
+
+  def findWordAt(
+      lines: Array[String],
+      x: Int,
+      y: Int
+  ): Option[(String, Int, Int)] = {
+    if (y < 0 || y >= lines.length) return None
+
+    val parsed = parseLine(lines(y))
+    if (x < 0 || x >= parsed.cells.length || parsed.cells(x).char == ' ') return None
+
+    var start = x
+    while (start > 0 && parsed.cells(start - 1).char != ' ') start -= 1
+    var end = x
+    while (end < parsed.cells.length - 1 && parsed.cells(end + 1).char != ' ') end += 1
+
+    val word = parsed.cells.slice(start, end + 1).map(_.char).mkString
+    if (word.trim.nonEmpty) Some((word, start, end + 1)) else None
+  }
+
+  def textPositions(lines: Array[String]): Array[(Int, Int)] =
+    lines.zipWithIndex.flatMap { case (line, y) =>
+      parseLine(line).cells.zipWithIndex.collect {
+        case (cell, x) if cell.char != ' ' => (x, y)
+      }
+    }
+
+  def applyStolen(
+      lines: Array[String],
+      stolenWords: List[StolenWord]
+  ): Array[String] = {
+    val result = lines.clone()
+    val stolenByRow = stolenWords.groupBy(_.row)
+
+    result.indices.foreach { row =>
+      stolenByRow.get(row).foreach { rowStolenWords =>
+        val parsed = parseLine(result(row))
+        val cells = parsed.cells.toArray
+
+        rowStolenWords.foreach { sw =>
+          val start = Math.max(0, sw.startCol)
+          val end = Math.min(cells.length, sw.startCol + sw.length)
+          var idx = start
+          while (idx < end) {
+            cells(idx) = cells(idx).copy(char = ' ')
+            idx += 1
+          }
+        }
+
+        result(row) = rebuildLine(cells.toVector, parsed.trailingAnsi)
+      }
+    }
+
+    result
+  }
+
+  def overlayText(
+      line: String,
+      startCol: Int,
+      text: String,
+      screenWidth: Int
+  ): String = {
+    if (screenWidth <= 0) return ""
+
+    val parsed = parseLine(line)
+    val baseCells =
+      if (parsed.cells.length < screenWidth)
+        parsed.cells ++ Vector.fill(screenWidth - parsed.cells.length)(VisibleCell("", ' '))
+      else parsed.cells.take(screenWidth)
+
+    if (startCol < 0 || startCol >= baseCells.length || text.isEmpty)
+      rebuildLine(baseCells, parsed.trailingAnsi)
+    else {
+      val maxWrite = Math.min(text.length, screenWidth - startCol)
+      val updatedCells = baseCells.zipWithIndex.map { case (cell, idx) =>
+        val relative = idx - startCol
+        if (relative >= 0 && relative < maxWrite) cell.copy(char = text.charAt(relative))
+        else cell
+      }
+      rebuildLine(updatedCells, parsed.trailingAnsi)
+    }
+  }
+
+  private def parseLine(line: String): ParsedLine = {
+    val cells = Vector.newBuilder[VisibleCell]
+    val pendingAnsi = new StringBuilder
+    var index = 0
+
+    while (index < line.length) {
+      if (
+        line.charAt(index) == '\u001b' &&
+        index + 1 < line.length &&
+        line.charAt(index + 1) == '['
+      ) {
+        val start = index
+        index += 2
+        while (index < line.length && line.charAt(index) != 'm') {
+          index += 1
+        }
+        if (index < line.length) {
+          index += 1
+        }
+        pendingAnsi.append(line.substring(start, index))
+      } else {
+        cells += VisibleCell(pendingAnsi.toString, line.charAt(index))
+        pendingAnsi.clear()
+        index += 1
+      }
+    }
+
+    ParsedLine(cells.result(), pendingAnsi.toString)
+  }
+
+  private def rebuildLine(cells: Vector[VisibleCell], trailingAnsi: String): String =
+    cells.map(cell => s"${cell.prefix}${cell.char}").mkString + trailingAnsi
+}
+
 case class IdleOverlayConfig(
     firstBugDelay: FiniteDuration = 0.seconds,
     spawnInterval: FiniteDuration = 3.seconds,
@@ -135,19 +264,8 @@ object Idle {
         lines: Array[String],
         x: Int,
         y: Int
-    ): Option[(String, Int, Int)] = {
-      if (y < 0 || y >= lines.length) return None
-      val line = lines(y)
-      if (x < 0 || x >= line.length || line.charAt(x) == ' ') return None
-
-      var start = x
-      while (start > 0 && line.charAt(start - 1) != ' ') start -= 1
-      var end = x
-      while (end < line.length - 1 && line.charAt(end + 1) != ' ') end += 1
-
-      val word = line.substring(start, end + 1)
-      if (word.trim.nonEmpty) Some((word, start, end + 1)) else None
-    }
+    ): Option[(String, Int, Int)] =
+      IdleAnsiSupport.findWordAt(lines, x, y)
 
     private def updateBugs(
         context: Screen,
@@ -161,9 +279,7 @@ object Idle {
       val linesWithStolen = applyStolen(lines, s.stolenWords)
 
       val textPositions: Array[(Int, Int)] =
-        linesWithStolen.zipWithIndex.flatMap { case (line, y) =>
-          line.zipWithIndex.collect { case (ch, x) if ch != ' ' => (x, y) }
-        }
+        IdleAnsiSupport.textPositions(linesWithStolen)
 
       var newStolenWords = s.stolenWords
 
@@ -176,12 +292,11 @@ object Idle {
             wordHere match {
               case Some((word, startCol, _)) =>
                 newStolenWords = StolenWord(b.y, startCol, word.length) :: newStolenWords
-                if (b.y < linesWithStolen.length) {
-                  linesWithStolen(b.y) = linesWithStolen(b.y).take(
-                    startCol
-                  ) + (" " * word.length) + linesWithStolen(b.y).drop(
-                    startCol + word.length
-                  )
+                linesWithStolen.indices.find(_ == b.y).foreach { row =>
+                  linesWithStolen(row) = IdleAnsiSupport.applyStolen(
+                    Array(linesWithStolen(row)),
+                    List(StolenWord(0, startCol, word.length))
+                  ).head
                 }
                 b.copy(carrying = Some(word), targetEdge = rng.nextInt(4))
               case None =>
@@ -344,27 +459,14 @@ object Idle {
         stolenWords: List[StolenWord]
     ): Boolean = {
       val visible = applyStolen(lines, stolenWords)
-      visible.forall(_.trim.isEmpty)
+      visible.forall(line => !IdleAnsiSupport.hasVisibleText(line))
     }
 
     private def applyStolen(
         lines: Array[String],
         stolenWords: List[StolenWord]
-    ): Array[String] = {
-      val result = lines.clone()
-      stolenWords.foreach { sw =>
-        if (sw.row >= 0 && sw.row < result.length) {
-          val line = result(sw.row)
-          if (sw.startCol < line.length) {
-            val end = Math.min(sw.startCol + sw.length, line.length)
-            result(sw.row) = line.take(sw.startCol) + (" " * (end - sw.startCol)) + line.drop(
-              end
-            )
-          }
-        }
-      }
-      result
-    }
+    ): Array[String] =
+      IdleAnsiSupport.applyStolen(lines, stolenWords)
 
     private def normalizeLines(
         content: String,
@@ -399,16 +501,15 @@ object Idle {
             case Some(word) => bug.char + word
             case None       => bug.char
           }
-          if (bug.x < line.length) {
-            val updatedLine = line.take(bug.x) + displayStr + line.drop(
-              bug.x + displayStr.length
+          acc.updated(
+            bug.y,
+            IdleAnsiSupport.overlayText(
+              line,
+              bug.x,
+              displayStr,
+              context.screenWidth
             )
-            val trimmed =
-              if (updatedLine.length > context.screenWidth)
-                updatedLine.take(context.screenWidth)
-              else updatedLine
-            acc.updated(bug.y, trimmed)
-          } else acc
+          )
         } else acc
       }
 

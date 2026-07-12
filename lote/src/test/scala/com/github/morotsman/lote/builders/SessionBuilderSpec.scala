@@ -1,6 +1,9 @@
 package com.github.morotsman.lote.builders
 
 import cats.effect.IO
+import com.github.morotsman.lote.algebra.Overlay
+import com.github.morotsman.lote.interpreter.middleware.Milestone
+import com.github.morotsman.lote.model.{Screen, ScreenAdjusted}
 import munit.FunSuite
 
 import scala.concurrent.duration._
@@ -49,6 +52,34 @@ class SessionBuilderSpec extends FunSuite {
     SessionBuilder[IO]().withAnimationFrameRate(60.0)
     SessionBuilder[IO]().withAnimationFrameRate(30.0)
     SessionBuilder[IO]().withAnimationFrameRate(25.0)
+  }
+
+  test("addOverlay accepts a custom overlay") {
+    val overlay = new Overlay[IO] {
+      override def applyOverlay(
+          context: Screen,
+          screenAdjusted: ScreenAdjusted,
+          originalContent: ScreenAdjusted
+      ): IO[ScreenAdjusted] = {
+        val _ = context
+        val _ = originalContent
+        IO.pure(screenAdjusted)
+      }
+    }
+
+    SessionBuilder[IO]().addOverlay(overlay)
+  }
+
+  test("withProgressBar stores milestone configuration") {
+    val builder = SessionBuilder[IO]().withProgressBar(
+      List(Milestone("Intro", 0), Milestone("Demo", 2))
+    )
+
+    assertEquals(builder.productElement(2), true)
+    assertEquals(
+      builder.productElement(3),
+      List(Milestone("Intro", 0), Milestone("Demo", 2))
+    )
   }
 }
 

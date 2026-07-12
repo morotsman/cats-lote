@@ -2,15 +2,8 @@ package com.github.morotsman
 package lote.util
 
 object Colors {
-  val BLACK_BOLD = "\u001b[30;1m"
-  val ANSI_RESET = "\u001B[0m"
-  val ANSI_BLACK = "\u001B[30m"
-  val ANSI_RED = "\u001B[31m"
-  val ANSI_GREEN = "\u001B[32m"
-  val ANSI_GRAY = "\u001B[32m"
-  val ANSI_YELLOW = "\u001B[33m"
-  val ANSI_BLUE = "\u001B[34m"
-  val ANSI_PURPLE = "\u001B[35m"
-  val ANSI_CYAN = "\u001B[36m"
-  val ANSI_WHITE = "\u001B[37m"
+  val gray = "\u001b[90m"
+  val bright = "\u001b[97m"
+  val bold = "\u001b[1m"
+  val reset = "\u001b[0m"
 }

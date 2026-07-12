@@ -63,5 +63,15 @@ class AnsiFrameRendererSpec extends FunSuite {
 
     assertEquals(frame, Vector("abcd", "1234"))
   }
+
+  test("normalize preserves ANSI reset when truncating colored text") {
+    val frame = AnsiFrameRenderer.normalize(
+      content = "\u001b[90mOverlays\u001b[0mInteractive",
+      width = 8,
+      height = 1
+    )
+
+    assertEquals(frame, Vector("\u001b[90mOverlays\u001b[0m"))
+  }
 }
 
