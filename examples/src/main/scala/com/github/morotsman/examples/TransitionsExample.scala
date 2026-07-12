@@ -20,10 +20,11 @@ object TransitionsExample extends IOApp.Simple {
       }
       .addTextSlide {
         _.content(
-          """`ReplaceTransition` is a simple option for sharp visual changes.
+          """`ReplaceTransition` is the direct option.
             |
-            |It is easy to read and works well when you want the audience
-            |to notice that the presentation is moving to a new idea instead of quietly drifting there.""".stripMargin
+            |It swaps characters with a sharp visual cut,
+            |which works well when you want the audience to notice the slide changed
+            |instead of quietly drifting into the next one like nothing happened.""".stripMargin
         ).title("Replace Transition")
           .morphTransition()
       }
@@ -31,8 +32,9 @@ object TransitionsExample extends IOApp.Simple {
         _.content(
           """`MorphTransition` is smoother.
             |
-            |It works especially well for text-heavy decks,
-            |because the change feels more continuous and slightly less like being hit with a new paragraph.""".stripMargin
+            |It works especially well for text-heavy decks
+            |where the change should feel continuous
+            |and slightly less like being hit in the face with a new paragraph.""".stripMargin
         ).title("Morph Transition")
           .fallingCharactersTransition()
       }
@@ -40,10 +42,11 @@ object TransitionsExample extends IOApp.Simple {
         _.content(
           """`FallingCharactersTransition` is more playful.
             |
-            |It is a good reminder that transitions can shape the tone of the deck,
-            |not just move you from slide to slide while pretending to be invisible.
+            |It's a good reminder that transitions shape the tone of your deck,
+            |not just ferry people between slides while pretending to be invisible.
             |
-            |Next, try CustomTransitionExample to build one of your own, because a stock animation is only so much personality.""".stripMargin
+            |Next, try CustomTransitionExample to build your own,
+            |because stock animations can only carry so much personality.""".stripMargin
         ).title("Falling Characters")
       }
       .run()

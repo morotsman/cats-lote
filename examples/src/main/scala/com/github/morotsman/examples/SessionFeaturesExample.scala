@@ -20,7 +20,8 @@ object SessionFeaturesExample extends IOApp.Simple {
       .withAnimationFrameRate(25)
       .addTextSlide {
         _.content(
-          """Session-wide features are configured once on `SessionBuilder`.
+          """Session-wide features are configured once on `SessionBuilder`
+            |and then quietly applied to every slide.
             |
             |This deck turns on a timer, a progress bar, quick navigation,
             |and custom frame-rate settings, because apparently one slide at a time was too easy to reason about.""".stripMargin
@@ -28,28 +29,33 @@ object SessionFeaturesExample extends IOApp.Simple {
       }
       .addTextSlide {
         _.content(
-          """The important idea is that these settings apply to the whole presentation,
-            |not just a single slide.
+          """These settings apply to the whole presentation, not just a single slide.
             |
-            |That makes them a good place to put navigation, timing,
-            |and other deck-level behavior that you would rather not retype until morale improves.""".stripMargin
+            |That makes them the right place for navigation, timing,
+            |and other deck-level behavior that nobody wants to copy-paste
+            |across twenty slides until morale improves.""".stripMargin
         ).title("How To Use Them")
       }
       .addTextSlide {
         _.content(
-          """Look for the timer and progress bar overlays while you move through the deck.
+          """Look for the timer and progress bar overlays while you navigate.
             |
-            |Press N to open quick navigation and see how titles become menu labels instead of decorative optimism.""".stripMargin
+            |Press N to open quick navigation and see how titles become menu labels
+            |instead of decorative optimism.
+            |
+            |If you forgot to add titles, the menu entries will be blank,
+            |which is about as helpful as an unnamed commit.""".stripMargin
         ).title("What To Notice")
       }
       .addTextSlide {
         _.content(
-          """The frame-rate settings shape motion in the session:
+          """The frame-rate settings shape all motion in the session:
             |
-            |- `withFrameRate(...)` changes render cadence
-            |- `withAnimationFrameRate(...)` changes animation speed
+            |- `withFrameRate(...)` controls how often the terminal redraws
+            |- `withAnimationFrameRate(...)` controls how fast transitions move
             |
-            |Those settings matter most once you start using animated transitions or slides and discover that movement has consequences.""".stripMargin
+            |Those two are independent, so you can have smooth rendering
+            |without turning your transitions into caffeinated railguns.""".stripMargin
         ).title("What To Tweak")
       }
       .run()

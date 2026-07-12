@@ -26,13 +26,14 @@ object CustomTransitionExample extends IOApp.Simple {
       }
       .addTextSlide {
         _.content(
-          """Using one looks almost exactly like using a built-in transition:
+          """Using one looks almost like using a built-in transition:
             |
             |1. create a `Transition[F]`
             |2. attach it with `.transition(...)`
             |3. let the session timing settings drive the animation
             |
-            |This slide leaves with the same custom wipe again, because one dramatic entrance is rarely enough.""".stripMargin
+            |This slide leaves with the same custom wipe again,
+            |because one dramatic entrance is rarely enough.""".stripMargin
         ).title("How To Use It")
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
           .transition(SweepRightTransition.contextual[IO](columnsPerStep = 5))
@@ -52,26 +53,28 @@ object CustomTransitionExample extends IOApp.Simple {
       }
       .addTextSlide {
         _.content(
-          """The wipe itself works in three small steps:
+          """The wipe works in three steps:
             |
             |1. read the current slide content and the next slide content
             |2. build a frame that mixes both slides row by row
             |3. reveal a few more columns on each animation step until the next slide fills the screen
             |
-            |That is often enough for a polished text transition, or at least enough to look suspiciously deliberate.""".stripMargin
+            |That's often enough for a polished text transition,
+            |or at least enough to look suspiciously deliberate.""".stripMargin
         )
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
           .title("How The Code Works")
       }
       .addTextSlide {
         _.content(
-          """This transition uses the same session timing model as the built-in ones:
+          """This transition uses the same timing model as the built-in ones:
             |
-            |- `withFrameRate(...)` changes how often frames are rendered
-            |- `withAnimationFrameRate(...)` changes how quickly the wipe advances
-            |- `columnsPerStep` changes how much is revealed per update
+            |- `withFrameRate(...)` controls how often frames are rendered
+            |- `withAnimationFrameRate(...)` controls how quickly the wipe advances
+            |- `columnsPerStep` controls how much is revealed per update
             |
-            |Those three values give you most of the feel of the animation, which is a polite way of saying you can make it tasteful or ridiculous.""".stripMargin
+            |Those three knobs give you most of the feel of the animation,
+            |which is a polite way of saying you can make it tasteful or ridiculous.""".stripMargin
         )
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
           .title("What To Tweak")

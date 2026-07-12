@@ -33,11 +33,12 @@ object StepByStepExample extends IOApp.Simple {
       }
       .addTextSlide {
         _.content(
-          """The code works by combining the initial `content(...)`
+          """The code combines the initial `content(...)`
             |with each later `step(...)`.
             |
             |`separator(...)` controls how the pieces join,
-            |and `hint(...)` controls the continue message, in case the audience needed help noticing there was more slide coming.""".stripMargin
+            |and `hint(...)` sets the continue prompt,
+            |in case the audience needs help noticing there's more slide coming.""".stripMargin
         ).title("How The Code Works")
       }
       .addTextSlide {
