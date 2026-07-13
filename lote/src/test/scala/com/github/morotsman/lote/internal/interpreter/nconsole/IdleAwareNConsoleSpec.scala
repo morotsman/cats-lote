@@ -1,10 +1,10 @@
-package com.github.morotsman.lote.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole
 
 import cats.effect.IO
 import com.github.morotsman.lote.api.{Character, Key, MouseClick, MouseMove, Screen, ScreenAdjusted, SpecialKey}
 import com.github.morotsman.lote.internal.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
 import com.github.morotsman.lote.internal.interpreter.nconsole.IdleAwareNConsole
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.TestConsole
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
@@ -16,7 +16,7 @@ class IdleAwareNConsoleSpec extends CatsEffectSuite {
       detector <- IdleDetectorInterpreter.make[IO](
         IdleDetectorConfig(idleTimeout = 50.millis)
       )
-      rawConsole <- TestNConsole.make(
+      rawConsole <- TestConsole.make[IO](
         screen = Screen(20, 5),
         inputs = List(Character('a'))
       )
@@ -37,7 +37,7 @@ class IdleAwareNConsoleSpec extends CatsEffectSuite {
       detector <- IdleDetectorInterpreter.make[IO](
         IdleDetectorConfig(idleTimeout = 50.millis)
       )
-      rawConsole <- TestNConsole.make(
+      rawConsole <- TestConsole.make[IO](
         screen = Screen(20, 5),
         inputs = List(MouseClick(10, 20))
       )
@@ -58,7 +58,7 @@ class IdleAwareNConsoleSpec extends CatsEffectSuite {
       detector <- IdleDetectorInterpreter.make[IO](
         IdleDetectorConfig(idleTimeout = 50.millis)
       )
-      rawConsole <- TestNConsole.make(
+      rawConsole <- TestConsole.make[IO](
         screen = Screen(20, 5),
         inputs = List(MouseMove(5, 10))
       )
@@ -79,7 +79,7 @@ class IdleAwareNConsoleSpec extends CatsEffectSuite {
       detector <- IdleDetectorInterpreter.make[IO](
         IdleDetectorConfig(idleTimeout = 50.millis)
       )
-      rawConsole <- TestNConsole.make(
+      rawConsole <- TestConsole.make[IO](
         screen = Screen(20, 5),
         inputs = List(Key(SpecialKey.Esc))
       )
@@ -98,7 +98,7 @@ class IdleAwareNConsoleSpec extends CatsEffectSuite {
       detector <- IdleDetectorInterpreter.make[IO](
         IdleDetectorConfig(idleTimeout = 50.millis)
       )
-      rawConsole <- TestNConsole.make(screen = Screen(20, 5))
+      rawConsole <- TestConsole.make[IO](screen = Screen(20, 5))
       console = IdleAwareNConsole.wrap[IO](rawConsole, detector)
       _ <- console.writeString(ScreenAdjusted("initial content"))
       _ <- IO.sleep(100.millis)
@@ -119,7 +119,7 @@ class IdleAwareNConsoleSpec extends CatsEffectSuite {
       detector <- IdleDetectorInterpreter.make[IO](
         IdleDetectorConfig(idleTimeout = 50.millis)
       )
-      rawConsole <- TestNConsole.make(screen = Screen(42, 13))
+      rawConsole <- TestConsole.make[IO](screen = Screen(42, 13))
       console = IdleAwareNConsole.wrap[IO](rawConsole, detector)
       ctx <- console.context
     } yield {

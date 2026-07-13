@@ -449,6 +449,225 @@ When reading the custom examples, keep these questions in mind (they'll save you
 
 ---
 
+## Testing Custom Components
+
+Because even terminal presentations deserve test coverage. The `testkit` package (`com.github.morotsman.lote.testkit`) provides a complete set of test doubles so you can unit-test your custom slides, transitions, and overlays without a real terminal. No `IO.sleep`, no flickering screen, no existential dread.
+
+### `SlideTestHarness` – One-Line Setup
+
+The harness bundles a fake console, a controllable ticker, and a simulated clock into a single object. Create one, hand its fields to your component, and assert on the results:
+
+```scala
+import cats.effect.IO
+import com.github.morotsman.lote.api._
+import com.github.morotsman.lote.testkit.SlideTestHarness
+import munit.CatsEffectSuite
+import scala.concurrent.duration._
+
+class MyTransitionSpec extends CatsEffectSuite {
+
+  test("transition completes and shows target content") {
+    for {
+      harness <- SlideTestHarness.make[IO](
+        screen = Screen(80, 24),   // simulated terminal dimensions
+        tickStep = 5.millis        // duration per tick
+      )
+      from = SlideTestHarness.fixedSlide[IO]("Hello")
+      to   = SlideTestHarness.fixedSlide[IO]("Goodbye")
+      transition = {
+        implicit val clock = harness.clockInstance
+        MyTransition.create[IO](harness.console, harness.ticker, harness.animationSettings)
+      }
+      _       <- harness.runWithTicking(transition.transition(from, to))
+      written <- harness.writtenFrames
+    } yield assert(written.head.contains("Goodbye"))
+  }
+}
+```
+
+That's it. No real terminal, no wall-clock delays, deterministic results. The test runs in milliseconds because the simulated clock doesn't actually sleep — it just pretends time has passed, which is more than most of us can say on a Monday morning.
+
+### `SlideTestHarness.make` Parameters
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `screen` | `Screen(80, 24)` | Simulated terminal dimensions. Pick something small for focused tests. |
+| `inputs` | `Nil` | Pre-loaded `UserInput` events consumed by `console.read()`. |
+| `tickStep` | `16.millis` | Duration per tick. Matches the default render cadence. |
+| `animationStep` | same as `tickStep` | Simulation step for `AnimationSettings`. Override if you want animation to advance at a different rate. |
+| `readDelay` | `Duration.Zero` | Delay before each `console.read()` returns. Set to e.g. `1.millis` for integration tests using `SessionBuilder.runWith`, so slide fibers have time to write content. |
+
+### Manual Ticking and `runWithTicking`
+
+Call `harness.tick(n)` to advance the simulated clock by `n` steps and fire all subscriber callbacks. Great for slides and animations where you want to assert on specific intermediate states:
+
+```scala
+test("my slide renders after 3 ticks") {
+  for {
+    harness <- SlideTestHarness.make[IO](tickStep = 16.millis)
+    slide   <- MySlide.create[IO](harness.console, harness.ticker, harness.animationSettings)
+    _       <- slide.startShow
+    _       <- harness.tick(3)   // advances clock by 3×16ms, fires callbacks 3 times
+    frames  <- harness.writtenFrames
+  } yield assert(frames.nonEmpty)
+}
+```
+
+For transitions and other components that **block until completion** (via `Deferred.get`), you can't call `tick()` after the blocking call — it would never be reached. Use `runWithTicking` instead, which forks the blocking task and ticks alongside it:
+
+```scala
+test("sweep transition completes without hanging") {
+  for {
+    harness <- SlideTestHarness.make[IO](
+      screen = Screen(10, 1),
+      tickStep = 5.millis
+    )
+    from = SlideTestHarness.fixedSlide[IO]("AAAAAAAAAA")
+    to   = SlideTestHarness.fixedSlide[IO]("BBBBBBBBBB")
+    transition = /* ... create transition using harness ... */
+    _ <- harness.runWithTicking(transition.transition(from, to))
+    written <- harness.writtenFrames
+  } yield assertEquals(written.head, "BBBBBBBBBB")
+}
+```
+
+`runWithTicking` fires a bounded number of ticks (default 10) with a 1ms pause between each, giving the task fiber scheduling time between ticks. The tick count is explicit, making it easy to reason about how much simulated time passes.
+
+### Harness API
+
+Once you have a harness, these are the methods you'll reach for:
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `harness.console` | `TestConsole[F]` | The fake console. Pass it to your component. |
+| `harness.ticker` | `TestTicker[F]` | The controllable ticker. Pass it to your component. |
+| `harness.animationSettings` | `AnimationSettings` | Animation config derived from `tickStep` / `animationStep`. |
+| `harness.clockInstance` | `Clock[F]` | The simulated clock. Use as an implicit for `FixedStep`. |
+| `harness.tick(n)` | `F[Unit]` | Fire `n` ticks manually — advances the simulated clock and fires subscriber callbacks. |
+| `harness.runWithTicking(task, n)` | `F[Unit]` | Fork `task`, fire `n` ticks alongside it, then join. Use for blocking operations like transitions. |
+| `harness.writtenFrames` | `F[List[String]]` | All frames written to console, most recent first. |
+| `harness.writtenFramesInOrder` | `F[List[String]]` | Same, but oldest first. For people who read left to right. |
+| `harness.lastWrittenFrame` | `F[Option[String]]` | The most recently rendered frame. |
+| `harness.clearCount` | `F[Int]` | How many times `clear()` was called. |
+| `harness.enqueueInputs(inputs)` | `F[Unit]` | Inject additional user inputs mid-test. |
+| `harness.reset` | `F[Unit]` | Clear all recorded frames and counters. For multi-phase tests. |
+| `harness.clock.currentTime` | `F[FiniteDuration]` | Inspect current simulated time. Useful for asserting that animations finish promptly. |
+
+### `SlideTestHarness.fixedSlide` – Stub Slides
+
+When testing transitions, you typically don't care about the slide implementation — you just need something that returns known content. `fixedSlide` is that thing:
+
+```scala
+val from = SlideTestHarness.fixedSlide[IO]("OLD CONTENT")
+val to   = SlideTestHarness.fixedSlide[IO]("NEW CONTENT")
+```
+
+It returns a `Slide[F]` whose `content` is a `ScreenAdjusted` wrapping the given string, and whose `startShow`/`stopShow`/`userInput` are all no-ops. The minimum viable slide, if you will.
+
+### Using Individual Test Doubles
+
+If `SlideTestHarness` is too opinionated for your test, you can use the pieces individually:
+
+```scala
+import com.github.morotsman.lote.testkit.{TestConsole, TestTicker, SimulatedClock}
+
+for {
+  console <- TestConsole.make[IO](screen = Screen(40, 10))
+  ticker  <- TestTicker.make[IO](step = 10.millis)
+  clock   <- SimulatedClock.make[IO]()
+} yield ()
+```
+
+`SimulatedClock` is especially useful if you're testing `FixedStep` logic in isolation. Advance time, call `consumeSteps`, assert on the step count. No sleeping involved, just pure deterministic time manipulation:
+
+```scala
+for {
+  clock   <- SimulatedClock.make[IO]()
+  stepper <- FixedStep.makeRef[IO](clock, implicitly)
+  _       <- clock.advance(48.millis)
+  steps   <- FixedStep.consumeSteps(stepper, 16.millis)(clock)
+} yield assertEquals(steps, 3)  // 48ms / 16ms = 3 steps
+```
+
+### Testing Tips
+
+- **Keep screen dimensions small** in tests. A `Screen(4, 1)` is easier to assert on than `Screen(80, 24)`. Your test assertions will thank you.
+- **Use `runWithTicking`** for transitions. They block on a `Deferred` internally, so they need ticks to fire concurrently.
+- **Use manual `tick()`** for slides and interactive components. You get precise control over how many frames are rendered.
+- **`fixedSlide` content is NOT padded.** Unlike production slides that go through the `Aligner`, `fixedSlide` returns raw content. This is intentional — it lets you test transition logic without fighting screen-width padding.
+
+### Complete Feature Showcase
+
+For a comprehensive, runnable tour of every test framework feature — `TestConsole`, `SimulatedClock`, `FixedStep`, `TestTicker`, `SlideTestHarness`, `runWithTicking`, overlay testing, `reset`, `readDelay`, and more — see [`TestFrameworkShowcaseSpec.scala`](lote/src/test/scala/com/github/morotsman/lote/testkit/TestFrameworkShowcaseSpec.scala). Each section introduces one concept with commented examples that you can copy into your own tests.
+
+### Testing a Full Presentation
+
+Testing individual components is all well and good, but at some point you'll want to know if the whole thing actually works when you wire it together. `SessionBuilder.runWith` lets you run your entire presentation — slides, overlays, middleware, the full existential stack — against a test harness instead of a real terminal.
+
+The trick: expose your `SessionBuilder` from the presentation object so tests can call `.runWith(...)` instead of `.run()`. It's the same session, just pointed at a fake terminal that won't judge your slide content:
+
+```scala
+// In your presentation object
+object EffectfulOverlayExample extends IOApp.Simple {
+
+  /** The session configuration, exposed so tests can exercise it
+    * without needing a real terminal or a willing audience.
+    */
+  def session: SessionBuilder[IO] =
+    SessionBuilder[IO]()
+      .addOverlay(InputStatusOverlay.make[IO]())
+      .addTextSlide(_.content("...").title("Slide One"))
+      .addTextSlide(_.content("...").title("Slide Two"))
+
+  override def run: IO[Unit] = session.run()
+}
+```
+
+Then feed it pre-loaded inputs and let it run. The session reads from the input queue, renders frames, and exits when it hits `Esc` — just like production, except nobody has to sit through it:
+
+```scala
+// In your test spec
+class EffectfulOverlayExampleSpec extends CatsEffectSuite {
+
+  private val readDelay = 1.millis
+
+  test("session starts and exits on Esc") {
+    for {
+      harness <- SlideTestHarness.make[IO](
+        screen = Screen(80, 10),
+        inputs = List(Key(SpecialKey.Esc)),
+        readDelay = readDelay
+      )
+      _ <- EffectfulOverlayExample.session.runWith(harness.console, harness.ticker)
+      written <- harness.writtenFrames
+    } yield assert(written.nonEmpty)
+  }
+
+  test("navigating right shows second slide") {
+    for {
+      harness <- SlideTestHarness.make[IO](
+        screen = Screen(80, 10),
+        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Esc)),
+        readDelay = readDelay
+      )
+      _ <- EffectfulOverlayExample.session.runWith(harness.console, harness.ticker)
+      written <- harness.writtenFrames
+    } yield {
+      val allContent = written.mkString("\n")
+      assert(allContent.contains("Slide Two"))
+    }
+  }
+}
+```
+
+The `readDelay` parameter adds a small pause between consuming pre-loaded inputs. In production, `console.read()` blocks on the keyboard so the slide has all the time in the world to render. In tests, inputs are available immediately, so without a small delay the session would consume them faster than your slides can write frames. `1.millis` is enough to be polite about it.
+
+Why bother? Because this tests the **actual production configuration**, the same slides, the same overlays, the same middleware chain. If you add a slide, rearrange the deck, or accidentally break an overlay, the tests will catch it. The alternative is maintaining a separate test-only session definition that starts out identical to production and then quietly drifts until you discover the divergence during a live demo. Which is a learning experience, just not the kind you want.
+
+And well, I needed it myself for writing the tests for this library, so why not share, right :-)
+
+---
+
 ## Build & Test
 
 In case you want to verify that the code compiles before trusting it with your presentation career:
@@ -483,7 +702,8 @@ cats-lote/
 │       │   ├── builders/  # SessionBuilder, TextSlideBuilder, SlideBuilder, Contextual
 │       │   ├── spi/       # Extension points: Slide, Transition, Overlay, NConsole, Ticker
 │       │   └── support/   # FixedStep animation helper
+│       ├── testkit/       # Test doubles: SlideTestHarness, TestConsole, TestTicker, SimulatedClock
 │       └── internal/      # Not your problem
-├── examples/      # Example presentations
+├── examples/      # Example presentations (+ tests using the testkit)
 └── project/       # sbt build configuration
 ```

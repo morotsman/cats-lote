@@ -6,7 +6,10 @@ import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object EffectfulOverlayExample extends IOApp.Simple {
 
-  override def run: IO[Unit] =
+  /** The session builder, exposed so tests can exercise the real configuration
+    * via `runWith` instead of duplicating the setup.
+    */
+  def session: SessionBuilder[IO] =
     SessionBuilder[IO]()
       .addOverlay(InputStatusOverlay.make[IO]())
       .addTextSlide {
@@ -64,5 +67,6 @@ object EffectfulOverlayExample extends IOApp.Simple {
             |that would feel dishonest to pretend was pure.""".stripMargin
         ).title("When To Choose It")
       }
-      .run()
+
+  override def run: IO[Unit] = session.run()
 }

@@ -6,7 +6,7 @@ import cats.effect.implicits._
 import cats.implicits._
 import com.github.morotsman.lote.api.{AnimationSettings, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.api.builders.Contextual
-import com.github.morotsman.lote.api.support.FixedStep
+import com.github.morotsman.lote.api.support.{Clock, FixedStep}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription, Transition}
 
 object SweepRightTransition {
@@ -32,7 +32,7 @@ object SweepRightTransition {
       console: NConsole[F],
       ticker: Ticker[F],
       animationSettings: AnimationSettings
-  ): Transition[F] = {
+  )(implicit clock: Clock[F]): Transition[F] = {
     require(columnsPerStep > 0, "columnsPerStep must be greater than 0")
 
     def normalizeLine(line: String, width: Int): String = {
@@ -68,6 +68,11 @@ object SweepRightTransition {
           screen <- console.context
           fromContent <- from.content
           toContent <- to.content
+          contentWidth = {
+            val fromMax = fromContent.content.split("\n", -1).map(_.stripTrailing().length).maxOption.getOrElse(0)
+            val toMax = toContent.content.split("\n", -1).map(_.stripTrailing().length).maxOption.getOrElse(0)
+            math.min(math.max(fromMax, toMax), screen.screenWidth)
+          }
           revealRef <- Ref[F].of(0)
           stepperRef <- FixedStep.makeRef[F]
           done <- Deferred[F, Unit]
@@ -79,7 +84,7 @@ object SweepRightTransition {
                 revealRef
                   .modify { currentReveal =>
                     val nextReveal = math.min(
-                      screen.screenWidth,
+                      contentWidth,
                       currentReveal + (nrOfSteps * columnsPerStep)
                     )
                     (nextReveal, nextReveal)
@@ -95,18 +100,18 @@ object SweepRightTransition {
 
                     console.clear() *>
                       console.writeString(frame) *>
-                      (if (revealColumns >= screen.screenWidth)
+                      (if (revealColumns >= contentWidth)
                          done.complete(()).attempt.void
                        else Monad[F].unit)
                   }
               }
             }
           maybeSub <-
-            if (screen.screenWidth <= 0) Monad[F].pure(Option.empty[TickerSubscription[F]])
+            if (contentWidth <= 0) Monad[F].pure(Option.empty[TickerSubscription[F]])
             else ticker.subscribe(onTick).map(Option(_))
           _ <- maybeSub.traverse_(_ => ticker.start)
           _ <-
-            if (screen.screenWidth <= 0) Monad[F].unit
+            if (contentWidth <= 0) Monad[F].unit
             else done.get.guarantee(maybeSub.traverse_(_.cancel))
           _ <- console.clear() *> console.writeString(toContent)
         } yield ()

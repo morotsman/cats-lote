@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.interpreter.middleware
+package com.github.morotsman.lote.internal.interpreter.middleware
 
 import cats.effect.IO
 import com.github.morotsman.lote.api.{Milestone, Screen, ScreenAdjusted}

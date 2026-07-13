@@ -2,26 +2,13 @@ package com.github.morotsman.lote.api.builders
 
 import cats.effect.IO
 import com.github.morotsman.lote.api.{AnimationSettings, Screen, ScreenAdjusted, UserInput}
-import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription, Transition}
+import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, Transition}
 import com.github.morotsman.lote.internal.builders.SlideBuilder
 import com.github.morotsman.lote.internal.model.SlideSpecification
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
 class SlideBuilderSpec extends CatsEffectSuite {
-
-  private implicit val animationSettings: AnimationSettings = AnimationSettings(AnimationSettings.DefaultStep)
-
-  private def stubTicker: Ticker[IO] = new Ticker[IO] {
-    override def subscribe(callback: IO[Unit]): IO[TickerSubscription[IO]] = {
-      val _ = callback
-      IO.pure(new TickerSubscription[IO] {
-        override def cancel: IO[Unit] = IO.unit
-      })
-    }
-    override def start: IO[Unit] = IO.unit
-    override def stop: IO[Unit] = IO.unit
-  }
 
   private def makeSlide(text: String): Slide[IO] = new Slide[IO] {
     override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
@@ -114,9 +101,10 @@ class SlideBuilderSpec extends CatsEffectSuite {
 
   test("SlideBuilder built-in transition helpers set transitions") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(ticker: Ticker[IO]) = stubTicker
+      harness <- SlideTestHarness.make[IO](screen = Screen(40, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      implicit0(ticker: Ticker[IO]) = harness.ticker: Ticker[IO]
+      implicit0(as: AnimationSettings) = harness.animationSettings
       slide = makeSlide("hello")
       morphSpec = SlideBuilder[IO]()
         .addSlide(slide)
@@ -142,4 +130,3 @@ class SlideBuilderSpec extends CatsEffectSuite {
     }
   }
 }
-

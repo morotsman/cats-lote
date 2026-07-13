@@ -2,25 +2,12 @@ package com.github.morotsman.lote.api.builders
 
 import cats.effect.IO
 import com.github.morotsman.lote.api.{Alignment, AnimationSettings, Character, HorizontalAlignment, Screen, UserInput, VerticalAlignment}
-import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription, Transition}
+import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, Transition}
 import com.github.morotsman.lote.internal.builders.TextSlideBuilder
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
 class TextSlideBuilderSpec extends CatsEffectSuite {
-
-  private implicit val animationSettings: AnimationSettings = AnimationSettings(AnimationSettings.DefaultStep)
-
-  private def stubTicker: Ticker[IO] = new Ticker[IO] {
-    override def subscribe(callback: IO[Unit]): IO[TickerSubscription[IO]] = {
-      val _ = callback
-      IO.pure(new TickerSubscription[IO] {
-        override def cancel: IO[Unit] = IO.unit
-      })
-    }
-    override def start: IO[Unit] = IO.unit
-    override def stop: IO[Unit] = IO.unit
-  }
 
   private def makeTransition(): Transition[IO] = new Transition[IO] {
     override def transition(from: Slide[IO], to: Slide[IO]): IO[Unit] = IO.unit
@@ -29,8 +16,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder.content sets slide content") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(40, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Hello World")
         .build()
@@ -42,8 +29,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder uses Center/Center alignment by default") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 5))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("X")
         .build()
@@ -60,8 +47,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder.alignment overrides default alignment") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 5))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("AB")
         .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
@@ -75,8 +62,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder.alignment with Down/Right") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 5))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Z")
         .alignment(Alignment(VerticalAlignment.Down, HorizontalAlignment.Right))
@@ -91,8 +78,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder.transition sets the out transition") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(40, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       transition = makeTransition()
       spec = TextSlideBuilder[IO]()
         .content("Test")
@@ -105,8 +92,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder without transition has out = None") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(40, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Test")
         .build()
@@ -117,9 +104,10 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder built-in transition helpers set transitions") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
-      implicit0(ticker: Ticker[IO]) = stubTicker
+      harness <- SlideTestHarness.make[IO](screen = Screen(40, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      implicit0(ticker: Ticker[IO]) = harness.ticker: Ticker[IO]
+      implicit0(as: AnimationSettings) = harness.animationSettings
       morphSpec = TextSlideBuilder[IO]()
         .content("Morph")
         .morphTransition()
@@ -146,8 +134,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder.title sets the slide title") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(40, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Test")
         .title("Intro")
@@ -159,8 +147,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder handles multiline content") {
     for {
-      console <- TestNConsole.make(screen = Screen(30, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(30, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Line 1\nLine 2\nLine 3")
         .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
@@ -176,8 +164,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder chaining - alignment after content") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 5))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Hi")
         .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Right))
@@ -193,8 +181,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder chaining - transition after alignment") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 5))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       transition = makeTransition()
       spec = TextSlideBuilder[IO]()
         .content("Hi")
@@ -212,8 +200,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder.step builds a staged text slide with the default hint") {
     for {
-      console <- TestNConsole.make(screen = Screen(30, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(30, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Agenda")
         .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
@@ -222,7 +210,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       _ <- spec.slide.startShow
       _ <- spec.slide.userInput(Character('x'))
-      written <- console.writtenRef.get
+      written <- harness.writtenFrames
     } yield {
       assertEquals(written.length, 2)
       assert(written(1).contains("Agenda"))
@@ -236,8 +224,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder.separator controls how steps are joined") {
     for {
-      console <- TestNConsole.make(screen = Screen(30, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(30, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Intro")
         .separator("\n\n")
@@ -246,7 +234,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       _ <- spec.slide.startShow
       _ <- spec.slide.userInput(Character('x'))
-      written <- console.writtenRef.get
+      written <- harness.writtenFrames
     } yield {
       val lines = written.head.split("\n", -1)
       assert(lines(0).startsWith("Intro"))
@@ -257,8 +245,8 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder.hint overrides the default continue hint and disappears on the final step") {
     for {
-      console <- TestNConsole.make(screen = Screen(30, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(30, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Topic")
         .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
@@ -267,7 +255,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       _ <- spec.slide.startShow
       _ <- spec.slide.userInput(Character('x'))
-      written <- console.writtenRef.get
+      written <- harness.writtenFrames
     } yield {
       assert(written(1).contains("[next]"))
       assert(!written.head.contains("[next]"))
@@ -277,4 +265,3 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
     }
   }
 }
-

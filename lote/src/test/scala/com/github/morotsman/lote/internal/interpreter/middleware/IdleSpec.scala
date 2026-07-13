@@ -5,7 +5,6 @@ import com.github.morotsman.lote.api.{Key, Screen, ScreenAdjusted, SpecialKey}
 import com.github.morotsman.lote.internal.algebra.IdleDetector
 import com.github.morotsman.lote.internal.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
 import com.github.morotsman.lote.internal.util.Colors
-import com.github.morotsman.lote.support.TestNConsole
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
@@ -35,7 +34,6 @@ class IdleSpec extends CatsEffectSuite {
 
   test("Idle does not modify content before timeout") {
     for {
-      _ <- TestNConsole.make(screen = Screen(20, 5))
       (_, idle) <- makeIdleWithDetector(timeout = 10.minutes)
       content = ScreenAdjusted("Hello World         ")
       result <- idle.applyOverlay(Screen(20, 5), content, content)
@@ -46,7 +44,6 @@ class IdleSpec extends CatsEffectSuite {
 
   test("Idle modifies content after timeout elapses") {
     for {
-      _ <- TestNConsole.make(screen = Screen(20, 5))
       (_, idle) <- makeIdleWithDetector()
       content = ScreenAdjusted(
         "Hello World         \n" * 4 + "Hello World         "
@@ -63,7 +60,6 @@ class IdleSpec extends CatsEffectSuite {
 
   test("Idle resets on key press (via IdleDetector)") {
     for {
-      _ <- TestNConsole.make(screen = Screen(20, 5))
       (detector, idle) <- makeIdleWithDetector()
       content = ScreenAdjusted(
         "Hello World         \n" * 4 + "Hello World         "
@@ -79,7 +75,6 @@ class IdleSpec extends CatsEffectSuite {
 
   test("Idle resets on content change (via IdleDetector)") {
     for {
-      _ <- TestNConsole.make(screen = Screen(20, 5))
       (detector, idle) <- makeIdleWithDetector()
       content1 = ScreenAdjusted(
         "First content       \n" * 4 + "First content       "
@@ -99,7 +94,6 @@ class IdleSpec extends CatsEffectSuite {
 
   test("Idle notifyActivity on detector resets idle state") {
     for {
-      _ <- TestNConsole.make(screen = Screen(20, 5))
       (detector, idle) <- makeIdleWithDetector()
       content = ScreenAdjusted(
         "Test content        \n" * 4 + "Test content        "
@@ -114,7 +108,6 @@ class IdleSpec extends CatsEffectSuite {
 
   test("Idle spawns bugs that appear as overlay characters") {
     for {
-      _ <- TestNConsole.make(screen = Screen(30, 8))
       (_, idle) <- makeIdleWithDetector(
         timeout = 10.millis,
         overlayConfig = shortOverlayConfig.copy(
@@ -140,7 +133,6 @@ class IdleSpec extends CatsEffectSuite {
 
   test("Idle with same content does not reset idle timer") {
     for {
-      _ <- TestNConsole.make(screen = Screen(20, 5))
       (detector, idle) <- makeIdleWithDetector()
       content = ScreenAdjusted(
         "Same content        \n" * 4 + "Same content        "
