@@ -35,6 +35,7 @@ lazy val lote = crossProject(JVMPlatform, JSPlatform)
       // test
       "org.typelevel" %%% "munit-cats-effect" % "2.0.0" % Test,
       "org.scalameta" %%% "munit" % "1.0.3" % Test,
+      "org.typelevel" %%% "cats-effect-testkit" % "3.5.7" % Test,
     ),
     testFrameworks += new TestFramework("munit.Framework"),
     scalacOptions ++= Seq(
