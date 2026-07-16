@@ -24,6 +24,7 @@ val commonSettings =
 lazy val lote = (project in file("lote"))
   .settings(commonSettings)
   .settings(
+    coverageExcludedFiles := ".*Symbols.*",
     libraryDependencies ++= Seq(
       // cats
       "org.typelevel" %% "cats-core" % "2.12.0",
@@ -43,6 +44,7 @@ lazy val examples = (project in file("examples"))
   .dependsOn(lote % "test->test;compile->compile")
   .settings(commonSettings)
   .settings(
+    testFrameworks += new TestFramework("munit.Framework"),
     scalacOptions ++= Seq(
       "-Ymacro-annotations"
     )

@@ -1,10 +1,10 @@
-package com.github.morotsman.lote.interpreter.middleware
+package com.github.morotsman.lote.internal.interpreter.middleware
 
 import cats.effect.IO
 import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Screen, ScreenAdjusted, VerticalAlignment}
 import com.github.morotsman.lote.api.spi.{Overlay, Ticker, TickerSubscription}
 import com.github.morotsman.lote.internal.interpreter.middleware.Middleware
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.TestConsole
 import munit.CatsEffectSuite
 
 class MiddlewareSpec extends CatsEffectSuite {
@@ -21,7 +21,7 @@ class MiddlewareSpec extends CatsEffectSuite {
 
   test("Middleware delegates alignText to underlying NConsole") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
+      console <- TestConsole.make[IO](screen = Screen(20, 5))
       middleware <- Middleware.make[IO](console, stubTicker)
       result <- middleware.alignText(
         "Hi",
@@ -34,10 +34,10 @@ class MiddlewareSpec extends CatsEffectSuite {
 
   test("Middleware delegates clear to underlying NConsole") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
+      console <- TestConsole.make[IO](screen = Screen(20, 5))
       middleware <- Middleware.make[IO](console, stubTicker)
       _ <- middleware.clear()
-      cleared <- console.clearedRef.get
+      cleared <- console.clearCount
     } yield {
       assertEquals(cleared, 1)
     }
@@ -45,7 +45,7 @@ class MiddlewareSpec extends CatsEffectSuite {
 
   test("Middleware delegates context to underlying NConsole") {
     for {
-      console <- TestNConsole.make(screen = Screen(42, 13))
+      console <- TestConsole.make[IO](screen = Screen(42, 13))
       middleware <- Middleware.make[IO](console, stubTicker)
       ctx <- middleware.context
     } yield {
@@ -55,10 +55,10 @@ class MiddlewareSpec extends CatsEffectSuite {
 
   test("Middleware writeString with no overlays writes content unchanged") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
+      console <- TestConsole.make[IO](screen = Screen(20, 5))
       middleware <- Middleware.make[IO](console, stubTicker)
       _ <- middleware.writeString(ScreenAdjusted("hello"))
-      written <- console.writtenRef.get
+      written <- console.writtenFrames
     } yield {
       assertEquals(written.length, 1)
       assertEquals(written.head, "hello")
@@ -67,7 +67,7 @@ class MiddlewareSpec extends CatsEffectSuite {
 
   test("Middleware writeString applies overlays") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
+      console <- TestConsole.make[IO](screen = Screen(20, 5))
       middleware <- Middleware.make[IO](console, stubTicker)
       overlay = new Overlay[IO] {
         override def applyOverlay(
@@ -79,7 +79,7 @@ class MiddlewareSpec extends CatsEffectSuite {
       }
       _ <- middleware.addOverlays(List(overlay))
       _ <- middleware.writeString(ScreenAdjusted("content"))
-      written <- console.writtenRef.get
+      written <- console.writtenFrames
     } yield {
       assertEquals(written.head, "content [overlay]")
     }
@@ -87,7 +87,7 @@ class MiddlewareSpec extends CatsEffectSuite {
 
   test("Middleware applies multiple overlays in order") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
+      console <- TestConsole.make[IO](screen = Screen(20, 5))
       middleware <- Middleware.make[IO](console, stubTicker)
       overlay1 = new Overlay[IO] {
         override def applyOverlay(
@@ -107,7 +107,7 @@ class MiddlewareSpec extends CatsEffectSuite {
       }
       _ <- middleware.addOverlays(List(overlay1, overlay2))
       _ <- middleware.writeString(ScreenAdjusted("X"))
-      written <- console.writtenRef.get
+      written <- console.writtenFrames
     } yield {
       assertEquals(written.head, "X[1][2]")
     }
@@ -115,7 +115,7 @@ class MiddlewareSpec extends CatsEffectSuite {
 
   test("Middleware addOverlays replaces existing overlays") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
+      console <- TestConsole.make[IO](screen = Screen(20, 5))
       middleware <- Middleware.make[IO](console, stubTicker)
       overlay1 = new Overlay[IO] {
         override def applyOverlay(
@@ -137,7 +137,7 @@ class MiddlewareSpec extends CatsEffectSuite {
       _ <- middleware.writeString(ScreenAdjusted("x"))
       _ <- middleware.addOverlays(List(overlay2))
       _ <- middleware.writeString(ScreenAdjusted("y"))
-      written <- console.writtenRef.get
+      written <- console.writtenFrames
     } yield {
       // written is in reverse order (newest first)
       assertEquals(written.head, "second")
@@ -147,9 +147,9 @@ class MiddlewareSpec extends CatsEffectSuite {
 
   test("Middleware close delegates to underlying NConsole") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
+      console <- TestConsole.make[IO](screen = Screen(20, 5))
       middleware <- Middleware.make[IO](console, stubTicker)
-      // close() on TestNConsole is a no-op (IO.unit), just verify it doesn't fail
+      // close() on TestConsole is a no-op, just verify it doesn't fail
       _ <- middleware.close()
     } yield ()
   }

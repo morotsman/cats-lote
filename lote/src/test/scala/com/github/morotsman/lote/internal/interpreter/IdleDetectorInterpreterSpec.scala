@@ -1,8 +1,7 @@
-package com.github.morotsman.lote.interpreter
+package com.github.morotsman.lote.internal.interpreter
 
 import cats.effect.IO
 import com.github.morotsman.lote.api.{Key, SpecialKey}
-import com.github.morotsman.lote.internal.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._

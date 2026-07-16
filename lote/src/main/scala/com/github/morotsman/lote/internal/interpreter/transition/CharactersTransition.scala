@@ -213,4 +213,3 @@ private[lote] object CharactersTransition {
   }
 
 }
-

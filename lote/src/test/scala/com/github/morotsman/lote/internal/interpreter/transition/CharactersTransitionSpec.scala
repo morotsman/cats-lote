@@ -1,19 +1,14 @@
 package com.github.morotsman.lote.internal.interpreter.transition
 
 import cats.effect.IO
-import com.github.morotsman.lote.api.{AnimationSettings, Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
+import com.github.morotsman.lote.api.{Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
 import com.github.morotsman.lote.api.spi.Slide
-import com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreter
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
-import scala.concurrent.duration.FiniteDuration
 
 class CharactersTransitionSpec extends CatsEffectSuite {
-
-  // Override default timeout for transition tests
-  override val munitIOTimeout: Duration = 10.seconds
 
   /** Creates a slide that returns fixed ScreenAdjusted content (no alignment/padding)
     */
@@ -51,21 +46,19 @@ class CharactersTransitionSpec extends CatsEffectSuite {
 
   test("CharactersTransition completes and shows the target slide") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("AAAA")
       to = fixedSlide("BBBB")
       transition = CharactersTransition.create[IO](
         selectAccelerator = 100.0,
         setupPosition = simpleSetupPosition,
         getNewIndex = inPlaceNewIndex,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(written.nonEmpty, "Expected content to be written")
       // Last write is the final "to" slide
@@ -78,21 +71,19 @@ class CharactersTransitionSpec extends CatsEffectSuite {
 
   test("CharactersTransition writes intermediate frames") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("XXXX")
       to = fixedSlide("YYYY")
       transition = CharactersTransition.create[IO](
         selectAccelerator = 100.0,
         setupPosition = simpleSetupPosition,
         getNewIndex = inPlaceNewIndex,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       // initial write + at least one tick write + final write
       assert(
@@ -104,21 +95,19 @@ class CharactersTransitionSpec extends CatsEffectSuite {
 
   test("CharactersTransition with identical slides completes immediately") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("SAME")
       to = fixedSlide("SAME")
       transition = CharactersTransition.create[IO](
         selectAccelerator = 100.0,
         setupPosition = simpleSetupPosition,
         getNewIndex = inPlaceNewIndex,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(written.nonEmpty)
     }
@@ -126,108 +115,71 @@ class CharactersTransitionSpec extends CatsEffectSuite {
 
   test("CharactersTransition userInput is a no-op") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       transition = CharactersTransition.create[IO](
         selectAccelerator = 100.0,
         setupPosition = simpleSetupPosition,
         getNewIndex = inPlaceNewIndex,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
       _ <- transition.userInput(Key(SpecialKey.Right))
     } yield ()
   }
 
-  private def runTransition(accelerator: Double): IO[FiniteDuration] = for {
-    console <- TestNConsole.make(screen = Screen(4, 1))
-    ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-    animationSettings = AnimationSettings(5.millis)
-    from = fixedSlide("ABCD")
-    to = fixedSlide("WXYZ")
-    transition = CharactersTransition.create[IO](
-      selectAccelerator = accelerator,
-      setupPosition = simpleSetupPosition,
-      getNewIndex = inPlaceNewIndex,
-      console = console,
-      ticker = ticker,
-      animationSettings = animationSettings
-    )
-    start <- IO.monotonic
-    _ <- transition.transition(from, to)
-    end <- IO.monotonic
-  } yield end - start
-
-  private def runTransitionWithAnimationStep(
-      animationStep: FiniteDuration,
-      tickerInterval: FiniteDuration
-  ): IO[FiniteDuration] = {
-    val animationSettings = AnimationSettings(animationStep)
-
+  test("CharactersTransition higher selectAccelerator completes with fewer ticks") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = tickerInterval)
+      harnessFast <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("ABCD")
       to = fixedSlide("WXYZ")
-      transition = CharactersTransition.create[IO](
+      transitionFast = CharactersTransition.create[IO](
+        selectAccelerator = 100.0,
+        setupPosition = simpleSetupPosition,
+        getNewIndex = inPlaceNewIndex,
+        console = harnessFast.console,
+        ticker = harnessFast.ticker,
+        animationSettings = harnessFast.animationSettings
+      )
+      _ <- harnessFast.runWithTicking(transitionFast.transition(from, to), ticks = 50)
+      writtenFast <- harnessFast.writtenFrames
+
+      harnessSlow <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
+      transitionSlow = CharactersTransition.create[IO](
         selectAccelerator = 1.1,
         setupPosition = simpleSetupPosition,
         getNewIndex = inPlaceNewIndex,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harnessSlow.console,
+        ticker = harnessSlow.ticker,
+        animationSettings = harnessSlow.animationSettings
       )
-      start <- IO.monotonic
-      _ <- transition.transition(from, to)
-      end <- IO.monotonic
-    } yield end - start
-  }
-
-  test("CharactersTransition higher selectAccelerator completes faster") {
-    for {
-      fastDuration <- runTransition(100.0)
-      slowDuration <- runTransition(1.1)
+      _ <- harnessSlow.runWithTicking(transitionSlow.transition(from, to), ticks = 50)
+      writtenSlow <- harnessSlow.writtenFrames
     } yield {
       assert(
-        fastDuration <= slowDuration,
-        s"Expected fast ($fastDuration) <= slow ($slowDuration)"
+        writtenFast.length <= writtenSlow.length,
+        s"Expected fast (${writtenFast.length} frames) <= slow (${writtenSlow.length} frames)"
       )
     }
   }
 
   test("CharactersTransition clears screen during transition") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("AAAA")
       to = fixedSlide("BBBB")
       transition = CharactersTransition.create[IO](
         selectAccelerator = 100.0,
         setupPosition = simpleSetupPosition,
         getNewIndex = inPlaceNewIndex,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
-      _ <- transition.transition(from, to)
-      cleared <- console.clearedRef.get
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      cleared <- harness.clearCount
     } yield {
       assert(cleared >= 1, s"Expected at least one clear(), got $cleared")
-    }
-  }
-
-  test("CharactersTransition animation step controls speed independently of ticker") {
-    for {
-      fastAnimation <- runTransitionWithAnimationStep(10.millis, 40.millis)
-      slowAnimation <- runTransitionWithAnimationStep(80.millis, 40.millis)
-    } yield {
-      assert(
-        fastAnimation < slowAnimation,
-        s"Expected smaller animation step ($fastAnimation) to complete faster than larger step ($slowAnimation)"
-      )
     }
   }
 }

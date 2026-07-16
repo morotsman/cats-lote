@@ -1,17 +1,14 @@
 package com.github.morotsman.lote.internal.interpreter.transition
 
 import cats.effect.IO
-import com.github.morotsman.lote.api.{AnimationSettings, Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
+import com.github.morotsman.lote.api.{Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
 import com.github.morotsman.lote.api.spi.Slide
-import com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreter
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
 
 class ReplaceTransitionSpec extends CatsEffectSuite {
-
-  override val munitIOTimeout: Duration = 10.seconds
 
   private def fixedSlide(text: String): Slide[IO] = new Slide[IO] {
     override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
@@ -22,14 +19,12 @@ class ReplaceTransitionSpec extends CatsEffectSuite {
 
   test("ReplaceTransition completes and shows target slide") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("AAAA")
       to = fixedSlide("BBBB")
-      transition = ReplaceTransition.create[IO]('*', console, ticker, animationSettings)
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      transition = ReplaceTransition.create[IO]('*', harness.console, harness.ticker, harness.animationSettings)
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(written.nonEmpty)
       assert(
@@ -41,14 +36,12 @@ class ReplaceTransitionSpec extends CatsEffectSuite {
 
   test("ReplaceTransition intermediate frames show the replacement character") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("XXXX")
       to = fixedSlide("YYYY")
-      transition = ReplaceTransition.create[IO]('#', console, ticker, animationSettings)
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      transition = ReplaceTransition.create[IO]('#', harness.console, harness.ticker, harness.animationSettings)
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       // Intermediate frames should contain the replacement character '#'
       val intermediates = written.drop(1) // drop the final "to" write
@@ -61,14 +54,12 @@ class ReplaceTransitionSpec extends CatsEffectSuite {
 
   test("ReplaceTransition with identical slides completes immediately") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("SAME")
       to = fixedSlide("SAME")
-      transition = ReplaceTransition.create[IO]('.', console, ticker, animationSettings)
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      transition = ReplaceTransition.create[IO]('.', harness.console, harness.ticker, harness.animationSettings)
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(written.nonEmpty)
     }
@@ -76,14 +67,12 @@ class ReplaceTransitionSpec extends CatsEffectSuite {
 
   test("ReplaceTransition clears screen during transition") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("AAAA")
       to = fixedSlide("BBBB")
-      transition = ReplaceTransition.create[IO]('*', console, ticker, animationSettings)
-      _ <- transition.transition(from, to)
-      cleared <- console.clearedRef.get
+      transition = ReplaceTransition.create[IO]('*', harness.console, harness.ticker, harness.animationSettings)
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      cleared <- harness.clearCount
     } yield {
       assert(cleared >= 1, s"Expected at least one clear(), got $cleared")
     }
@@ -91,10 +80,8 @@ class ReplaceTransitionSpec extends CatsEffectSuite {
 
   test("ReplaceTransition userInput is a no-op") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
-      transition = ReplaceTransition.create[IO]('*', console, ticker, animationSettings)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
+      transition = ReplaceTransition.create[IO]('*', harness.console, harness.ticker, harness.animationSettings)
       _ <- transition.userInput(Key(SpecialKey.Left))
     } yield ()
   }

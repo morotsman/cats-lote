@@ -106,4 +106,3 @@ private[lote] object JLineTerminal {
     }
   }
 }
-

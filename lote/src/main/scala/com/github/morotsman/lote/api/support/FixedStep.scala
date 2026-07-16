@@ -1,7 +1,8 @@
 package com.github.morotsman.lote.api.support
 
+import cats.Monad
 import cats.syntax.all._
-import cats.effect.kernel.{Ref, Temporal}
+import cats.effect.kernel.Ref
 import com.github.morotsman.lote.api.AnimationSettings
 
 import scala.concurrent.duration.{FiniteDuration, NANOSECONDS}
@@ -14,25 +15,25 @@ final case class FixedStepState(
 object FixedStep {
   val DefaultAnimationStep: FiniteDuration = AnimationSettings.DefaultStep
 
-  def initialState[F[_]: Temporal]: F[FixedStepState] =
-    Temporal[F].monotonic.map(now => FixedStepState(now, FiniteDuration(0, NANOSECONDS)))
+  def initialState[F[_]](implicit clock: Clock[F], monad: Monad[F]): F[FixedStepState] =
+    clock.monotonic.map(now => FixedStepState(now, FiniteDuration(0, NANOSECONDS)))
 
-  def makeRef[F[_]: Temporal: Ref.Make]: F[Ref[F, FixedStepState]] =
+  def makeRef[F[_]: Monad: Ref.Make](implicit clock: Clock[F]): F[Ref[F, FixedStepState]] =
     initialState[F].flatMap(Ref[F].of)
 
-  def reset[F[_]: Temporal](stateRef: Ref[F, FixedStepState]): F[Unit] =
+  def reset[F[_]: Monad](stateRef: Ref[F, FixedStepState])(implicit clock: Clock[F]): F[Unit] =
     initialState[F].flatMap(stateRef.set)
 
-  def consumeSteps[F[_]: Temporal](
+  def consumeSteps[F[_]: Monad](
       stateRef: Ref[F, FixedStepState]
-  )(implicit animationSettings: AnimationSettings): F[Int] =
+  )(implicit animationSettings: AnimationSettings, clock: Clock[F]): F[Int] =
     consumeSteps(stateRef, animationSettings.step)
 
-  def consumeSteps[F[_]: Temporal](
+  def consumeSteps[F[_]: Monad](
       stateRef: Ref[F, FixedStepState],
       step: FiniteDuration = DefaultAnimationStep
-  ): F[Int] =
-    Temporal[F].monotonic.flatMap { now =>
+  )(implicit clock: Clock[F]): F[Int] =
+    clock.monotonic.flatMap { now =>
       stateRef.modify { state =>
         val elapsedNanos = Math.max(0L, (now - state.lastUpdateAt).toNanos)
         val totalNanos = state.accumulated.toNanos + elapsedNanos
@@ -50,8 +51,3 @@ object FixedStep {
       }
     }
 }
-
-
-
-
-

@@ -64,4 +64,3 @@ private[lote] object SlideBuilder {
 
   sealed trait SlideAdded extends BuildState
 }
-

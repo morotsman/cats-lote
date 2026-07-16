@@ -1,17 +1,14 @@
 package com.github.morotsman.lote.internal.interpreter.transition
 
 import cats.effect.IO
-import com.github.morotsman.lote.api.{AnimationSettings, Character, Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.api.{Character, Screen, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.api.spi.Slide
-import com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreter
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
 
 class MorphTransitionSpec extends CatsEffectSuite {
-
-  override val munitIOTimeout: Duration = 10.seconds
 
   private def fixedSlide(text: String): Slide[IO] = new Slide[IO] {
     override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
@@ -22,14 +19,12 @@ class MorphTransitionSpec extends CatsEffectSuite {
 
   test("MorphTransition completes and shows target slide") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("AAAA")
       to = fixedSlide("BBBB")
-      transition = MorphTransition.create[IO](console, ticker, animationSettings)
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      transition = MorphTransition.create[IO](harness.console, harness.ticker, harness.animationSettings)
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(written.nonEmpty)
       assert(
@@ -41,14 +36,12 @@ class MorphTransitionSpec extends CatsEffectSuite {
 
   test("MorphTransition with identical slides completes immediately") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("SAME")
       to = fixedSlide("SAME")
-      transition = MorphTransition.create[IO](console, ticker, animationSettings)
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      transition = MorphTransition.create[IO](harness.console, harness.ticker, harness.animationSettings)
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(written.nonEmpty)
     }
@@ -56,14 +49,12 @@ class MorphTransitionSpec extends CatsEffectSuite {
 
   test("MorphTransition writes intermediate frames") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("XXXX")
       to = fixedSlide("YYYY")
-      transition = MorphTransition.create[IO](console, ticker, animationSettings)
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      transition = MorphTransition.create[IO](harness.console, harness.ticker, harness.animationSettings)
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(
         written.length >= 2,
@@ -74,14 +65,12 @@ class MorphTransitionSpec extends CatsEffectSuite {
 
   test("MorphTransition clears screen during transition") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
       from = fixedSlide("AAAA")
       to = fixedSlide("BBBB")
-      transition = MorphTransition.create[IO](console, ticker, animationSettings)
-      _ <- transition.transition(from, to)
-      cleared <- console.clearedRef.get
+      transition = MorphTransition.create[IO](harness.console, harness.ticker, harness.animationSettings)
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      cleared <- harness.clearCount
     } yield {
       assert(cleared >= 1, s"Expected at least one clear(), got $cleared")
     }
@@ -89,10 +78,8 @@ class MorphTransitionSpec extends CatsEffectSuite {
 
   test("MorphTransition userInput is a no-op") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 1))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
-      transition = MorphTransition.create[IO](console, ticker, animationSettings)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
+      transition = MorphTransition.create[IO](harness.console, harness.ticker, harness.animationSettings)
       _ <- transition.userInput(Character('x'))
     } yield ()
   }

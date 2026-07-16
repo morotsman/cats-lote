@@ -7,4 +7,3 @@ object Colors {
   val bold = "\u001b[1m"
   val reset = "\u001b[0m"
 }
-

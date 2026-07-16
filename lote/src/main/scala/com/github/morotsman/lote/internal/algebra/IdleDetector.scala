@@ -42,4 +42,3 @@ private[lote] object IdleDetector {
     override def idleStartTime: F[Option[Long]] = Applicative[F].pure(None)
   }
 }
-

@@ -1,18 +1,25 @@
 package com.github.morotsman.lote.api.builders
 
 import cats.effect.IO
-import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Screen, ScreenAdjusted, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  HorizontalAlignment,
+  Screen,
+  ScreenAdjusted,
+  UserInput,
+  VerticalAlignment
+}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Transition}
 import com.github.morotsman.lote.internal.builders.{SlideBuilder, TextSlideBuilder}
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
 class BuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder builds slide with custom alignment") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(40, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Test")
         .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
@@ -26,8 +33,8 @@ class BuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder uses Center/Center alignment by default") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 5))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Hi")
         .build()
@@ -65,8 +72,8 @@ class BuilderSpec extends CatsEffectSuite {
 
   test("TextSlideBuilder with no transition results in None") {
     for {
-      console <- TestNConsole.make(screen = Screen(40, 10))
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      harness <- SlideTestHarness.make[IO](screen = Screen(40, 10))
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       spec = TextSlideBuilder[IO]()
         .content("Test")
         .build()
@@ -75,4 +82,3 @@ class BuilderSpec extends CatsEffectSuite {
     }
   }
 }
-

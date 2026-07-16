@@ -1,17 +1,14 @@
 package com.github.morotsman.lote.internal.interpreter.transition
 
 import cats.effect.IO
-import com.github.morotsman.lote.api.{AnimationSettings, Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
+import com.github.morotsman.lote.api.{Key, Screen, ScreenAdjusted, SpecialKey, UserInput}
 import com.github.morotsman.lote.api.spi.Slide
-import com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreter
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
 
 class FallingCharactersTransitionSpec extends CatsEffectSuite {
-
-  override val munitIOTimeout: Duration = 10.seconds
 
   private def fixedSlide(text: String): Slide[IO] = new Slide[IO] {
     override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
@@ -22,20 +19,18 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
 
   test("FallingCharactersTransition completes and shows target slide") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 4))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 4), tickStep = 5.millis)
       from = fixedSlide("AAAA")
       to = fixedSlide("BBBB")
       transition = FallingCharactersTransition.create[IO](
         gravity = 2.0,
         selectAccelerator = 100.0,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(written.nonEmpty)
       // Final write should be the "to" slide
@@ -50,20 +45,18 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
     "FallingCharactersTransition with identical slides completes immediately"
   ) {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 4))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 4), tickStep = 5.millis)
       from = fixedSlide("SAME")
       to = fixedSlide("SAME")
       transition = FallingCharactersTransition.create[IO](
         gravity = 2.0,
         selectAccelerator = 100.0,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(written.nonEmpty)
     }
@@ -73,20 +66,18 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
     "FallingCharactersTransition writes intermediate frames during animation"
   ) {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 4))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 4), tickStep = 5.millis)
       from = fixedSlide("XXXX")
       to = fixedSlide("YYYY")
       transition = FallingCharactersTransition.create[IO](
         gravity = 2.0,
         selectAccelerator = 100.0,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
-      _ <- transition.transition(from, to)
-      written <- console.writtenRef.get
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      written <- harness.writtenFrames
     } yield {
       assert(
         written.length >= 2,
@@ -97,20 +88,18 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
 
   test("FallingCharactersTransition clears screen during transition") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 4))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 4), tickStep = 5.millis)
       from = fixedSlide("AAAA")
       to = fixedSlide("BBBB")
       transition = FallingCharactersTransition.create[IO](
         gravity = 2.0,
         selectAccelerator = 100.0,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
-      _ <- transition.transition(from, to)
-      cleared <- console.clearedRef.get
+      _ <- harness.runWithTicking(transition.transition(from, to), ticks = 50)
+      cleared <- harness.clearCount
     } yield {
       assert(cleared >= 1, s"Expected at least one clear(), got $cleared")
     }
@@ -118,15 +107,13 @@ class FallingCharactersTransitionSpec extends CatsEffectSuite {
 
   test("FallingCharactersTransition userInput is a no-op") {
     for {
-      console <- TestNConsole.make(screen = Screen(4, 4))
-      ticker <- TickerInterpreter.make[IO](interval = 5.millis)
-      animationSettings = AnimationSettings(5.millis)
+      harness <- SlideTestHarness.make[IO](screen = Screen(4, 4), tickStep = 5.millis)
       transition = FallingCharactersTransition.create[IO](
         gravity = 2.0,
         selectAccelerator = 100.0,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
+        console = harness.console,
+        ticker = harness.ticker,
+        animationSettings = harness.animationSettings
       )
       _ <- transition.userInput(Key(SpecialKey.Right))
     } yield ()

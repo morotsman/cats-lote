@@ -4,7 +4,16 @@ package lote.internal
 import cats.Monad
 import cats.effect.Temporal
 import cats.implicits._
-import com.github.morotsman.lote.api.{Alignment, Character, HorizontalAlignment, Key, ScreenAdjusted, SpecialKey, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  Character,
+  HorizontalAlignment,
+  Key,
+  ScreenAdjusted,
+  SpecialKey,
+  UserInput,
+  VerticalAlignment
+}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide}
 
 import java.util.concurrent.atomic.AtomicInteger
@@ -15,9 +24,9 @@ object TextSlide {
   private[lote] val DefaultStepSeparator: String = "\n"
 
   private def shouldAdvance(input: UserInput): Boolean = input match {
-    case Character(_)                         => true
+    case Character(_)                      => true
     case Key(k) if k != SpecialKey.Timeout => true
-    case _                                    => false
+    case _                                 => false
   }
 
   def apply[F[_]: Monad: NConsole](
@@ -112,5 +121,3 @@ object TextSlide {
   }
 
 }
-
-

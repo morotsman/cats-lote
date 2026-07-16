@@ -44,14 +44,16 @@ private[lote] object ReplaceTransition {
     }
 
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
-      CharactersTransition.create(
-        selectAccelerator = 1.3,
-        setupPosition = setupPosition,
-        getNewIndex = getNewIndex,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
-      ).transition(from, to)
+      CharactersTransition
+        .create(
+          selectAccelerator = 1.3,
+          setupPosition = setupPosition,
+          getNewIndex = getNewIndex,
+          console = console,
+          ticker = ticker,
+          animationSettings = animationSettings
+        )
+        .transition(from, to)
 
     }
 
@@ -59,4 +61,3 @@ private[lote] object ReplaceTransition {
 
   }
 }
-

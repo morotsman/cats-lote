@@ -1,6 +1,16 @@
-package com.github.morotsman.lote.model
+package com.github.morotsman.lote.internal.model
 
-import com.github.morotsman.lote.api.{Alignment, Character, HorizontalAlignment, Key, Screen, ScreenAdjusted, SpecialKey, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  Character,
+  HorizontalAlignment,
+  Key,
+  Screen,
+  ScreenAdjusted,
+  SpecialKey,
+  UserInput,
+  VerticalAlignment
+}
 import munit.FunSuite
 
 class ModelSpec extends FunSuite {

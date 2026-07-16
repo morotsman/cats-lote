@@ -115,4 +115,3 @@ private[lote] object Middleware {
     }
 
 }
-

@@ -1,12 +1,11 @@
-package com.github.morotsman.lote.interpreter
+package com.github.morotsman.lote.internal.interpreter
 
 import cats.effect.IO
-import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Key, Screen, ScreenAdjusted, SpecialKey, UserInput, VerticalAlignment}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide}
-import com.github.morotsman.lote.internal.interpreter.PresentationExecutorInterpreter
+import com.github.morotsman.lote.api._
 import com.github.morotsman.lote.internal.TextSlide
 import com.github.morotsman.lote.internal.model.{Presentation, SlideSpecification}
-import com.github.morotsman.lote.support.TestNConsole
+import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
@@ -14,19 +13,13 @@ import scala.concurrent.duration._
 class PresentationExecutorSpec extends CatsEffectSuite {
 
   test("PresentationExecutor starts and shows first slide") {
-    def waitForWrite(console: TestNConsole, attemptsLeft: Int): IO[Unit] =
-      console.writtenRef.get.flatMap { written =>
-        if (written.nonEmpty) IO.unit
-        else if (attemptsLeft <= 0) IO.raiseError(new RuntimeException("Timed out waiting for first slide render"))
-        else IO.sleep(10.millis) *> waitForWrite(console, attemptsLeft - 1)
-      }
-
     for {
-      console <- TestNConsole.make(
+      harness <- SlideTestHarness.make[IO](
         screen = Screen(20, 5),
-        inputs = Nil
+        inputs = List(Key(SpecialKey.Esc)),
+        readDelay = 1.millis
       )
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       presentation = Presentation[IO](
         slideSpecifications = List(
           SlideSpecification(
@@ -39,12 +32,9 @@ class PresentationExecutorSpec extends CatsEffectSuite {
         )
       )
       executor <- PresentationExecutorInterpreter.make[IO](presentation)
-      runFiber <- executor.start().start
-      _ <- waitForWrite(console, attemptsLeft = 50)
-      _ <- console.inputsRef.set(List(Key(SpecialKey.Esc)))
-      _ <- runFiber.joinWithNever
-      written <- console.writtenRef.get
-      cleared <- console.clearedRef.get
+      _ <- harness.runWithTicking(executor.start(), ticks = 20)
+      written <- harness.writtenFrames
+      cleared <- harness.clearCount
     } yield {
       assert(written.nonEmpty, "Expected content to be written")
       assert(cleared > 0, "Expected screen to be cleared at least once")
@@ -54,11 +44,12 @@ class PresentationExecutorSpec extends CatsEffectSuite {
   test("PresentationExecutor navigates right") {
     for {
       slideChanges <- IO.ref(List.empty[Int])
-      console <- TestNConsole.make(
+      harness <- SlideTestHarness.make[IO](
         screen = Screen(20, 5),
-        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Esc))
+        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Esc)),
+        readDelay = 1.millis
       )
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       presentation = Presentation[IO](
         slideSpecifications = List(
           SlideSpecification(
@@ -81,7 +72,7 @@ class PresentationExecutorSpec extends CatsEffectSuite {
         presentation,
         onSlideChange = (idx: Int) => slideChanges.update(idx :: _)
       )
-      _ <- executor.start()
+      _ <- harness.runWithTicking(executor.start(), ticks = 20)
       changes <- slideChanges.get
     } yield {
       assert(changes.contains(0), "Should have visited slide 0")
@@ -92,11 +83,12 @@ class PresentationExecutorSpec extends CatsEffectSuite {
   test("PresentationExecutor navigates left") {
     for {
       slideChanges <- IO.ref(List.empty[Int])
-      console <- TestNConsole.make(
+      harness <- SlideTestHarness.make[IO](
         screen = Screen(20, 5),
-        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Left), Key(SpecialKey.Esc))
+        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Left), Key(SpecialKey.Esc)),
+        readDelay = 1.millis
       )
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       presentation = Presentation[IO](
         slideSpecifications = List(
           SlideSpecification(
@@ -119,7 +111,7 @@ class PresentationExecutorSpec extends CatsEffectSuite {
         presentation,
         onSlideChange = (idx: Int) => slideChanges.update(idx :: _)
       )
-      _ <- executor.start()
+      _ <- harness.runWithTicking(executor.start(), ticks = 30)
       changes <- slideChanges.get
     } yield {
       val slide0Count = changes.count(_ == 0)
@@ -132,15 +124,16 @@ class PresentationExecutorSpec extends CatsEffectSuite {
 
   test("PresentationExecutor does not go past last slide on Right") {
     for {
-      console <- TestNConsole.make(
+      harness <- SlideTestHarness.make[IO](
         screen = Screen(20, 5),
         inputs = List(
           Key(SpecialKey.Right),
           Key(SpecialKey.Right),
           Key(SpecialKey.Esc)
-        )
+        ),
+        readDelay = 1.millis
       )
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       presentation = Presentation[IO](
         slideSpecifications = List(
           SlideSpecification(
@@ -153,8 +146,8 @@ class PresentationExecutorSpec extends CatsEffectSuite {
         )
       )
       executor <- PresentationExecutorInterpreter.make[IO](presentation)
-      _ <- executor.start()
-      written <- console.writtenRef.get
+      _ <- harness.runWithTicking(executor.start(), ticks = 20)
+      written <- harness.writtenFrames
     } yield {
       assert(written.forall(_.contains("Only Slide")))
     }
@@ -163,18 +156,16 @@ class PresentationExecutorSpec extends CatsEffectSuite {
   test("PresentationExecutor forwards Space special key to the current slide") {
     for {
       receivedInputs <- IO.ref(List.empty[UserInput])
-      console <- TestNConsole.make(
+      harness <- SlideTestHarness.make[IO](
         screen = Screen(20, 5),
-        inputs = List(Key(SpecialKey.Space), Key(SpecialKey.Esc))
+        inputs = List(Key(SpecialKey.Space), Key(SpecialKey.Esc)),
+        readDelay = 1.millis
       )
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       slide = new Slide[IO] {
         override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Slide 1"))
-
         override def startShow: IO[Unit] = IO.unit
-
         override def stopShow: IO[Unit] = IO.unit
-
         override def userInput(input: UserInput): IO[Unit] =
           receivedInputs.update(_ :+ input)
       }
@@ -187,7 +178,7 @@ class PresentationExecutorSpec extends CatsEffectSuite {
         )
       )
       executor <- PresentationExecutorInterpreter.make[IO](presentation)
-      _ <- executor.start()
+      _ <- harness.runWithTicking(executor.start(), ticks = 20)
       inputs <- receivedInputs.get
     } yield {
       assertEquals(inputs, List(Key(SpecialKey.Space)))
@@ -197,11 +188,12 @@ class PresentationExecutorSpec extends CatsEffectSuite {
   test("PresentationExecutor calls onSlideChange callback") {
     for {
       slideChanges <- IO.ref(List.empty[Int])
-      console <- TestNConsole.make(
+      harness <- SlideTestHarness.make[IO](
         screen = Screen(20, 5),
-        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Esc))
+        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Esc)),
+        readDelay = 1.millis
       )
-      implicit0(nc: NConsole[IO]) = console: NConsole[IO]
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       presentation = Presentation[IO](
         slideSpecifications = List(
           SlideSpecification(
@@ -224,7 +216,7 @@ class PresentationExecutorSpec extends CatsEffectSuite {
         presentation,
         onSlideChange = (idx: Int) => slideChanges.update(idx :: _)
       )
-      _ <- executor.start()
+      _ <- harness.runWithTicking(executor.start(), ticks = 20)
       changes <- slideChanges.get
     } yield {
       assert(changes.contains(0), "Should have notified slide 0")

@@ -1,14 +1,16 @@
 package com.github.morotsman.lote.support
 
 import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Screen, VerticalAlignment}
+import com.github.morotsman.lote.testkit.SlideTestHarness
+import cats.effect.IO
 import munit.CatsEffectSuite
 
 class NConsoleAlignmentSpec extends CatsEffectSuite {
 
   test("alignText with Center/Center places text in the middle") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
-      result <- console.alignText(
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 5))
+      result <- harness.console.alignText(
         "Hi",
         Alignment(VerticalAlignment.Center, HorizontalAlignment.Center)
       )
@@ -23,8 +25,8 @@ class NConsoleAlignmentSpec extends CatsEffectSuite {
 
   test("alignText with Up/Left places text at top-left") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
-      result <- console.alignText(
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 5))
+      result <- harness.console.alignText(
         "Hi",
         Alignment(VerticalAlignment.Up, HorizontalAlignment.Left)
       )
@@ -37,8 +39,8 @@ class NConsoleAlignmentSpec extends CatsEffectSuite {
 
   test("alignText with Down/Right places text at bottom-right") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 5))
-      result <- console.alignText(
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 5))
+      result <- harness.console.alignText(
         "Hi",
         Alignment(VerticalAlignment.Down, HorizontalAlignment.Right)
       )
@@ -53,8 +55,8 @@ class NConsoleAlignmentSpec extends CatsEffectSuite {
 
   test("alignText handles multiline content") {
     for {
-      console <- TestNConsole.make(screen = Screen(20, 6))
-      result <- console.alignText(
+      harness <- SlideTestHarness.make[IO](screen = Screen(20, 6))
+      result <- harness.console.alignText(
         "Line1\nLine2",
         Alignment(VerticalAlignment.Up, HorizontalAlignment.Left)
       )

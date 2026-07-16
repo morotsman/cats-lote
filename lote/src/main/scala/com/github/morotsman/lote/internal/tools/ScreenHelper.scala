@@ -11,4 +11,3 @@ object ScreenHelper {
     xy.x * screenWidth + xy.y
 
 }
-

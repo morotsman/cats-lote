@@ -20,81 +20,6 @@ import com.github.morotsman.lote.internal.builders.TextSlideBuilder.{
 }
 import com.github.morotsman.lote.internal.model.SlideSpecification
 
-trait SlideMetadataDsl[F[_], Self] {
-  def slideContext: SlideContext[F]
-
-  def transition(transition: Transition[F]): Self
-
-  def transition(transition: Contextual[F, Transition[F]]): Self
-
-  def morphTransition()(implicit
-      temporal: Temporal[F],
-      refMake: Ref.Make[F]
-  ): Self
-
-  def replaceTransition(replace: Char)(implicit
-      temporal: Temporal[F],
-      refMake: Ref.Make[F]
-  ): Self
-
-  def fallingCharactersTransition(
-      gravity: Double = 1.2,
-      selectAccelerator: Double = 1.2
-  )(implicit
-      temporal: Temporal[F],
-      refMake: Ref.Make[F]
-  ): Self
-
-  def grabTransition(stepSize: Int = 2)(implicit
-      temporal: Temporal[F],
-      refMake: Ref.Make[F]
-  ): Self
-
-  def title(title: String): Self
-}
-
-trait SlideBuilderStart[F[_]] extends SlideMetadataDsl[F, SlideBuilderStart[F]] {
-  def addSlide(slide: Slide[F]): SlideBuilderReady[F]
-
-  def addSlide(slide: Contextual[F, Slide[F]]): SlideBuilderReady[F]
-
-  def addSlideF(slide: ContextualF[F, Slide[F]])(implicit functor: Functor[F]): F[SlideBuilderReady[F]]
-}
-
-trait SlideBuilderReady[F[_]] extends SlideMetadataDsl[F, SlideBuilderReady[F]] {
-  def addSlide(slide: Slide[F]): SlideBuilderReady[F]
-
-  def addSlide(slide: Contextual[F, Slide[F]]): SlideBuilderReady[F]
-
-  def addSlideF(slide: ContextualF[F, Slide[F]])(implicit functor: Functor[F]): F[SlideBuilderReady[F]]
-
-  private[lote] def buildSpec(): SlideSpecification[F]
-}
-
-trait TextSlideBuilderStart[F[_]] extends SlideMetadataDsl[F, TextSlideBuilderStart[F]] {
-  def content(content: String): TextSlideBuilderReady[F]
-
-  def separator(separator: String): TextSlideBuilderStart[F]
-
-  def hint(hint: String): TextSlideBuilderStart[F]
-
-  def alignment(alignment: Alignment): TextSlideBuilderStart[F]
-}
-
-trait TextSlideBuilderReady[F[_]] extends SlideMetadataDsl[F, TextSlideBuilderReady[F]] {
-  def content(content: String): TextSlideBuilderReady[F]
-
-  def step(step: String): TextSlideBuilderReady[F]
-
-  def separator(separator: String): TextSlideBuilderReady[F]
-
-  def hint(hint: String): TextSlideBuilderReady[F]
-
-  def alignment(alignment: Alignment): TextSlideBuilderReady[F]
-
-  private[lote] def buildSpec(): SlideSpecification[F]
-}
-
 private[lote] object BuilderDslAdapters {
 
   private trait MetadataDslAdapter[F[_], Builder, Self] extends SlideMetadataDsl[F, Self] {
@@ -108,14 +33,20 @@ private[lote] object BuilderDslAdapters {
 
     protected def applyMorph(builder: Builder)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
 
-    protected def applyReplace(builder: Builder, replace: Char)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
+    protected def applyReplace(builder: Builder, replace: Char)(implicit
+        temporal: Temporal[F],
+        refMake: Ref.Make[F]
+    ): Builder
 
     protected def applyFalling(builder: Builder, gravity: Double, selectAccelerator: Double)(implicit
         temporal: Temporal[F],
         refMake: Ref.Make[F]
     ): Builder
 
-    protected def applyGrab(builder: Builder, stepSize: Int)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
+    protected def applyGrab(builder: Builder, stepSize: Int)(implicit
+        temporal: Temporal[F],
+        refMake: Ref.Make[F]
+    ): Builder
 
     protected def applyTitle(builder: Builder, title: String): Builder
 
@@ -187,7 +118,13 @@ private[lote] object BuilderDslAdapters {
         gravity: Double,
         selectAccelerator: Double
     )(implicit temporal: Temporal[F], refMake: Ref.Make[F]): InternalSlideBuilder[F, State] =
-      builder.fallingCharactersTransition(gravity, selectAccelerator)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
+      builder.fallingCharactersTransition(gravity, selectAccelerator)(
+        temporal,
+        refMake,
+        ctx.console,
+        ctx.ticker,
+        ctx.animationSettings
+      )
 
     override protected final def applyGrab(builder: InternalSlideBuilder[F, State], stepSize: Int)(implicit
         temporal: Temporal[F],
@@ -195,7 +132,10 @@ private[lote] object BuilderDslAdapters {
     ): InternalSlideBuilder[F, State] =
       builder.grabTransition(stepSize)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
-    override protected final def applyTitle(builder: InternalSlideBuilder[F, State], title: String): InternalSlideBuilder[F, State] =
+    override protected final def applyTitle(
+        builder: InternalSlideBuilder[F, State],
+        title: String
+    ): InternalSlideBuilder[F, State] =
       builder.title(title)
   }
 
@@ -225,7 +165,13 @@ private[lote] object BuilderDslAdapters {
         gravity: Double,
         selectAccelerator: Double
     )(implicit temporal: Temporal[F], refMake: Ref.Make[F]): InternalTextSlideBuilder[F, State] =
-      builder.fallingCharactersTransition(gravity, selectAccelerator)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
+      builder.fallingCharactersTransition(gravity, selectAccelerator)(
+        temporal,
+        refMake,
+        ctx.console,
+        ctx.ticker,
+        ctx.animationSettings
+      )
 
     override protected final def applyGrab(builder: InternalTextSlideBuilder[F, State], stepSize: Int)(implicit
         temporal: Temporal[F],
@@ -233,7 +179,10 @@ private[lote] object BuilderDslAdapters {
     ): InternalTextSlideBuilder[F, State] =
       builder.grabTransition(stepSize)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
-    override protected final def applyTitle(builder: InternalTextSlideBuilder[F, State], title: String): InternalTextSlideBuilder[F, State] =
+    override protected final def applyTitle(
+        builder: InternalTextSlideBuilder[F, State],
+        title: String
+    ): InternalTextSlideBuilder[F, State] =
       builder.title(title)
   }
 
@@ -317,7 +266,6 @@ private[lote] object BuilderDslAdapters {
     override protected def wrap(builder: InternalTextSlideBuilder[F, State]): TextSlideBuilderReady[F] =
       new TextSlideBuilderReadyImpl(ctx, builder)
 
-
     override def content(content: String): TextSlideBuilderReady[F] =
       new TextSlideBuilderReadyImpl(ctx, builder.content(content))
 
@@ -337,6 +285,3 @@ private[lote] object BuilderDslAdapters {
       builder.build()
   }
 }
-
-
-

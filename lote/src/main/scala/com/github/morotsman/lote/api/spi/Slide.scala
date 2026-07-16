@@ -11,4 +11,3 @@ trait Slide[F[_]] {
 
   def userInput(input: UserInput): F[Unit]
 }
-

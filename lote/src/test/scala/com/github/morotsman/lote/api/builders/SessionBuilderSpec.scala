@@ -114,5 +114,3 @@ class SessionBuilderSpec extends FunSuite {
     }
   }
 }
-
-

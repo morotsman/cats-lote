@@ -55,18 +55,19 @@ private[lote] object FallingCharactersTransition {
       }
 
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
-      CharactersTransition.create(
-        selectAccelerator = selectAccelerator,
-        setupPosition = setupPosition,
-        getNewIndex = getNewIndex,
-        console = console,
-        ticker = ticker,
-        animationSettings = animationSettings
-      ).transition(from, to)
+      CharactersTransition
+        .create(
+          selectAccelerator = selectAccelerator,
+          setupPosition = setupPosition,
+          getNewIndex = getNewIndex,
+          console = console,
+          ticker = ticker,
+          animationSettings = animationSettings
+        )
+        .transition(from, to)
 
     }
 
     override def userInput(input: UserInput): F[Unit] = Monad[F].unit
   }
 }
-

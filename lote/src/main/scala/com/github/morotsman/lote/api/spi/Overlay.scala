@@ -15,4 +15,3 @@ trait Overlay[F[_]] {
     F.unit
   }
 }
-

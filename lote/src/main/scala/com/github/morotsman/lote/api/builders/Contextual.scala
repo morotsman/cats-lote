@@ -28,6 +28,3 @@ object ContextualF {
   def apply[F[_], A](f: SlideContext[F] => F[A]): ContextualF[F, A] =
     new ContextualF(f)
 }
-
-
-

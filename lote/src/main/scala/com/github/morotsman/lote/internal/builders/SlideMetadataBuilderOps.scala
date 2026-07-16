@@ -77,5 +77,3 @@ private[lote] trait SlideMetadataBuilderOps[F[_], Self] {
   final def title(title: String): Self =
     withTitle(title)
 }
-
-

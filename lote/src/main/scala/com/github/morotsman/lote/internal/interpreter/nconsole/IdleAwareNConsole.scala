@@ -53,4 +53,3 @@ private[lote] object IdleAwareNConsole {
       override def context: F[Screen] = underlying.context
     }
 }
-

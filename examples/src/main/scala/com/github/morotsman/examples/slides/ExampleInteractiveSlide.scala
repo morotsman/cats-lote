@@ -4,9 +4,17 @@ import cats.Monad
 import cats.effect.{Ref, Temporal}
 import cats.effect.std.Queue
 import cats.implicits._
-import com.github.morotsman.lote.api.{Alignment, AnimationSettings, Character, HorizontalAlignment, ScreenAdjusted, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  AnimationSettings,
+  Character,
+  HorizontalAlignment,
+  ScreenAdjusted,
+  UserInput,
+  VerticalAlignment
+}
 import com.github.morotsman.lote.api.builders.ContextualF
-import com.github.morotsman.lote.api.support.FixedStep
+import com.github.morotsman.lote.api.support.{Clock, FixedStep}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription}
 
 import scala.util.Random
@@ -93,7 +101,7 @@ object Animator {
       console: NConsole[F],
       ticker: Ticker[F],
       animationSettings: AnimationSettings
-  ): F[Animator[F]] = {
+  )(implicit clock: Clock[F]): F[Animator[F]] = {
 
     for {
       queue <- Queue.unbounded[F, Direction]
@@ -200,6 +208,50 @@ object Animator {
       private def hasSelfCollision(worm: Worm): Boolean =
         worm.segments.map(_.index).size != worm.segments.map(_.index).toSet.size
 
+      // ASCII art death screen, loosely inspired by a certain game
+      // that believes dying is a core gameplay feature.
+      private val youDiedArt: String =
+        """
+          |
+          |
+          |▓██   ██▓ ▒█████   █    ██    ▓█████▄  ██▓▓█████ ▓█████▄
+          | ▒██  ██▒▒██▒  ██▒ ██  ▓██▒   ▒██▀ ██▌▓██▒▓█   ▀ ▒██▀ ██▌
+          |  ▒██ ██░▒██░  ██▒▓██  ▒██░   ░██   █▌▒██▒▒███   ░██   █▌
+          |  ░ ▐██▓░▒██   ██░▓▓█  ░██░   ░▓█▄   ▌░██░▒▓█  ▄ ░▓█▄   ▌
+          |  ░ ██▒▓░░ ████▓▒░▒▒█████▓    ░▒████▓ ░██░░▒████▒ ░▒████▓
+          |   ██▒▒▒ ░ ▒░▒░▒░ ░▒▓▒ ▒ ▒    ▒▒▓  ▒ ░▓  ░░ ▒░ ░  ▒▒▓  ▒
+          | ▓██ ░▒░   ░ ▒ ▒░ ░░▒░ ░ ░    ░ ▒  ▒  ▒ ░ ░ ░  ░  ░ ▒  ▒
+          | ▒ ▒ ░░  ░ ░ ░ ▒   ░░░ ░ ░    ░ ░  ░  ▒ ░   ░     ░ ░  ░
+          | ░ ░       ░ ░       ░            ░  ░       ░  ░      ░
+          | ░ ░                            ░                    ░
+          |
+          |""".stripMargin
+
+      private def renderDeathScreen(
+          screenWidth: Int,
+          screenHeight: Int
+      ): ScreenAdjusted = {
+        val artLines = youDiedArt.split("\n", -1).toVector
+        val artHeight = artLines.length
+        val artWidth = artLines.map(_.length).maxOption.getOrElse(0)
+
+        val topPad = math.max(0, (screenHeight - artHeight) / 2)
+        val leftPad = math.max(0, (screenWidth - artWidth) / 2)
+
+        def fitLine(line: String): String = {
+          val padded = (" " * leftPad) + line
+          val truncated = padded.take(screenWidth)
+          truncated + (" " * math.max(0, screenWidth - truncated.length))
+        }
+
+        val emptyLine = " " * screenWidth
+        val lines = Vector.fill(topPad)(emptyLine) ++
+          artLines.map(fitLine) ++
+          Vector.fill(math.max(0, screenHeight - topPad - artHeight))(emptyLine)
+
+        ScreenAdjusted(lines.take(screenHeight).mkString("\n"))
+      }
+
       private def renderScreen(
           s: AnimatorState,
           screenWidth: Int
@@ -227,7 +279,11 @@ object Animator {
             _ <- maybeState.traverse_ { s =>
               if (!s.running) Monad[F].unit
               else if (hasSelfCollision(s.worm)) {
-                stateRef.update(_.map(_.copy(running = false)))
+                for {
+                  screen <- console.context
+                  _ <- console.writeString(renderDeathScreen(screen.screenWidth, screen.screenHeight))
+                  _ <- stateRef.update(_.map(_.copy(running = false)))
+                } yield ()
               } else {
                 for {
                   screen <- console.context
@@ -245,11 +301,12 @@ object Animator {
                         )
                       }
                   }
-                  _ <- if (updatedState.running)
-                    console.writeString(
-                      renderScreen(updatedState, screen.screenWidth)
-                    )
-                  else Monad[F].unit
+                  _ <-
+                    if (updatedState.running)
+                      console.writeString(
+                        renderScreen(updatedState, screen.screenWidth)
+                      )
+                    else Monad[F].unit
                   _ <- stateRef.set(Some(updatedState))
                 } yield ()
               }

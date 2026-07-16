@@ -9,8 +9,20 @@ import com.github.morotsman.lote.internal.builders.{
   SlideBuilder => InternalSlideBuilder,
   TextSlideBuilder => InternalTextSlideBuilder
 }
-import com.github.morotsman.lote.internal.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter, PresentationExecutorInterpreter}
-import com.github.morotsman.lote.internal.interpreter.middleware.{Idle, Middleware, NavigationSubscriber, ProgressBar, QuickNavigation, Timer}
+import com.github.morotsman.lote.internal.algebra.IdleDetector
+import com.github.morotsman.lote.internal.interpreter.{
+  IdleDetectorConfig,
+  IdleDetectorInterpreter,
+  PresentationExecutorInterpreter
+}
+import com.github.morotsman.lote.internal.interpreter.middleware.{
+  Idle,
+  Middleware,
+  NavigationSubscriber,
+  ProgressBar,
+  QuickNavigation,
+  Timer
+}
 import com.github.morotsman.lote.internal.interpreter.nconsole.{IdleAwareNConsole, NConsoleInterpreter}
 import com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreter
 import com.github.morotsman.lote.internal.model.Presentation
@@ -124,7 +136,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     * Example:
     * {{{
     * .addTextSlide { builder =>
-      *   builder.content("Hello").morphTransition()
+    *   builder.content("Hello").morphTransition()
     * }
     * }}}
     */
@@ -179,7 +191,6 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
   /** Adds a custom overlay that doesn't require effectful construction. */
   def addOverlay(overlay: Overlay[F]): SessionBuilder[F] =
     this.copy(customOverlays = customOverlays :+ Async[F].pure(overlay))
-
 
   /** Sets a callback invoked on each slide change with the new slide index. */
   def onSlideChanged(callback: Int => F[Unit]): SessionBuilder[F] =
@@ -245,79 +256,117 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
         baseConsole =
           if (idleEnabled) IdleAwareNConsole.wrap[F](rawConsole, idleDetector)
           else rawConsole
-
-        // Create middleware layer
-        consoleWithMiddleware <- Middleware.make[F](baseConsole, ticker)
-
-        // Build the presentation with the middleware-wrapped console
-        presentation <- buildPresentation(consoleWithMiddleware, ticker)
-        totalSlides = presentation.slideSpecifications.length
-
-        // Build middleware overlays
-        timerOverlay <- timerDuration.traverse(d => Timer.make[F](d))
-        progressBar <-
-          if (progressBarEnabled)
-            ProgressBar
-              .make[F](totalSlides, milestones = progressBarMilestones)
-              .map(Some(_))
-          else Monad[F].pure(None: Option[ProgressBar[F]])
-        quickNavigation <-
-          if (quickNavigationEnabled) QuickNavigation.make[F]().map(Some(_))
-          else Monad[F].pure(None: Option[QuickNavigation[F]])
-        idleOverlay <-
-          if (idleEnabled) Idle.make[F](idleDetector).map(Some(_))
-          else Monad[F].pure(None: Option[Idle[F]])
-        customOverlayInstances <- customOverlays.sequence
-
-        // Collect all overlays and register with middleware
-        allOverlays = List(
-          progressBar.map(x => x: Overlay[F]),
-          timerOverlay,
-          quickNavigation.map(x => x: Overlay[F]),
-        ).flatten ++ customOverlayInstances ++ idleOverlay.toList
-        _ <- consoleWithMiddleware.addOverlays(allOverlays)
-
-        // Wire up quick navigation titles
-        _ <- quickNavigation match {
-          case Some(qn) => qn.setTitles(presentation.titles)
-          case None     => Monad[F].unit
-        }
-
-        // Create executor with slide-change callbacks
-        executor <- {
-          implicit val mc: NConsole[F] = consoleWithMiddleware
-          PresentationExecutorInterpreter.make[F](
-            presentation,
-            { index =>
-              val progressUpdate = progressBar match {
-                case Some(pb) => pb.setCurrentSlide(index)
-                case None     => Monad[F].unit
-              }
-              val idleNotify =
-                if (idleEnabled) idleDetector.notifyActivity()
-                else Monad[F].unit
-              val quickNavigationNotify = quickNavigation match {
-                case Some(qn) => qn.onSlideChange(index)
-                case None     => Monad[F].unit
-              }
-              val userCallback = onSlideChange.fold(Monad[F].unit)(_(index))
-              progressUpdate *> idleNotify *> quickNavigationNotify *> userCallback
-            }
-          )
-        }
-
-        // Wire quick navigation to executor
-        _ <- quickNavigation match {
-          case Some(qn) =>
-            qn.subscribe(NavigationSubscriber(id = 1L, callback = index => executor.setSlide(index))).void
-          case None => Monad[F].unit
-        }
-
-        // Start the presentation loop
-        _ <- executor.start()
+        _ <- runSession(baseConsole, ticker, Some(idleDetector))
       } yield ()
     }
   }
+
+  /** Builds and runs the presentation session using the provided console and ticker.
+    *
+    * This is the test-friendly counterpart to `run()`. Instead of creating a real terminal and ticker, it accepts
+    * external implementations — typically `TestConsole` and `TestTicker` from the testkit.
+    *
+    * Pre-load user inputs (including an `Esc` key to terminate) via `TestConsole` before calling this method, otherwise
+    * the presentation loop will keep reading until it runs out of inputs.
+    *
+    * Idle detection is not supported in this mode — `withIdleAnimation()` settings are ignored.
+    *
+    * Example:
+    * {{{
+    * for {
+    *   harness <- SlideTestHarness.make[IO](screen = Screen(80, 24), inputs = List(Key(SpecialKey.Esc)))
+    *   _ <- SessionBuilder[IO]()
+    *     .addOverlay(InputStatusOverlay.make[IO]())
+    *     .addTextSlide(_.content("Hello").title("Slide 1"))
+    *     .runWith(harness.console, harness.ticker)
+    *   written <- harness.writtenFrames
+    * } yield assert(written.nonEmpty)
+    * }}}
+    *
+    * Requires at least one slide to have been added.
+    */
+  def runWith(console: NConsole[F], ticker: Ticker[F]): F[Unit] = {
+    require(slideSteps.nonEmpty, "At least one slide must be added before running the presentation")
+    runSession(console, ticker, idleDetector = None)
+  }
+
+  private def runSession(
+      baseConsole: NConsole[F],
+      ticker: Ticker[F],
+      idleDetector: Option[IdleDetector[F]]
+  ): F[Unit] =
+    for {
+      // Create middleware layer
+      consoleWithMiddleware <- Middleware.make[F](baseConsole, ticker)
+
+      // Build the presentation with the middleware-wrapped console
+      presentation <- buildPresentation(consoleWithMiddleware, ticker)
+      totalSlides = presentation.slideSpecifications.length
+
+      // Build middleware overlays
+      timerOverlay <- timerDuration.traverse(d => Timer.make[F](d))
+      progressBar <-
+        if (progressBarEnabled)
+          ProgressBar
+            .make[F](totalSlides, milestones = progressBarMilestones)
+            .map(Some(_))
+        else Monad[F].pure(None: Option[ProgressBar[F]])
+      quickNavigation <-
+        if (quickNavigationEnabled) QuickNavigation.make[F]().map(Some(_))
+        else Monad[F].pure(None: Option[QuickNavigation[F]])
+      idleOverlay <-
+        if (idleEnabled && idleDetector.isDefined) Idle.make[F](idleDetector.get).map(Some(_))
+        else Monad[F].pure(None: Option[Idle[F]])
+      customOverlayInstances <- customOverlays.sequence
+
+      // Collect all overlays and register with middleware
+      allOverlays = List(
+        progressBar.map(x => x: Overlay[F]),
+        timerOverlay,
+        quickNavigation.map(x => x: Overlay[F])
+      ).flatten ++ customOverlayInstances ++ idleOverlay.toList
+      _ <- consoleWithMiddleware.addOverlays(allOverlays)
+
+      // Wire up quick navigation titles
+      _ <- quickNavigation match {
+        case Some(qn) => qn.setTitles(presentation.titles)
+        case None     => Monad[F].unit
+      }
+
+      // Create executor with slide-change callbacks
+      executor <- {
+        implicit val mc: NConsole[F] = consoleWithMiddleware
+        PresentationExecutorInterpreter.make[F](
+          presentation,
+          { index =>
+            val progressUpdate = progressBar match {
+              case Some(pb) => pb.setCurrentSlide(index)
+              case None     => Monad[F].unit
+            }
+            val idleNotify = idleDetector match {
+              case Some(id) if idleEnabled => id.notifyActivity()
+              case _                       => Monad[F].unit
+            }
+            val quickNavigationNotify = quickNavigation match {
+              case Some(qn) => qn.onSlideChange(index)
+              case None     => Monad[F].unit
+            }
+            val userCallback = onSlideChange.fold(Monad[F].unit)(_(index))
+            progressUpdate *> idleNotify *> quickNavigationNotify *> userCallback
+          }
+        )
+      }
+
+      // Wire quick navigation to executor
+      _ <- quickNavigation match {
+        case Some(qn) =>
+          qn.subscribe(NavigationSubscriber(id = 1L, callback = index => executor.setSlide(index))).void
+        case None => Monad[F].unit
+      }
+
+      // Start the presentation loop
+      _ <- executor.start()
+    } yield ()
 
   private def buildPresentation(console: NConsole[F], ticker: Ticker[F]): F[Presentation[F]] = {
     implicit val nc: NConsole[F] = console
@@ -397,4 +446,3 @@ object SessionBuilder {
       f: BuiltEffectfulSlideStep[F]
   ) extends SlideStep[F]
 }
-
