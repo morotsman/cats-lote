@@ -2,7 +2,7 @@ package com.github.morotsman.examples
 
 import cats.effect._
 import com.github.morotsman.examples.slides.{Bye, ExampleInteractiveSlide, SweepRightTransition}
-import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Milestone, VerticalAlignment}
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Milestone, TerminalPlatform, VerticalAlignment}
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 import scala.concurrent.duration.DurationInt
@@ -10,7 +10,8 @@ import scala.concurrent.duration.DurationInt
 object AdvancedExample extends IOApp.Simple {
 
   override def run: IO[Unit] = {
-    SessionBuilder[IO]()
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      SessionBuilder[IO]()
       .withTimer(30.minutes)
       .withProgressBar(
         List(
@@ -328,6 +329,7 @@ object AdvancedExample extends IOApp.Simple {
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
       }
       .run()
+    }
   }
 
 }

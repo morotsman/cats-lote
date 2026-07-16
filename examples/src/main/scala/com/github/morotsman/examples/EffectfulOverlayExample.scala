@@ -2,6 +2,7 @@ package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
 import com.github.morotsman.examples.slides.InputStatusOverlay
+import com.github.morotsman.lote.api.TerminalPlatform
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object EffectfulOverlayExample extends IOApp.Simple {
@@ -68,5 +69,8 @@ object EffectfulOverlayExample extends IOApp.Simple {
         ).title("When To Choose It")
       }
 
-  override def run: IO[Unit] = session.run()
+  override def run: IO[Unit] =
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      session.run()
+    }
 }

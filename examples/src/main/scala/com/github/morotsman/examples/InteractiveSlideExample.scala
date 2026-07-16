@@ -2,12 +2,14 @@ package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
 import com.github.morotsman.examples.slides.ExampleInteractiveSlide
+import com.github.morotsman.lote.api.TerminalPlatform
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object InteractiveSlideExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
-    SessionBuilder[IO]()
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      SessionBuilder[IO]()
       .withFrameRate(60)
       .withAnimationFrameRate(25)
       .addTextSlide {
@@ -77,4 +79,4 @@ object InteractiveSlideExample extends IOApp.Simple {
         ).title("What To Tweak")
       }
       .run()
-}
+    }}

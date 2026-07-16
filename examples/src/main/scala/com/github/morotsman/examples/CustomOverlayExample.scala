@@ -2,12 +2,14 @@ package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
 import com.github.morotsman.examples.slides.CornerLabelOverlay
+import com.github.morotsman.lote.api.TerminalPlatform
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object CustomOverlayExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
-    SessionBuilder[IO]()
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      SessionBuilder[IO]()
       .addOverlay(CornerLabelOverlay[IO]("CUSTOM OVERLAY"))
       .addTextSlide {
         _.content(
@@ -65,4 +67,4 @@ object CustomOverlayExample extends IOApp.Simple {
         ).title("What To Try Next")
       }
       .run()
-}
+    }}

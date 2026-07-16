@@ -6,3 +6,6 @@
 /lote/target/
 /examples/target/
 .DS_Store
+lote/js/target/
+lote/jvm/target
+browser-examples/target

@@ -1,7 +1,7 @@
 package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
-import com.github.morotsman.lote.api.Milestone
+import com.github.morotsman.lote.api.{Milestone, TerminalPlatform}
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 import scala.concurrent.duration.DurationInt
@@ -9,7 +9,8 @@ import scala.concurrent.duration.DurationInt
 object SessionFeaturesExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
-    SessionBuilder[IO]()
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      SessionBuilder[IO]()
       .withTimer(5.minutes)
       .withProgressBar(
         List(
@@ -61,4 +62,5 @@ object SessionFeaturesExample extends IOApp.Simple {
         ).title("What To Tweak")
       }
       .run()
+    }
 }
