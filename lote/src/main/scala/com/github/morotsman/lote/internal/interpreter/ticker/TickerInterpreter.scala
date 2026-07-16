@@ -28,7 +28,7 @@ private[lote] object TickerInterpreter {
         private def tickLoop(): F[Unit] = for {
           _ <- Temporal[F].sleep(interval)
           s <- state.get
-          _ <- s.subscribers.traverse_(_.callback)
+          _ <- s.subscribers.parTraverse_(_.callback.attempt.void)
           running <- state.get.map(_.running)
           _ <- if (running) tickLoop() else Temporal[F].unit
         } yield ()

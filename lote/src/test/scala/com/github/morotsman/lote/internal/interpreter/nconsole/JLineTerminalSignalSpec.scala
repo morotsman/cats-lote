@@ -1,6 +1,8 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
 import cats.effect.IO
+import com.github.morotsman.lote.api.Screen
+import com.github.morotsman.lote.api.spi.{Terminal => TerminalAlgebra}
 import munit.CatsEffectSuite
 import sun.misc.{Signal, SignalHandler}
 
@@ -11,14 +13,13 @@ class JLineTerminalSignalSpec extends CatsEffectSuite {
   /** A Terminal implementation that tracks close() calls and allows us to verify cleanup behavior without needing a
     * real terminal.
     */
-  class TrackingTerminal extends Terminal {
+  class TrackingTerminal extends TerminalAlgebra[IO] {
     @volatile var closed = false
-    override def read(timeoutInMillis: Long): Int = 65534 // always timeout
-    override val width: Int = 80
-    override val height: Int = 24
-    override def flush(): Unit = ()
-    override def write(s: String): Unit = ()
-    override def close(): Unit = { closed = true }
+    override def read(timeoutInMillis: Long): IO[Int] = IO.pure(65534) // always timeout
+    override def size: IO[Screen] = IO.pure(Screen(80, 24))
+    override def flush(): IO[Unit] = IO.unit
+    override def write(s: String): IO[Unit] = IO.unit
+    override def close(): IO[Unit] = IO { closed = true }
   }
 
   test("Resource releases NConsole (calls close) on normal completion") {

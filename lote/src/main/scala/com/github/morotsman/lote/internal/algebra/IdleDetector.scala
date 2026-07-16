@@ -3,6 +3,9 @@ package com.github.morotsman.lote.internal.algebra
 import cats.Applicative
 import com.github.morotsman.lote.api.UserInput
 
+import scala.annotation.implicitNotFound
+
+@implicitNotFound("No implicit IdleDetector[${F}] found. Use IdleDetector.noop[${F}] for a default, or wire one via SessionBuilder.")
 private[lote] trait IdleDetector[F[_]] {
 
   /** Signal that user activity occurred (e.g. slide navigation) */
