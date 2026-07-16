@@ -1,13 +1,21 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
+import cats.effect.{Resource, Sync}
+import com.github.morotsman.lote.api.Screen
+import com.github.morotsman.lote.api.spi.{Terminal => TerminalAlgebra}
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.InfoCmp.Capability
 import sun.misc.{Signal, SignalHandler}
 
-/** JLine-based Terminal implementation. Initializes raw mode and clears the screen.
+/** JLine-based Terminal implementation. Initializes raw mode, enables mouse tracking, and clears the screen.
   */
 private[lote] object JLineTerminal {
-  def make(): Terminal = {
+
+  /** Creates a JLine-backed `Terminal[F]` as a `Resource` that automatically restores terminal state on release. */
+  def resource[F[_]: Sync](): Resource[F, TerminalAlgebra[F]] =
+    Resource.make(Sync[F].blocking(createTerminal[F]()))(_.close())
+
+  private def createTerminal[F[_]: Sync](): TerminalAlgebra[F] = {
     val jlineTerminal = TerminalBuilder.terminal()
     val reader = jlineTerminal.reader()
     jlineTerminal.enterRawMode()
@@ -69,40 +77,46 @@ private[lote] object JLineTerminal {
     val renderLock = new AnyRef
     var previousFrame = Vector.empty[String]
 
-    new Terminal {
-      override def read(timeoutInMillis: Long): Int =
-        reader.read(timeoutInMillis)
-      override val width: Int = jlineTerminal.getWidth
-      override val height: Int = jlineTerminal.getHeight
-      override def flush(): Unit = jlineTerminal.flush()
-      override def write(s: String): Unit = {
-        renderLock.synchronized {
-          val (nextFrame, command): (Vector[String], String) =
-            com.github.morotsman.lote.internal.interpreter.nconsole.AnsiFrameRenderer
-              .render(previousFrame, s, width, height)
-          previousFrame = nextFrame
-          if (command.nonEmpty) {
-            writer.print(command)
-            writer.flush()
+    new TerminalAlgebra[F] {
+      override def read(timeoutInMillis: Long): F[Int] =
+        Sync[F].blocking(reader.read(timeoutInMillis))
+
+      override def size: F[Screen] =
+        Sync[F].blocking(Screen(screenWidth = jlineTerminal.getWidth, screenHeight = jlineTerminal.getHeight))
+
+      override def write(s: String): F[Unit] =
+        Sync[F].blocking {
+          renderLock.synchronized {
+            val (nextFrame, command): (Vector[String], String) =
+              AnsiFrameRenderer.render(previousFrame, s, jlineTerminal.getWidth, jlineTerminal.getHeight)
+            previousFrame = nextFrame
+            if (command.nonEmpty) {
+              writer.print(command)
+              writer.flush()
+            }
           }
         }
-      }
-      override def close(): Unit = {
-        // Restore previous signal handler
-        try { Signal.handle(new Signal("INT"), prevHandler) }
-        catch { case _: Throwable => }
-        // Remove shutdown hook since we're closing cleanly
-        try { Runtime.getRuntime.removeShutdownHook(shutdownHook) }
-        catch { case _: IllegalStateException => }
-        // Disable mouse tracking before closing
-        val w = jlineTerminal.writer()
-        w.print("\u001b[?25h")
-        w.print("\u001b[?1003l")
-        w.print("\u001b[?1000l")
-        w.print("\u001b[?1006l")
-        w.flush()
-        jlineTerminal.close()
-      }
+
+      override def flush(): F[Unit] =
+        Sync[F].blocking(jlineTerminal.flush())
+
+      override def close(): F[Unit] =
+        Sync[F].blocking {
+          // Restore previous signal handler
+          try { Signal.handle(new Signal("INT"), prevHandler) }
+          catch { case _: Throwable => }
+          // Remove shutdown hook since we're closing cleanly
+          try { Runtime.getRuntime.removeShutdownHook(shutdownHook) }
+          catch { case _: IllegalStateException => }
+          // Disable mouse tracking before closing
+          val w = jlineTerminal.writer()
+          w.print("\u001b[?25h")
+          w.print("\u001b[?1003l")
+          w.print("\u001b[?1000l")
+          w.print("\u001b[?1006l")
+          w.flush()
+          jlineTerminal.close()
+        }
     }
   }
 }

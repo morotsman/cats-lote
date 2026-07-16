@@ -116,4 +116,19 @@ class TickerInterpreterSpec extends CatsEffectSuite {
       _ <- ticker.stop
     } yield ()
   }
+
+  test("a failing subscriber does not stall other subscribers") {
+    for {
+      counter <- Ref[IO].of(0)
+      ticker <- TickerInterpreter.make[IO](interval = 20.millis)
+      _ <- ticker.subscribe(IO.raiseError(new RuntimeException("boom")))
+      _ <- ticker.subscribe(counter.update(_ + 1))
+      _ <- ticker.start
+      _ <- IO.sleep(100.millis)
+      _ <- ticker.stop
+      count <- counter.get
+    } yield {
+      assert(count >= 2, s"Expected at least 2 ticks despite failing subscriber, got $count")
+    }
+  }
 }

@@ -9,7 +9,7 @@ import com.github.morotsman.lote.internal.builders.{
   SlideBuilder => InternalSlideBuilder,
   TextSlideBuilder => InternalTextSlideBuilder
 }
-import com.github.morotsman.lote.internal.algebra.IdleDetector
+import com.github.morotsman.lote.internal.algebra.{Feature, IdleDetector, PresentationExecutor}
 import com.github.morotsman.lote.internal.interpreter.{
   IdleDetectorConfig,
   IdleDetectorInterpreter,
@@ -48,6 +48,10 @@ class SlideContext[F[_]](
   * Instead of manually creating a ticker, idle detector, overlay layer, and presentation executor, you can use the
   * SessionBuilder to configure everything declaratively and then call `run()`.
   *
+  * Features (Timer, ProgressBar, QuickNavigation, custom overlays) are stored in a feature registry. Each feature
+  * self-registers its overlay, slide-change callback, and any lifecycle hooks, so the execution loop processes them
+  * uniformly without feature-specific wiring.
+  *
   * The nested slide-builder lambdas are type-checked:
   *   - `addTextSlide(...)` requires a `TextSlideBuilder` that has had `content(...)` supplied
   *   - `addSlide(...)` / `addSlideF(...)` require a `SlideBuilder` that has had `addSlide(...)` supplied
@@ -74,13 +78,9 @@ class SlideContext[F[_]](
   */
 case class SessionBuilder[F[_]: Async: Ref.Make] private (
     private val slideSteps: List[SessionBuilder.SlideStep[F]],
-    private val timerDuration: Option[FiniteDuration],
-    private val progressBarEnabled: Boolean,
-    private val progressBarMilestones: List[Milestone],
-    private val quickNavigationEnabled: Boolean,
+    private val featureFactories: List[Presentation[F] => F[Feature[F]]],
     private val idleEnabled: Boolean,
     private val idleDetectorConfig: IdleDetectorConfig,
-    private val customOverlays: List[F[Overlay[F]]],
     private val onSlideChange: Option[Int => F[Unit]],
     private val tickerInterval: FiniteDuration,
     private val animationStep: FiniteDuration
@@ -150,11 +150,11 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
       }
     }))
 
-  // -- Overlay configuration --
+  // -- Feature registration --
 
   /** Adds a countdown timer overlay showing remaining presentation time. */
   def withTimer(allocatedTime: FiniteDuration): SessionBuilder[F] =
-    this.copy(timerDuration = Some(allocatedTime))
+    registerFeature(_ => Timer.make[F](allocatedTime).map(Feature.fromOverlay[F]))
 
   /** Adds a progress bar overlay at the bottom of the screen.
     *
@@ -162,11 +162,32 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     *   optional named markers to display above the bar for sections like "Intro", "Demo", or "Q&A"
     */
   def withProgressBar(milestones: List[Milestone] = List.empty): SessionBuilder[F] =
-    this.copy(progressBarEnabled = true, progressBarMilestones = milestones)
+    registerFeature(presentation =>
+      ProgressBar
+        .make[F](presentation.slideSpecifications.length, milestones = milestones)
+        .map { pb =>
+          new Feature[F] {
+            val overlay: Overlay[F] = pb
+            def onSlideChange(index: Int): F[Unit] = pb.setCurrentSlide(index)
+            def onPresentationBuilt(p: Presentation[F]): F[Unit] = Monad[F].unit
+            def onExecutorReady(executor: PresentationExecutor[F]): F[Unit] = Monad[F].unit
+          }
+        }
+    )
 
   /** Adds a quick navigation overlay (press 'N' to toggle, arrows + Enter to navigate). */
   def withQuickNavigation(): SessionBuilder[F] =
-    this.copy(quickNavigationEnabled = true)
+    registerFeature(_ =>
+      QuickNavigation.make[F]().map { qn =>
+        new Feature[F] {
+          val overlay: Overlay[F] = qn
+          def onSlideChange(index: Int): F[Unit] = qn.onSlideChange(index)
+          def onPresentationBuilt(p: Presentation[F]): F[Unit] = qn.setTitles(p.titles)
+          def onExecutorReady(executor: PresentationExecutor[F]): F[Unit] =
+            qn.subscribe(NavigationSubscriber(1L, index => executor.setSlide(index))).void
+        }
+      }
+    )
 
   /** Adds an idle screen animation that activates when the presenter stops interacting.
     *
@@ -186,11 +207,11 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     * Use this for overlays that require effectful construction (e.g., those that allocate Refs).
     */
   def addOverlay(overlay: F[Overlay[F]]): SessionBuilder[F] =
-    this.copy(customOverlays = customOverlays :+ overlay)
+    registerFeature(_ => overlay.map(Feature.fromOverlay[F]))
 
   /** Adds a custom overlay that doesn't require effectful construction. */
   def addOverlay(overlay: Overlay[F]): SessionBuilder[F] =
-    this.copy(customOverlays = customOverlays :+ Async[F].pure(overlay))
+    registerFeature(_ => Async[F].pure(Feature.fromOverlay[F](overlay)))
 
   /** Sets a callback invoked on each slide change with the new slide index. */
   def onSlideChanged(callback: Int => F[Unit]): SessionBuilder[F] =
@@ -230,6 +251,11 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
   def withAnimationFrameRate(frameRate: Double): SessionBuilder[F] =
     this.copy(animationStep = SessionBuilder.fpsToDuration(frameRate))
 
+  // -- Internal --
+
+  private def registerFeature(factory: Presentation[F] => F[Feature[F]]): SessionBuilder[F] =
+    this.copy(featureFactories = featureFactories :+ factory)
+
   // -- Execution --
 
   /** Builds and runs the presentation session. Returns when the presenter leaves the presentation, typically by
@@ -240,8 +266,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     *   - Ticker for animation
     *   - Idle detection (if configured)
     *   - Middleware layer with overlays
-    *   - Quick navigation wiring
-    *   - Progress bar wiring
+    *   - Feature registry lifecycle
     *   - Presentation execution loop
     *
     * Requires at least one slide to have been added.
@@ -301,68 +326,45 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
 
       // Build the presentation with the middleware-wrapped console
       presentation <- buildPresentation(consoleWithMiddleware, ticker)
-      totalSlides = presentation.slideSpecifications.length
 
-      // Build middleware overlays
-      timerOverlay <- timerDuration.traverse(d => Timer.make[F](d))
-      progressBar <-
-        if (progressBarEnabled)
-          ProgressBar
-            .make[F](totalSlides, milestones = progressBarMilestones)
-            .map(Some(_))
-        else Monad[F].pure(None: Option[ProgressBar[F]])
-      quickNavigation <-
-        if (quickNavigationEnabled) QuickNavigation.make[F]().map(Some(_))
-        else Monad[F].pure(None: Option[QuickNavigation[F]])
-      idleOverlay <-
-        if (idleEnabled && idleDetector.isDefined) Idle.make[F](idleDetector.get).map(Some(_))
-        else Monad[F].pure(None: Option[Idle[F]])
-      customOverlayInstances <- customOverlays.sequence
+      // Create all registered features
+      registeredFeatures <- featureFactories.traverse(_(presentation))
 
-      // Collect all overlays and register with middleware
-      allOverlays = List(
-        progressBar.map(x => x: Overlay[F]),
-        timerOverlay,
-        quickNavigation.map(x => x: Overlay[F])
-      ).flatten ++ customOverlayInstances ++ idleOverlay.toList
-      _ <- consoleWithMiddleware.addOverlays(allOverlays)
+      // Create idle feature if enabled (special: needs IdleDetector from run())
+      idleFeature <-
+        if (idleEnabled && idleDetector.isDefined)
+          Idle.make[F](idleDetector.get).map { idle =>
+            Some(new Feature[F] {
+              val overlay: Overlay[F] = idle
+              def onSlideChange(index: Int): F[Unit] = idleDetector.get.notifyActivity()
+              def onPresentationBuilt(p: Presentation[F]): F[Unit] = Monad[F].unit
+              def onExecutorReady(executor: PresentationExecutor[F]): F[Unit] = Monad[F].unit
+            })
+          }
+        else Monad[F].pure(None: Option[Feature[F]])
 
-      // Wire up quick navigation titles
-      _ <- quickNavigation match {
-        case Some(qn) => qn.setTitles(presentation.titles)
-        case None     => Monad[F].unit
-      }
+      allFeatures = registeredFeatures ++ idleFeature.toList
 
-      // Create executor with slide-change callbacks
+      // Register all overlays with middleware
+      _ <- consoleWithMiddleware.addOverlays(allFeatures.map(_.overlay))
+
+      // Notify features that presentation is built
+      _ <- allFeatures.traverse_(_.onPresentationBuilt(presentation))
+
+      // Create executor with composed slide-change callbacks
       executor <- {
         implicit val mc: NConsole[F] = consoleWithMiddleware
         PresentationExecutorInterpreter.make[F](
           presentation,
           { index =>
-            val progressUpdate = progressBar match {
-              case Some(pb) => pb.setCurrentSlide(index)
-              case None     => Monad[F].unit
-            }
-            val idleNotify = idleDetector match {
-              case Some(id) if idleEnabled => id.notifyActivity()
-              case _                       => Monad[F].unit
-            }
-            val quickNavigationNotify = quickNavigation match {
-              case Some(qn) => qn.onSlideChange(index)
-              case None     => Monad[F].unit
-            }
-            val userCallback = onSlideChange.fold(Monad[F].unit)(_(index))
-            progressUpdate *> idleNotify *> quickNavigationNotify *> userCallback
+            allFeatures.traverse_(_.onSlideChange(index)) *>
+              onSlideChange.fold(Monad[F].unit)(_(index))
           }
         )
       }
 
-      // Wire quick navigation to executor
-      _ <- quickNavigation match {
-        case Some(qn) =>
-          qn.subscribe(NavigationSubscriber(id = 1L, callback = index => executor.setSlide(index))).void
-        case None => Monad[F].unit
-      }
+      // Notify features that executor is ready (e.g., QuickNavigation subscribes here)
+      _ <- allFeatures.traverse_(_.onExecutorReady(executor))
 
       // Start the presentation loop
       _ <- executor.start()
@@ -419,13 +421,9 @@ object SessionBuilder {
   def apply[F[_]: Async: Ref.Make](): SessionBuilder[F] =
     new SessionBuilder[F](
       slideSteps = List.empty,
-      timerDuration = None,
-      progressBarEnabled = false,
-      progressBarMilestones = List.empty,
-      quickNavigationEnabled = false,
+      featureFactories = List.empty,
       idleEnabled = false,
       idleDetectorConfig = IdleDetectorConfig(),
-      customOverlays = List.empty,
       onSlideChange = None,
       tickerInterval = 40.millis,
       animationStep = AnimationSettings.DefaultStep
