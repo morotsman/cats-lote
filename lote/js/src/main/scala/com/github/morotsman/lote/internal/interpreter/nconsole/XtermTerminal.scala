@@ -31,6 +31,16 @@ class XtermJs(options: js.UndefOr[js.Object]) extends js.Object {
   def open(element: dom.HTMLElement): Unit = js.native
   def dispose(): Unit = js.native
   def focus(): Unit = js.native
+  def loadAddon(addon: js.Any): Unit = js.native
+}
+
+/** Scala.js facade for the xterm.js FitAddon (xterm-addon-fit). */
+@js.native
+@JSGlobal("FitAddon.FitAddon")
+@nowarn("cat=unused")
+class XtermFitAddon() extends js.Object {
+  def fit(): Unit = js.native
+  def proposeDimensions(): js.Dynamic = js.native
 }
 
 /** Browser-backed `Terminal[F]` implementation using xterm.js.
@@ -63,7 +73,18 @@ object XtermTerminal {
           convertEol = true
         )
         val t = new XtermJs(opts.asInstanceOf[js.UndefOr[js.Object]])
+
+        // Load the fit addon so the terminal fills its container
+        val fitAddon = new XtermFitAddon()
+        t.loadAddon(fitAddon)
+
         t.open(container)
+
+        // Fit to container size immediately
+        fitAddon.fit()
+
+        // Re-fit whenever the browser window is resized
+        dom.window.addEventListener("resize", (_: dom.Event) => fitAddon.fit())
 
         // Hide the cursor (presentation mode)
         t.write("\u001b[?25l")
