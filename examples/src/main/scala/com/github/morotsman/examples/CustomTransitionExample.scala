@@ -2,13 +2,14 @@ package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
 import com.github.morotsman.examples.slides.SweepRightTransition
-import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, VerticalAlignment}
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, TerminalPlatform, VerticalAlignment}
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object CustomTransitionExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
-    SessionBuilder[IO]()
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      SessionBuilder[IO]()
       .withFrameRate(60)
       .withAnimationFrameRate(30)
       .addTextSlide {
@@ -80,4 +81,5 @@ object CustomTransitionExample extends IOApp.Simple {
           .title("What To Tweak")
       }
       .run()
+    }
 }

@@ -1,0 +1,4 @@
+[warn] /Users/niklas.leopold/workspace/cats-lote/lote/shared/src/main/scala/com/github/morotsman/lote/testkit/SimulatedClock.scala:26:12: parameter F in class SimulatedClock is never used
+[warn] )(implicit F: Temporal[F])
+[warn]            ^
+[warn] one warning found

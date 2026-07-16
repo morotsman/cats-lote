@@ -1,13 +1,14 @@
 package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
-import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, VerticalAlignment}
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, TerminalPlatform, VerticalAlignment}
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object AlignmentExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
-    SessionBuilder[IO]()
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      SessionBuilder[IO]()
       .addTextSlide {
         _.content(
           """Alignment controls where slide content lands on the screen.
@@ -54,4 +55,4 @@ object AlignmentExample extends IOApp.Simple {
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
       }
       .run()
-}
+    }}

@@ -1,12 +1,14 @@
 package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
+import com.github.morotsman.lote.api.TerminalPlatform
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object TransitionsExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
-    SessionBuilder[IO]()
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      SessionBuilder[IO]()
       .addTextSlide {
         _.content(
           """Transitions are attached to the current slide with builder helpers like `.replaceTransition(...)`.
@@ -50,4 +52,4 @@ object TransitionsExample extends IOApp.Simple {
         ).title("Falling Characters")
       }
       .run()
-}
+    }}

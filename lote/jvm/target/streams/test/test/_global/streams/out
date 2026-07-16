@@ -1,0 +1,59 @@
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.MorphTransitionSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.nconsole.IdleAwareNConsoleSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.SessionBuilderSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.BuilderSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.SessionBuilderIntegrationSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.middleware.MiddlewareSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.TextSlideSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.support.NConsoleAlignmentSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.nconsole.AnsiFrameRendererSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.middleware.TimerSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.nconsole.JLineTerminalSignalSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.nconsole.NConsoleInterpreterSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.TextSlideBuilderSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.ReplaceTransitionSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.PresentationExecutorCommandPatternSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.middleware.IdleSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.IdleDetectorInterpreterSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.middleware.ProgressBarSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.testkit.TestFrameworkShowcaseSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.GrabTransitionSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreterSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.nconsole.AlignerSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.CharactersTransitionSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.SlideBuilderSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.FallingCharactersTransitionSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.PresentationExecutorSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.model.ModelSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.tools.ScreenHelperSpec, CustomFingerprint{suite='munit.Suite'}, false, [SuiteSelector])
+[debug] Summary for munit not available.
+[info] Passed: Total 272, Failed 0, Errors 0, Passed 272
+[debug] Passed tests:
+[debug] 	com.github.morotsman.lote.api.builders.SlideBuilderSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.CharactersTransitionSpec
+[debug] 	com.github.morotsman.lote.internal.model.ModelSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.middleware.MiddlewareSpec
+[debug] 	com.github.morotsman.lote.api.builders.BuilderSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.nconsole.IdleAwareNConsoleSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreterSpec
+[debug] 	com.github.morotsman.lote.api.builders.SessionBuilderIntegrationSpec
+[debug] 	com.github.morotsman.lote.internal.TextSlideSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.ReplaceTransitionSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.nconsole.NConsoleInterpreterSpec
+[debug] 	com.github.morotsman.lote.testkit.TestFrameworkShowcaseSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.GrabTransitionSpec
+[debug] 	com.github.morotsman.lote.api.builders.SessionBuilderSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.FallingCharactersTransitionSpec
+[debug] 	com.github.morotsman.lote.api.builders.TextSlideBuilderSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.nconsole.AnsiFrameRendererSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.nconsole.AlignerSpec
+[debug] 	com.github.morotsman.lote.support.NConsoleAlignmentSpec
+[debug] 	com.github.morotsman.lote.internal.tools.ScreenHelperSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.PresentationExecutorSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.middleware.TimerSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.middleware.ProgressBarSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.PresentationExecutorCommandPatternSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.MorphTransitionSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.nconsole.JLineTerminalSignalSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.middleware.IdleSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.IdleDetectorInterpreterSpec

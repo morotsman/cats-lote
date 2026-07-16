@@ -1,12 +1,14 @@
 package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
+import com.github.morotsman.lote.api.TerminalPlatform
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object StepByStepExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
-    SessionBuilder[IO]()
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      SessionBuilder[IO]()
       .addTextSlide {
         _.content(
           """This example shows a slide that reveals content in stages.
@@ -49,4 +51,4 @@ object StepByStepExample extends IOApp.Simple {
         ).title("What To Try Next")
       }
       .run()
-}
+    }}

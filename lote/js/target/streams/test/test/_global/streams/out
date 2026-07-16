@@ -1,0 +1,57 @@
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.nconsole.NConsoleInterpreterSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@74d8ce1c, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.SlideBuilderSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@2efbc4, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.BuilderSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@127fc13e, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.testkit.TestFrameworkShowcaseSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@4b76f6e7, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.middleware.ProgressBarSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@7e1f68f, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.TextSlideSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@789456d2, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreterSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@753cebe4, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.SessionBuilderSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@1af58bb7, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.GrabTransitionSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@49991b06, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.PresentationExecutorSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@2c33adb6, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.middleware.TimerSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@2d2f467c, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.ReplaceTransitionSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@145e9406, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.tools.ScreenHelperSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@76a8fdf5, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.CharactersTransitionSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@39b712c4, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.nconsole.AnsiFrameRendererSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@3e5a6b29, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.TextSlideBuilderSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@50b37cf9, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.middleware.MiddlewareSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@28357da9, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.nconsole.AlignerSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@21435ce7, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.support.NConsoleAlignmentSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@7f234c35, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.PresentationExecutorCommandPatternSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@5adc52c, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.IdleDetectorInterpreterSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@7e58e728, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.model.ModelSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@4f8b257, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.api.builders.SessionBuilderIntegrationSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@724afe52, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.middleware.IdleSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@71614c11, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.FallingCharactersTransitionSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@6430c08c, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.transition.MorphTransitionSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@4819f349, false, [SuiteSelector])
+[debug] Running TaskDef(com.github.morotsman.lote.internal.interpreter.nconsole.IdleAwareNConsoleSpec, org.scalajs.testing.common.Serializer$FingerprintSerializer$$anon$5@6544175e, false, [SuiteSelector])
+[debug] Summary for munit not available.
+[info] Passed: Total 266, Failed 0, Errors 0, Passed 266
+[debug] Passed tests:
+[debug] 	com.github.morotsman.lote.api.builders.SlideBuilderSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.CharactersTransitionSpec
+[debug] 	com.github.morotsman.lote.internal.model.ModelSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.middleware.MiddlewareSpec
+[debug] 	com.github.morotsman.lote.api.builders.BuilderSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.nconsole.IdleAwareNConsoleSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreterSpec
+[debug] 	com.github.morotsman.lote.api.builders.SessionBuilderIntegrationSpec
+[debug] 	com.github.morotsman.lote.internal.TextSlideSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.ReplaceTransitionSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.nconsole.NConsoleInterpreterSpec
+[debug] 	com.github.morotsman.lote.testkit.TestFrameworkShowcaseSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.GrabTransitionSpec
+[debug] 	com.github.morotsman.lote.api.builders.SessionBuilderSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.FallingCharactersTransitionSpec
+[debug] 	com.github.morotsman.lote.api.builders.TextSlideBuilderSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.nconsole.AnsiFrameRendererSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.nconsole.AlignerSpec
+[debug] 	com.github.morotsman.lote.support.NConsoleAlignmentSpec
+[debug] 	com.github.morotsman.lote.internal.tools.ScreenHelperSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.PresentationExecutorSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.middleware.TimerSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.middleware.ProgressBarSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.PresentationExecutorCommandPatternSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.transition.MorphTransitionSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.middleware.IdleSpec
+[debug] 	com.github.morotsman.lote.internal.interpreter.IdleDetectorInterpreterSpec

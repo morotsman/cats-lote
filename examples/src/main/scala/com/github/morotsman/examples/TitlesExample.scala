@@ -1,12 +1,14 @@
 package com.github.morotsman.examples
 
 import cats.effect.{IO, IOApp}
+import com.github.morotsman.lote.api.TerminalPlatform
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object TitlesExample extends IOApp.Simple {
 
   override def run: IO[Unit] =
-    SessionBuilder[IO]()
+    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
+      SessionBuilder[IO]()
       .withQuickNavigation()
       .addTextSlide {
         _.content(
@@ -46,4 +48,4 @@ object TitlesExample extends IOApp.Simple {
         ).title("Why They Help")
       }
       .run()
-}
+    }}

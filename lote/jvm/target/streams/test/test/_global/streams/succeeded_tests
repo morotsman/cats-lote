@@ -1,0 +1,30 @@
+#Successful Tests
+#Thu Jul 16 17:04:31 CEST 2026
+com.github.morotsman.lote.api.builders.BuilderSpec=1784214269125
+com.github.morotsman.lote.api.builders.SessionBuilderIntegrationSpec=1784214269372
+com.github.morotsman.lote.api.builders.SessionBuilderSpec=1784214268982
+com.github.morotsman.lote.api.builders.SlideBuilderSpec=1784214269378
+com.github.morotsman.lote.api.builders.TextSlideBuilderSpec=1784214269174
+com.github.morotsman.lote.internal.TextSlideSpec=1784214269122
+com.github.morotsman.lote.internal.interpreter.IdleDetectorInterpreterSpec=1784214270515
+com.github.morotsman.lote.internal.interpreter.PresentationExecutorCommandPatternSpec=1784214269892
+com.github.morotsman.lote.internal.interpreter.PresentationExecutorSpec=1784214269563
+com.github.morotsman.lote.internal.interpreter.middleware.IdleSpec=1784214269806
+com.github.morotsman.lote.internal.interpreter.middleware.MiddlewareSpec=1784214269125
+com.github.morotsman.lote.internal.interpreter.middleware.ProgressBarSpec=1784214269204
+com.github.morotsman.lote.internal.interpreter.middleware.TimerSpec=1784214269138
+com.github.morotsman.lote.internal.interpreter.nconsole.AlignerSpec=1784214269373
+com.github.morotsman.lote.internal.interpreter.nconsole.AnsiFrameRendererSpec=1784214269135
+com.github.morotsman.lote.internal.interpreter.nconsole.IdleAwareNConsoleSpec=1784214269614
+com.github.morotsman.lote.internal.interpreter.nconsole.JLineTerminalSignalSpec=1784214269456
+com.github.morotsman.lote.internal.interpreter.nconsole.NConsoleInterpreterSpec=1784214269169
+com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreterSpec=1784214270107
+com.github.morotsman.lote.internal.interpreter.transition.CharactersTransitionSpec=1784214269818
+com.github.morotsman.lote.internal.interpreter.transition.FallingCharactersTransitionSpec=1784214269691
+com.github.morotsman.lote.internal.interpreter.transition.GrabTransitionSpec=1784214271880
+com.github.morotsman.lote.internal.interpreter.transition.MorphTransitionSpec=1784214269367
+com.github.morotsman.lote.internal.interpreter.transition.ReplaceTransitionSpec=1784214269396
+com.github.morotsman.lote.internal.model.ModelSpec=1784214269468
+com.github.morotsman.lote.internal.tools.ScreenHelperSpec=1784214269470
+com.github.morotsman.lote.support.NConsoleAlignmentSpec=1784214269129
+com.github.morotsman.lote.testkit.TestFrameworkShowcaseSpec=1784214269253
