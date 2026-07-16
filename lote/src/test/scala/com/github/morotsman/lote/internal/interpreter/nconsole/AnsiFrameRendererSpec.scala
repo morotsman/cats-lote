@@ -74,4 +74,3 @@ class AnsiFrameRendererSpec extends FunSuite {
     assertEquals(frame, Vector("\u001b[90mOverlays\u001b[0m"))
   }
 }
-

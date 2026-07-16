@@ -128,16 +128,16 @@ private[lote] object QuickNavigation {
         override def onSlideChange(currentIndex: Int): F[Unit] =
           for {
             currentState <- quickNavigationState.get
-            _ <- if (currentState.currentIndex != currentIndex) {
-              quickNavigationState.set(
-                currentState.copy(
-                  currentIndex = currentIndex,
+            _ <-
+              if (currentState.currentIndex != currentIndex) {
+                quickNavigationState.set(
+                  currentState.copy(
+                    currentIndex = currentIndex
+                  )
                 )
-              )
-            } else Monad[F].unit
+              } else Monad[F].unit
           } yield ()
       }
     }
   }
 }
-

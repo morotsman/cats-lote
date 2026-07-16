@@ -86,4 +86,3 @@ private[lote] object IdleDetectorInterpreter {
     } yield if (s.isIdle) Some(s.idleStartTime) else None
   }
 }
-

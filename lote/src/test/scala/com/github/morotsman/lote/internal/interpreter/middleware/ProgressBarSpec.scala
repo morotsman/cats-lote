@@ -176,9 +176,18 @@ class ProgressBarSpec extends CatsEffectSuite {
       assert(interactiveIndex > overlaysIndex, s"Expected 'Interactive' after 'Overlays' in: '$milestoneLine'")
       assert(byeIndex > interactiveIndex, s"Expected 'Bye' after 'Interactive' in: '$milestoneLine'")
 
-      assert(transitionsIndex - startIndex >= 8, s"Expected visible spacing between Start and Transitions in: '$milestoneLine'")
-      assert(overlaysIndex - transitionsIndex >= 8, s"Expected visible spacing between Transitions and Overlays in: '$milestoneLine'")
-      assert(interactiveIndex - overlaysIndex >= 8, s"Expected visible spacing between Overlays and Interactive in: '$milestoneLine'")
+      assert(
+        transitionsIndex - startIndex >= 8,
+        s"Expected visible spacing between Start and Transitions in: '$milestoneLine'"
+      )
+      assert(
+        overlaysIndex - transitionsIndex >= 8,
+        s"Expected visible spacing between Transitions and Overlays in: '$milestoneLine'"
+      )
+      assert(
+        interactiveIndex - overlaysIndex >= 8,
+        s"Expected visible spacing between Overlays and Interactive in: '$milestoneLine'"
+      )
     }
   }
 

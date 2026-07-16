@@ -2,7 +2,16 @@ package com.github.morotsman.lote.testkit
 
 import cats.effect.{Ref, Temporal}
 import cats.implicits._
-import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Key, Screen, ScreenAdjusted, SpecialKey, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  HorizontalAlignment,
+  Key,
+  Screen,
+  ScreenAdjusted,
+  SpecialKey,
+  UserInput,
+  VerticalAlignment
+}
 import com.github.morotsman.lote.api.spi.NConsole
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
@@ -12,10 +21,9 @@ import scala.concurrent.duration.{Duration, FiniteDuration}
   * Use this to unit-test custom slides, transitions, and overlays without a real terminal.
   *
   * @param readDelay
-  *   optional delay before each `read()` call returns, giving background fibers time to run.
-  *   In production, `read()` blocks on keyboard input; this parameter simulates that pause.
-  *   Defaults to `Duration.Zero` (no delay). Set to e.g. `1.millis` for integration tests
-  *   that use `SessionBuilder.runWith`, where slide fibers need time to write content.
+  *   optional delay before each `read()` call returns, giving background fibers time to run. In production, `read()`
+  *   blocks on keyboard input; this parameter simulates that pause. Defaults to `Duration.Zero` (no delay). Set to e.g.
+  *   `1.millis` for integration tests that use `SessionBuilder.runWith`, where slide fibers need time to write content.
   *
   * Example:
   * {{{
@@ -121,8 +129,8 @@ object TestConsole {
   /** Creates a new `TestConsole` with the given screen dimensions and pre-loaded user inputs.
     *
     * @param readDelay
-    *   optional delay before each `read()` returns (default `Duration.Zero`).
-    *   Set to e.g. `1.millis` for integration tests where slide fibers need time to write content.
+    *   optional delay before each `read()` returns (default `Duration.Zero`). Set to e.g. `1.millis` for integration
+    *   tests where slide fibers need time to write content.
     */
   def make[F[_]: Temporal: Ref.Make](
       screen: Screen = Screen(80, 24),

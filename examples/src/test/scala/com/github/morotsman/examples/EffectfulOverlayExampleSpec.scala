@@ -10,12 +10,11 @@ import scala.concurrent.duration._
 
 /** Integration tests for `EffectfulOverlayExample` using `SessionBuilder.runWith`.
   *
-  * These test the full session — slides, overlay, middleware — wired together
-  * with test doubles instead of a real terminal. The presentation loop reads
-  * pre-loaded inputs and exits on `Esc`.
+  * These test the full session — slides, overlay, middleware — wired together with test doubles instead of a real
+  * terminal. The presentation loop reads pre-loaded inputs and exits on `Esc`.
   *
-  * `readDelay = 1.millis` gives slide fibers time to write content before the
-  * next input is consumed — in production, `read()` blocks on the keyboard.
+  * `readDelay = 1.millis` gives slide fibers time to write content before the next input is consumed — in production,
+  * `read()` blocks on the keyboard.
   */
 class EffectfulOverlayExampleSpec extends CatsEffectSuite {
 

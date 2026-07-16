@@ -10,8 +10,19 @@ import com.github.morotsman.lote.internal.builders.{
   TextSlideBuilder => InternalTextSlideBuilder
 }
 import com.github.morotsman.lote.internal.algebra.IdleDetector
-import com.github.morotsman.lote.internal.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter, PresentationExecutorInterpreter}
-import com.github.morotsman.lote.internal.interpreter.middleware.{Idle, Middleware, NavigationSubscriber, ProgressBar, QuickNavigation, Timer}
+import com.github.morotsman.lote.internal.interpreter.{
+  IdleDetectorConfig,
+  IdleDetectorInterpreter,
+  PresentationExecutorInterpreter
+}
+import com.github.morotsman.lote.internal.interpreter.middleware.{
+  Idle,
+  Middleware,
+  NavigationSubscriber,
+  ProgressBar,
+  QuickNavigation,
+  Timer
+}
 import com.github.morotsman.lote.internal.interpreter.nconsole.{IdleAwareNConsole, NConsoleInterpreter}
 import com.github.morotsman.lote.internal.interpreter.ticker.TickerInterpreter
 import com.github.morotsman.lote.internal.model.Presentation
@@ -125,7 +136,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     * Example:
     * {{{
     * .addTextSlide { builder =>
-      *   builder.content("Hello").morphTransition()
+    *   builder.content("Hello").morphTransition()
     * }
     * }}}
     */
@@ -180,7 +191,6 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
   /** Adds a custom overlay that doesn't require effectful construction. */
   def addOverlay(overlay: Overlay[F]): SessionBuilder[F] =
     this.copy(customOverlays = customOverlays :+ Async[F].pure(overlay))
-
 
   /** Sets a callback invoked on each slide change with the new slide index. */
   def onSlideChanged(callback: Int => F[Unit]): SessionBuilder[F] =
@@ -253,11 +263,11 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
 
   /** Builds and runs the presentation session using the provided console and ticker.
     *
-    * This is the test-friendly counterpart to `run()`. Instead of creating a real terminal and ticker,
-    * it accepts external implementations — typically `TestConsole` and `TestTicker` from the testkit.
+    * This is the test-friendly counterpart to `run()`. Instead of creating a real terminal and ticker, it accepts
+    * external implementations — typically `TestConsole` and `TestTicker` from the testkit.
     *
-    * Pre-load user inputs (including an `Esc` key to terminate) via `TestConsole` before calling this method,
-    * otherwise the presentation loop will keep reading until it runs out of inputs.
+    * Pre-load user inputs (including an `Esc` key to terminate) via `TestConsole` before calling this method, otherwise
+    * the presentation loop will keep reading until it runs out of inputs.
     *
     * Idle detection is not supported in this mode — `withIdleAnimation()` settings are ignored.
     *
@@ -313,7 +323,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
       allOverlays = List(
         progressBar.map(x => x: Overlay[F]),
         timerOverlay,
-        quickNavigation.map(x => x: Overlay[F]),
+        quickNavigation.map(x => x: Overlay[F])
       ).flatten ++ customOverlayInstances ++ idleOverlay.toList
       _ <- consoleWithMiddleware.addOverlays(allOverlays)
 
@@ -436,4 +446,3 @@ object SessionBuilder {
       f: BuiltEffectfulSlideStep[F]
   ) extends SlideStep[F]
 }
-

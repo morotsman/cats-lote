@@ -6,9 +6,9 @@ import scala.concurrent.duration.FiniteDuration
 
 /** A time source used by `FixedStep` to measure elapsed time between invocations.
   *
-  * In production, this delegates to `Temporal[F].monotonic` (wall-clock monotonic time).
-  * In tests, you can replace it with a `SimulatedClock` that advances only when you tell it to,
-  * making animation tests instantaneous and deterministic.
+  * In production, this delegates to `Temporal[F].monotonic` (wall-clock monotonic time). In tests, you can replace it
+  * with a `SimulatedClock` that advances only when you tell it to, making animation tests instantaneous and
+  * deterministic.
   */
 trait Clock[F[_]] {
 
@@ -20,8 +20,8 @@ object Clock extends ClockLowPriority {
   @inline def apply[F[_]](implicit instance: Clock[F]): Clock[F] = instance
 }
 
-/** Low-priority implicit derivation so that an explicit `Clock[F]` instance (e.g., `SimulatedClock`)
-  * takes priority over this derived one.
+/** Low-priority implicit derivation so that an explicit `Clock[F]` instance (e.g., `SimulatedClock`) takes priority
+  * over this derived one.
   */
 trait ClockLowPriority {
 

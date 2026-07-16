@@ -165,7 +165,6 @@ private[lote] case class IdleOverlayConfig(
     timeWobbleMaxOffset: Int = 1
 )
 
-
 private case class IdleOverlayState(
     idleStartTime: Long = 0,
     bugs: List[Bug] = List.empty,
@@ -295,10 +294,12 @@ private[lote] object Idle {
               case Some((word, startCol, _)) =>
                 newStolenWords = StolenWord(b.y, startCol, word.length) :: newStolenWords
                 linesWithStolen.indices.find(_ == b.y).foreach { row =>
-                  linesWithStolen(row) = IdleAnsiSupport.applyStolen(
-                    Array(linesWithStolen(row)),
-                    List(StolenWord(0, startCol, word.length))
-                  ).head
+                  linesWithStolen(row) = IdleAnsiSupport
+                    .applyStolen(
+                      Array(linesWithStolen(row)),
+                      List(StolenWord(0, startCol, word.length))
+                    )
+                    .head
                 }
                 b.copy(carrying = Some(word), targetEdge = rng.nextInt(4))
               case None =>
@@ -557,4 +558,3 @@ private[lote] object Idle {
   }
 
 }
-

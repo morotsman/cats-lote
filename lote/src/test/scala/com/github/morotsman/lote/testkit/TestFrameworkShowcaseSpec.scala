@@ -69,24 +69,24 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
       console <- TestConsole.make[IO](
         inputs = List(Character('a'), Key(SpecialKey.Right), Key(SpecialKey.Esc))
       )
-      first  <- console.read()
+      first <- console.read()
       second <- console.read()
-      third  <- console.read()
-      fourth <- console.read()  // queue is empty now
+      third <- console.read()
+      fourth <- console.read() // queue is empty now
     } yield {
       assertEquals(first, Character('a'))
       assertEquals(second, Key(SpecialKey.Right))
       assertEquals(third, Key(SpecialKey.Esc))
-      assertEquals(fourth, Key(SpecialKey.Timeout))  // sentinel for "no more input"
+      assertEquals(fourth, Key(SpecialKey.Timeout)) // sentinel for "no more input"
     }
   }
 
   test("TestConsole — enqueueInputs adds inputs mid-test") {
     // Start with no inputs, then add some dynamically.
     for {
-      console   <- TestConsole.make[IO]()
-      noInput   <- console.read()
-      _         <- console.enqueueInputs(List(Character('x'), Character('y')))
+      console <- TestConsole.make[IO]()
+      noInput <- console.read()
+      _ <- console.enqueueInputs(List(Character('x'), Character('y')))
       afterAdd1 <- console.read()
       afterAdd2 <- console.read()
     } yield {
@@ -99,20 +99,20 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
   test("TestConsole — clear count tracks how often the screen was cleared") {
     for {
       console <- TestConsole.make[IO]()
-      _       <- console.clear()
-      _       <- console.clear()
-      _       <- console.clear()
-      count   <- console.clearCount
+      _ <- console.clear()
+      _ <- console.clear()
+      _ <- console.clear()
+      count <- console.clearCount
     } yield assertEquals(count, 3)
   }
 
   test("TestConsole — reset clears all recorded state") {
     for {
-      console      <- TestConsole.make[IO]()
-      _            <- console.writeString(ScreenAdjusted("old"))
-      _            <- console.clear()
-      _            <- console.reset
-      framesAfter  <- console.writtenFrames
+      console <- TestConsole.make[IO]()
+      _ <- console.writeString(ScreenAdjusted("old"))
+      _ <- console.clear()
+      _ <- console.reset
+      framesAfter <- console.writtenFrames
       clearedAfter <- console.clearCount
     } yield {
       assertEquals(framesAfter, Nil)
@@ -131,11 +131,11 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
   test("SimulatedClock — starts at zero and advances on demand") {
     for {
       clock <- SimulatedClock.make[IO]()
-      t0    <- clock.currentTime
-      _     <- clock.advance(100.millis)
-      t1    <- clock.currentTime
-      _     <- clock.advance(50.millis)
-      t2    <- clock.currentTime
+      t0 <- clock.currentTime
+      _ <- clock.advance(100.millis)
+      t1 <- clock.currentTime
+      _ <- clock.advance(50.millis)
+      t2 <- clock.currentTime
     } yield {
       assertEquals(t0, Duration.Zero)
       assertEquals(t1, 100.millis)
@@ -146,9 +146,9 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
   test("SimulatedClock — set() jumps to an absolute time") {
     for {
       clock <- SimulatedClock.make[IO]()
-      _     <- clock.advance(200.millis)
-      _     <- clock.set(42.millis)
-      t     <- clock.currentTime
+      _ <- clock.advance(200.millis)
+      _ <- clock.set(42.millis)
+      t <- clock.currentTime
     } yield assertEquals(t, 42.millis)
   }
 
@@ -202,7 +202,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
     // step size, so you don't need to repeat the duration manually.
     for {
       harness <- SlideTestHarness.make[IO](
-        tickStep = 16.millis        // each tick advances the clock by 16ms
+        tickStep = 16.millis // each tick advances the clock by 16ms
         // animationStep defaults to tickStep (16ms) when not overridden
       )
       stepper <- {
@@ -218,12 +218,12 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
         implicit val as: AnimationSettings = harness.animationSettings
         FixedStep.consumeSteps(stepper)
       }
-    } yield assertEquals(steps, 3)   // 48ms / 16ms = 3 steps
+    } yield assertEquals(steps, 3) // 48ms / 16ms = 3 steps
   }
 
   test("FixedStep — accumulates remainder across calls") {
     for {
-      clock   <- SimulatedClock.make[IO]()
+      clock <- SimulatedClock.make[IO]()
       stepper <- {
         implicit val c: Clock[IO] = clock
         FixedStep.makeRef[IO]
@@ -241,8 +241,8 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
         FixedStep.consumeSteps(stepper, 16.millis)
       }
     } yield {
-      assertEquals(steps1, 0)  // 10ms < 16ms, no step yet
-      assertEquals(steps2, 1)  // 10ms + 10ms = 20ms ≥ 16ms, one step consumed
+      assertEquals(steps1, 0) // 10ms < 16ms, no step yet
+      assertEquals(steps2, 1) // 10ms + 10ms = 20ms ≥ 16ms, one step consumed
     }
   }
 
@@ -256,15 +256,15 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
 
   test("TestTicker — subscribers fire on each manual tick") {
     for {
-      ticker  <- TestTicker.make[IO](step = 10.millis)
+      ticker <- TestTicker.make[IO](step = 10.millis)
       counter <- Ref[IO].of(0)
-      _       <- ticker.subscribe(counter.update(_ + 1))
-      _       <- ticker.tick(3)
-      count   <- counter.get
-      time    <- ticker.clock.currentTime
+      _ <- ticker.subscribe(counter.update(_ + 1))
+      _ <- ticker.tick(3)
+      count <- counter.get
+      time <- ticker.clock.currentTime
     } yield {
-      assertEquals(count, 3)            // callback fired 3 times
-      assertEquals(time, 30.millis)     // clock advanced 3 × 10ms
+      assertEquals(count, 3) // callback fired 3 times
+      assertEquals(time, 30.millis) // clock advanced 3 × 10ms
     }
   }
 
@@ -272,23 +272,23 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
     for {
       ticker <- TestTicker.make[IO](step = 10.millis)
       counter <- Ref[IO].of(0)
-      sub     <- ticker.subscribe(counter.update(_ + 1))
-      _       <- ticker.tick(2)
-      _       <- sub.cancel
-      _       <- ticker.tick(3)  // these ticks should not fire the cancelled callback
-      count   <- counter.get
-    } yield assertEquals(count, 2)  // only the first 2 ticks counted
+      sub <- ticker.subscribe(counter.update(_ + 1))
+      _ <- ticker.tick(2)
+      _ <- sub.cancel
+      _ <- ticker.tick(3) // these ticks should not fire the cancelled callback
+      count <- counter.get
+    } yield assertEquals(count, 2) // only the first 2 ticks counted
   }
 
   test("TestTicker — subscriberCount tracks active subscriptions") {
     for {
       ticker <- TestTicker.make[IO]()
-      c0     <- ticker.subscriberCount
-      sub1   <- ticker.subscribe(IO.unit)
-      _      <- ticker.subscribe(IO.unit)
-      c2     <- ticker.subscriberCount
-      _      <- sub1.cancel
-      c1     <- ticker.subscriberCount
+      c0 <- ticker.subscriberCount
+      sub1 <- ticker.subscribe(IO.unit)
+      _ <- ticker.subscribe(IO.unit)
+      c2 <- ticker.subscriberCount
+      _ <- sub1.cancel
+      c1 <- ticker.subscriberCount
     } yield {
       assertEquals(c0, 0)
       assertEquals(c2, 2)
@@ -360,11 +360,11 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
           IO.pure(ScreenAdjusted("counter: 0"))
 
         override def startShow: IO[Unit] =
-          ticker.subscribe(
-            countRef.updateAndGet(_ + 1).flatMap(n =>
-              console.writeString(ScreenAdjusted(s"counter: $n"))
+          ticker
+            .subscribe(
+              countRef.updateAndGet(_ + 1).flatMap(n => console.writeString(ScreenAdjusted(s"counter: $n")))
             )
-          ).flatMap(sub => IO { subscription = Some(sub) }) *> ticker.start
+            .flatMap(sub => IO { subscription = Some(sub) }) *> ticker.start
 
         override def stopShow: IO[Unit] =
           IO(subscription).flatMap(_.traverse_(_.cancel))
@@ -379,15 +379,15 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
         screen = Screen(20, 1),
         tickStep = 10.millis
       )
-      slide   <- counterSlide(harness.console, harness.ticker)
+      slide <- counterSlide(harness.console, harness.ticker)
       // Start the slide (registers a ticker subscriber).
-      _       <- slide.startShow
+      _ <- slide.startShow
       // Tick 3 times — the slide writes a frame on each tick.
-      _       <- harness.tick(3)
-      frames  <- harness.writtenFramesInOrder
-      time    <- harness.clock.currentTime
+      _ <- harness.tick(3)
+      frames <- harness.writtenFramesInOrder
+      time <- harness.clock.currentTime
       // Clean up.
-      _       <- slide.stopShow
+      _ <- slide.stopShow
     } yield {
       // 3 ticks produced 3 frames, in order.
       assertEquals(frames, List("counter: 1", "counter: 2", "counter: 3"))
@@ -411,9 +411,9 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
     for {
       content <- slide.content
       // startShow / stopShow / userInput are all no-ops — they won't throw.
-      _       <- slide.startShow
-      _       <- slide.userInput(Character('x'))
-      _       <- slide.stopShow
+      _ <- slide.startShow
+      _ <- slide.userInput(Character('x'))
+      _ <- slide.stopShow
     } yield assertEquals(content.content, "Hello, world!")
   }
 
@@ -442,7 +442,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
   )(implicit clock: Clock[IO]): IO[Unit] = {
     import cats.effect.Deferred
     for {
-      done      <- Deferred[IO, Unit]
+      done <- Deferred[IO, Unit]
       stepperRef <- FixedStep.makeRef[IO]
       sub <- ticker.subscribe {
         FixedStep.consumeSteps(stepperRef, 10.millis).flatMap { steps =>
@@ -453,7 +453,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
         }
       }
       _ <- ticker.start
-      _ <- done.get   // blocks until a tick produces at least one step
+      _ <- done.get // blocks until a tick produces at least one step
       _ <- sub.cancel
     } yield ()
   }
@@ -518,9 +518,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
             screenAdjusted: ScreenAdjusted,
             originalContent: ScreenAdjusted
         ): IO[ScreenAdjusted] =
-          countRef.get.map(n =>
-            ScreenAdjusted(s"inputs: $n\n${screenAdjusted.content}")
-          )
+          countRef.get.map(n => ScreenAdjusted(s"inputs: $n\n${screenAdjusted.content}"))
 
         override def onUserInput(userInput: UserInput)(implicit F: Applicative[IO]): IO[Unit] =
           countRef.update(_ + 1)
@@ -533,10 +531,10 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
 
     for {
       overlay <- countingOverlay
-      before  <- overlay.applyOverlay(screen, content, content)
-      _       <- overlay.onUserInput(Character('a'))
-      _       <- overlay.onUserInput(Character('b'))
-      after   <- overlay.applyOverlay(screen, content, content)
+      before <- overlay.applyOverlay(screen, content, content)
+      _ <- overlay.onUserInput(Character('a'))
+      _ <- overlay.onUserInput(Character('b'))
+      after <- overlay.applyOverlay(screen, content, content)
     } yield {
       assert(before.content.startsWith("inputs: 0"))
       assert(after.content.startsWith("inputs: 2"))
@@ -556,20 +554,20 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
     for {
       // Create components individually with custom settings.
       console <- TestConsole.make[IO](screen = Screen(40, 10))
-      ticker  <- TestTicker.make[IO](step = 8.millis)
-      clock   <- SimulatedClock.make[IO]()
+      ticker <- TestTicker.make[IO](step = 8.millis)
+      clock <- SimulatedClock.make[IO]()
       // Use them independently.
-      _     <- console.writeString(ScreenAdjusted("standalone"))
-      _     <- clock.advance(100.millis)
-      _     <- ticker.tick(2)
+      _ <- console.writeString(ScreenAdjusted("standalone"))
+      _ <- clock.advance(100.millis)
+      _ <- ticker.tick(2)
       // Each has its own state.
       frame <- console.lastWrittenFrame
-      time  <- clock.currentTime
+      time <- clock.currentTime
       tTime <- ticker.clock.currentTime
     } yield {
       assertEquals(frame, Some("standalone"))
-      assertEquals(time, 100.millis)    // standalone clock
-      assertEquals(tTime, 16.millis)    // ticker's own clock: 2 × 8ms
+      assertEquals(time, 100.millis) // standalone clock
+      assertEquals(tTime, 16.millis) // ticker's own clock: 2 × 8ms
     }
   }
 
@@ -616,11 +614,11 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
     for {
       console <- TestConsole.make[IO](
         inputs = List(Character('a'), Character('b')),
-        readDelay = 1.millis   // 1ms pause before each read returns
+        readDelay = 1.millis // 1ms pause before each read returns
       )
       t0 <- IO.monotonic
-      _  <- console.read()
-      _  <- console.read()
+      _ <- console.read()
+      _ <- console.read()
       t1 <- IO.monotonic
       elapsed = t1 - t0
     } yield {
@@ -629,5 +627,3 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
     }
   }
 }
-
-

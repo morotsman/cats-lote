@@ -7,7 +7,9 @@ import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, Transition}
 
 private[lote] object MorphTransition {
 
-  def apply[F[_]: Temporal: Ref.Make: NConsole: Ticker]()(implicit animationSettings: AnimationSettings): Transition[F] =
+  def apply[F[_]: Temporal: Ref.Make: NConsole: Ticker]()(implicit
+      animationSettings: AnimationSettings
+  ): Transition[F] =
     create(NConsole[F], Ticker[F], animationSettings)
 
   def create[F[_]: Temporal: Ref.Make](
@@ -43,14 +45,16 @@ private[lote] object MorphTransition {
       }
 
       override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
-        CharactersTransition.create(
-          selectAccelerator = 1.5,
-          setupPosition = setupPosition,
-          getNewIndex = getNewIndex,
-          console = console,
-          ticker = ticker,
-          animationSettings = animationSettings
-        ).transition(from, to)
+        CharactersTransition
+          .create(
+            selectAccelerator = 1.5,
+            setupPosition = setupPosition,
+            getNewIndex = getNewIndex,
+            console = console,
+            ticker = ticker,
+            animationSettings = animationSettings
+          )
+          .transition(from, to)
 
       }
 
@@ -58,4 +62,3 @@ private[lote] object MorphTransition {
 
     }
 }
-

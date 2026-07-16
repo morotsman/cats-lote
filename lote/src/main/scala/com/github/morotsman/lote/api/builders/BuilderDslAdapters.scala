@@ -33,14 +33,20 @@ private[lote] object BuilderDslAdapters {
 
     protected def applyMorph(builder: Builder)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
 
-    protected def applyReplace(builder: Builder, replace: Char)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
+    protected def applyReplace(builder: Builder, replace: Char)(implicit
+        temporal: Temporal[F],
+        refMake: Ref.Make[F]
+    ): Builder
 
     protected def applyFalling(builder: Builder, gravity: Double, selectAccelerator: Double)(implicit
         temporal: Temporal[F],
         refMake: Ref.Make[F]
     ): Builder
 
-    protected def applyGrab(builder: Builder, stepSize: Int)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
+    protected def applyGrab(builder: Builder, stepSize: Int)(implicit
+        temporal: Temporal[F],
+        refMake: Ref.Make[F]
+    ): Builder
 
     protected def applyTitle(builder: Builder, title: String): Builder
 
@@ -112,7 +118,13 @@ private[lote] object BuilderDslAdapters {
         gravity: Double,
         selectAccelerator: Double
     )(implicit temporal: Temporal[F], refMake: Ref.Make[F]): InternalSlideBuilder[F, State] =
-      builder.fallingCharactersTransition(gravity, selectAccelerator)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
+      builder.fallingCharactersTransition(gravity, selectAccelerator)(
+        temporal,
+        refMake,
+        ctx.console,
+        ctx.ticker,
+        ctx.animationSettings
+      )
 
     override protected final def applyGrab(builder: InternalSlideBuilder[F, State], stepSize: Int)(implicit
         temporal: Temporal[F],
@@ -120,7 +132,10 @@ private[lote] object BuilderDslAdapters {
     ): InternalSlideBuilder[F, State] =
       builder.grabTransition(stepSize)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
-    override protected final def applyTitle(builder: InternalSlideBuilder[F, State], title: String): InternalSlideBuilder[F, State] =
+    override protected final def applyTitle(
+        builder: InternalSlideBuilder[F, State],
+        title: String
+    ): InternalSlideBuilder[F, State] =
       builder.title(title)
   }
 
@@ -150,7 +165,13 @@ private[lote] object BuilderDslAdapters {
         gravity: Double,
         selectAccelerator: Double
     )(implicit temporal: Temporal[F], refMake: Ref.Make[F]): InternalTextSlideBuilder[F, State] =
-      builder.fallingCharactersTransition(gravity, selectAccelerator)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
+      builder.fallingCharactersTransition(gravity, selectAccelerator)(
+        temporal,
+        refMake,
+        ctx.console,
+        ctx.ticker,
+        ctx.animationSettings
+      )
 
     override protected final def applyGrab(builder: InternalTextSlideBuilder[F, State], stepSize: Int)(implicit
         temporal: Temporal[F],
@@ -158,7 +179,10 @@ private[lote] object BuilderDslAdapters {
     ): InternalTextSlideBuilder[F, State] =
       builder.grabTransition(stepSize)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
-    override protected final def applyTitle(builder: InternalTextSlideBuilder[F, State], title: String): InternalTextSlideBuilder[F, State] =
+    override protected final def applyTitle(
+        builder: InternalTextSlideBuilder[F, State],
+        title: String
+    ): InternalTextSlideBuilder[F, State] =
       builder.title(title)
   }
 
@@ -261,4 +285,3 @@ private[lote] object BuilderDslAdapters {
       builder.build()
   }
 }
-

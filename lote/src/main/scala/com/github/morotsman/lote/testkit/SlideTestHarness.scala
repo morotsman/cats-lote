@@ -11,8 +11,8 @@ import scala.concurrent.duration.FiniteDuration
 
 /** A complete test harness for unit-testing custom slides, transitions, and overlays.
   *
-  * Bundles a `TestConsole` and `TestTicker` together with convenient accessor methods so you don't need
-  * to wire up the individual test doubles yourself.
+  * Bundles a `TestConsole` and `TestTicker` together with convenient accessor methods so you don't need to wire up the
+  * individual test doubles yourself.
   *
   * Example — testing a custom slide:
   * {{{
@@ -93,15 +93,15 @@ final class SlideTestHarness[F[_]] private (
   /** Reset recorded state. */
   def reset: F[Unit] = console.reset
 
-  /** Run a blocking operation (e.g. `SessionBuilder.runWith` or `transition.transition`) concurrently
-    * with manual ticking.
+  /** Run a blocking operation (e.g. `SessionBuilder.runWith` or `transition.transition`) concurrently with manual
+    * ticking.
     *
-    * Forks `task` into a background fiber, then fires the ticker one tick at a time with a 1ms
-    * sleep between each, giving the task fiber scheduling opportunities to make progress between
-    * ticks. After all ticks have fired, waits for the task to complete.
+    * Forks `task` into a background fiber, then fires the ticker one tick at a time with a 1ms sleep between each,
+    * giving the task fiber scheduling opportunities to make progress between ticks. After all ticks have fired, waits
+    * for the task to complete.
     *
-    * Use this for transitions (which block on `Deferred.get`) or full session tests (which block
-    * on the executor loop). The explicit tick count keeps the test bounded and predictable.
+    * Use this for transitions (which block on `Deferred.get`) or full session tests (which block on the executor loop).
+    * The explicit tick count keeps the test bounded and predictable.
     *
     * Example:
     * {{{
@@ -139,8 +139,8 @@ object SlideTestHarness {
     * @param animationStep
     *   simulation step for `AnimationSettings` (default matches tickStep)
     * @param readDelay
-    *   delay before each `console.read()` returns, giving background fibers time to run (default `Duration.Zero`).
-    *   Set to e.g. `1.millis` for integration tests that use `SessionBuilder.runWith`.
+    *   delay before each `console.read()` returns, giving background fibers time to run (default `Duration.Zero`). Set
+    *   to e.g. `1.millis` for integration tests that use `SessionBuilder.runWith`.
     */
   def make[F[_]: Temporal: Ref.Make](
       screen: Screen = Screen(80, 24),

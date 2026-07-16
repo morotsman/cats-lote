@@ -201,8 +201,7 @@ private[lote] object GrabTransition {
               if (frame >= totalBiteFrames) {
                 GrabStepResult(
                   renderedFrame = None,
-                  nextPhase =
-                    DragOut(0, dragOutTotalSteps, snakeTargetRow, targetCol)
+                  nextPhase = DragOut(0, dragOutTotalSteps, snakeTargetRow, targetCol)
                 )
               } else {
                 val sceneIdx = cumulativeBiteFrames.indexWhere(_ > frame)
@@ -266,9 +265,7 @@ private[lote] object GrabTransition {
                 }
               (nextPhase, renderedFrame, completed) = result
               _ <- phaseRef.set(nextPhase)
-              _ <- renderedFrame.traverse_(frame =>
-                console.clear() *> console.writeString(frame)
-              )
+              _ <- renderedFrame.traverse_(frame => console.clear() *> console.writeString(frame))
               _ <- if (completed) done.complete(()).attempt.void else Monad[F].unit
             } yield ()
           }
@@ -346,4 +343,3 @@ private[lote] object GrabTransition {
     override def userInput(input: UserInput): F[Unit] = Monad[F].unit
   }
 }
-

@@ -116,14 +116,16 @@ class GrabTransitionSpec extends CatsEffectSuite {
       toContent = " " * 40 + ("\n" + " " * 40) * 11
       from1 = fixedSlide(fromContent)
       to1 = fixedSlide(toContent)
-      transition1 = GrabTransition.create[IO](stepSize = 20, harness1.console, harness1.ticker, harness1.animationSettings)
+      transition1 = GrabTransition
+        .create[IO](stepSize = 20, harness1.console, harness1.ticker, harness1.animationSettings)
       _ <- harness1.runWithTicking(transition1.transition(from1, to1), ticks = 500)
       written1 <- harness1.writtenFrames
 
       harness2 <- SlideTestHarness.make[IO](screen = Screen(40, 12), tickStep = 5.millis)
       from2 = fixedSlide(fromContent)
       to2 = fixedSlide(toContent)
-      transition2 = GrabTransition.create[IO](stepSize = 2, harness2.console, harness2.ticker, harness2.animationSettings)
+      transition2 = GrabTransition
+        .create[IO](stepSize = 2, harness2.console, harness2.ticker, harness2.animationSettings)
       _ <- harness2.runWithTicking(transition2.transition(from2, to2), ticks = 500)
       written2 <- harness2.writtenFrames
     } yield {

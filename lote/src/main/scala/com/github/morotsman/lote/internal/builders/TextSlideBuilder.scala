@@ -9,8 +9,8 @@ import com.github.morotsman.lote.internal.TextSlide
 
 /** Builder for text slides.
   *
-  * Uses a phantom-type state parameter to ensure `build()` is only available after `content(...)` has been supplied.
-  * In other words, this will not compile:
+  * Uses a phantom-type state parameter to ensure `build()` is only available after `content(...)` has been supplied. In
+  * other words, this will not compile:
   * {{{
   * TextSlideBuilder[IO]().build()
   * }}}
@@ -126,4 +126,3 @@ private[lote] object TextSlideBuilder {
 
   sealed trait ContentAdded extends BuildState
 }
-

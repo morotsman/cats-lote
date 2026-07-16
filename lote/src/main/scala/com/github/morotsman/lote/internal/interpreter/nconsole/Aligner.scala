@@ -69,4 +69,3 @@ private[lote] object Aligner {
     }).mkString("\n")
   }
 }
-

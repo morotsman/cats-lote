@@ -123,5 +123,3 @@ object SweepRightTransition {
     }
   }
 }
-
-

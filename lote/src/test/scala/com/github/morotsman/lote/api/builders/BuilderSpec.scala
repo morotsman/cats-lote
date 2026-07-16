@@ -1,7 +1,14 @@
 package com.github.morotsman.lote.api.builders
 
 import cats.effect.IO
-import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Screen, ScreenAdjusted, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  HorizontalAlignment,
+  Screen,
+  ScreenAdjusted,
+  UserInput,
+  VerticalAlignment
+}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Transition}
 import com.github.morotsman.lote.internal.builders.{SlideBuilder, TextSlideBuilder}
 import com.github.morotsman.lote.testkit.SlideTestHarness

@@ -11,10 +11,12 @@ object SessionFeaturesExample extends IOApp.Simple {
   override def run: IO[Unit] =
     SessionBuilder[IO]()
       .withTimer(5.minutes)
-      .withProgressBar(List(
-        Milestone("Intro", 0),
-        Milestone("Summary", 2)
-      ))
+      .withProgressBar(
+        List(
+          Milestone("Intro", 0),
+          Milestone("Summary", 2)
+        )
+      )
       .withQuickNavigation()
       .withFrameRate(60)
       .withAnimationFrameRate(25)

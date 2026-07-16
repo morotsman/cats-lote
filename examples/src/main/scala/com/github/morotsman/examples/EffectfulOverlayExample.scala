@@ -6,8 +6,8 @@ import com.github.morotsman.lote.api.builders.SessionBuilder
 
 object EffectfulOverlayExample extends IOApp.Simple {
 
-  /** The session builder, exposed so tests can exercise the real configuration
-    * via `runWith` instead of duplicating the setup.
+  /** The session builder, exposed so tests can exercise the real configuration via `runWith` instead of duplicating the
+    * setup.
     */
   def session: SessionBuilder[IO] =
     SessionBuilder[IO]()

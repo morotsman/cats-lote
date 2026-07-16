@@ -3,7 +3,17 @@ package com.github.morotsman.lote.internal.interpreter.nconsole
 import cats.Monad
 import cats.effect.{Resource, Sync}
 import cats.implicits._
-import com.github.morotsman.lote.api.{Alignment, Character, Key, MouseClick, MouseMove, Screen, ScreenAdjusted, SpecialKey, UserInput}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  Character,
+  Key,
+  MouseClick,
+  MouseMove,
+  Screen,
+  ScreenAdjusted,
+  SpecialKey,
+  UserInput
+}
 import com.github.morotsman.lote.api.spi.NConsole
 
 private[lote] object NConsoleInterpreter {
@@ -137,4 +147,3 @@ private[lote] object NConsoleInterpreter {
   private[lote] def resource[F[_]: Sync](terminal: Terminal): Resource[F, NConsole[F]] =
     Resource.make(Sync[F].delay(make[F](terminal)))(_.close())
 }
-

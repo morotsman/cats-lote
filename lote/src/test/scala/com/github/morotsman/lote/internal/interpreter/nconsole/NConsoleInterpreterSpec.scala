@@ -1,7 +1,18 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
 import cats.effect.IO
-import com.github.morotsman.lote.api.{Alignment, Character, HorizontalAlignment, Key, MouseClick, MouseMove, Screen, ScreenAdjusted, SpecialKey, VerticalAlignment}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  Character,
+  HorizontalAlignment,
+  Key,
+  MouseClick,
+  MouseMove,
+  Screen,
+  ScreenAdjusted,
+  SpecialKey,
+  VerticalAlignment
+}
 import munit.CatsEffectSuite
 
 import scala.collection.mutable.ListBuffer

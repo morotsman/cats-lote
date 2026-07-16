@@ -58,4 +58,3 @@ class CornerLabelOverlaySpec extends CatsEffectSuite {
     }
   }
 }
-

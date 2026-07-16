@@ -159,7 +159,6 @@ private[lote] object ProgressBar {
           lines
         }
 
-
         val updatedLines = padded
           .updated(progressRowIndex, centered)
           .updated(milestoneRowIndex, milestoneRow)
@@ -170,4 +169,3 @@ private[lote] object ProgressBar {
   }
 
 }
-

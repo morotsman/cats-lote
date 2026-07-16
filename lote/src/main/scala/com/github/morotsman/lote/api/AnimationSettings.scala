@@ -14,4 +14,3 @@ object AnimationSettings {
 
   implicit val default: AnimationSettings = AnimationSettings(DefaultStep)
 }
-

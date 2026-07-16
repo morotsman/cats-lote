@@ -8,11 +8,9 @@ import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
 
-/**
- * Demonstrates testing a custom transition using the `SlideTestHarness`.
- * */
+/** Demonstrates testing a custom transition using the `SlideTestHarness`.
+  */
 class SweepRightTransitionHarnessSpec extends CatsEffectSuite {
-
 
   test("sweep completes and shows target slide content") {
     for {

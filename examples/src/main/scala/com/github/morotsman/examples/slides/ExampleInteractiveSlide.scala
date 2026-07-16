@@ -4,7 +4,15 @@ import cats.Monad
 import cats.effect.{Ref, Temporal}
 import cats.effect.std.Queue
 import cats.implicits._
-import com.github.morotsman.lote.api.{Alignment, AnimationSettings, Character, HorizontalAlignment, ScreenAdjusted, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  AnimationSettings,
+  Character,
+  HorizontalAlignment,
+  ScreenAdjusted,
+  UserInput,
+  VerticalAlignment
+}
 import com.github.morotsman.lote.api.builders.ContextualF
 import com.github.morotsman.lote.api.support.{Clock, FixedStep}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription}
@@ -293,11 +301,12 @@ object Animator {
                         )
                       }
                   }
-                  _ <- if (updatedState.running)
-                    console.writeString(
-                      renderScreen(updatedState, screen.screenWidth)
-                    )
-                  else Monad[F].unit
+                  _ <-
+                    if (updatedState.running)
+                      console.writeString(
+                        renderScreen(updatedState, screen.screenWidth)
+                      )
+                    else Monad[F].unit
                   _ <- stateRef.set(Some(updatedState))
                 } yield ()
               }

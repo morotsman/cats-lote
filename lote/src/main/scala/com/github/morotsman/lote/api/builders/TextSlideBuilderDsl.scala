@@ -26,4 +26,3 @@ trait TextSlideBuilderReady[F[_]] extends SlideMetadataDsl[F, TextSlideBuilderRe
 
   private[lote] def buildSpec(): SlideSpecification[F]
 }
-

@@ -1,7 +1,15 @@
 package com.github.morotsman.lote.api.builders
 
 import cats.effect.IO
-import com.github.morotsman.lote.api.{Alignment, AnimationSettings, Character, HorizontalAlignment, Screen, UserInput, VerticalAlignment}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  AnimationSettings,
+  Character,
+  HorizontalAlignment,
+  Screen,
+  UserInput,
+  VerticalAlignment
+}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, Transition}
 import com.github.morotsman.lote.internal.builders.TextSlideBuilder
 import com.github.morotsman.lote.testkit.SlideTestHarness

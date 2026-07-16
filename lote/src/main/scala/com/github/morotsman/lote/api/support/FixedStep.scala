@@ -2,7 +2,7 @@ package com.github.morotsman.lote.api.support
 
 import cats.Monad
 import cats.syntax.all._
-import cats.effect.kernel.{Ref, Temporal}
+import cats.effect.kernel.Ref
 import com.github.morotsman.lote.api.AnimationSettings
 
 import scala.concurrent.duration.{FiniteDuration, NANOSECONDS}

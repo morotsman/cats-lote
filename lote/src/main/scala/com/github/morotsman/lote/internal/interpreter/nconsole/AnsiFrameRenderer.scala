@@ -73,5 +73,3 @@ private[nconsole] object AnsiFrameRenderer {
       .map(truncateVisibleWidth(_, Math.max(width, 0)))
       .toVector
 }
-
-

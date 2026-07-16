@@ -11,8 +11,8 @@ import scala.util.Random
 
 /** Tests for `ExampleInteractiveSlide` using the `SlideTestHarness`.
   *
-  * Covers both the slide ↔ animator delegation (via a recording animator) and the full
-  * animator pipeline (via the real `Animator` + `TestTicker`).
+  * Covers both the slide ↔ animator delegation (via a recording animator) and the full animator pipeline (via the real
+  * `Animator` + `TestTicker`).
   */
 
 private final case class RecordingState(
@@ -177,8 +177,8 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
       .toList
       .zipWithIndex
       .flatMap { case (line, row) =>
-        line.zipWithIndex.collect {
-          case ('W', col) => (row, col)
+        line.zipWithIndex.collect { case ('W', col) =>
+          (row, col)
         }
       }
 
@@ -295,4 +295,3 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
     }
   }
 }
-

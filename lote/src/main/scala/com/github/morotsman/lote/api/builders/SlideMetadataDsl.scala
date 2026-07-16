@@ -35,4 +35,3 @@ trait SlideMetadataDsl[F[_], Self] {
 
   def title(title: String): Self
 }
-

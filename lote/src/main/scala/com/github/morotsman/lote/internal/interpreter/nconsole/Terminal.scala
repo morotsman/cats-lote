@@ -10,4 +10,3 @@ private[lote] trait Terminal {
   def write(s: String): Unit
   def close(): Unit = ()
 }
-

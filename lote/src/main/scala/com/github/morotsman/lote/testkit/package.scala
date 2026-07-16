@@ -2,7 +2,7 @@ package com.github.morotsman.lote
 
 /** Test utilities for unit-testing custom slides, transitions, and overlays without a real terminal.
   *
-  * == Quick Start ==
+  * ==Quick Start==
   *
   * {{{
   * import cats.effect.IO
@@ -23,11 +23,10 @@ package com.github.morotsman.lote
   * }
   * }}}
   *
-  * == Components ==
+  * ==Components==
   *
   *   - [[testkit.TestConsole]] — mock `NConsole[F]` that records writes and injects reads
   *   - [[testkit.TestTicker]] — manual-control `Ticker[F]` (ticks only when you say)
   *   - [[testkit.SlideTestHarness]] — bundles the above with `AnimationSettings` for one-line setup
   */
 package object testkit
-

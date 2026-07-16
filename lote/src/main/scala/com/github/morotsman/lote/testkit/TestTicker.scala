@@ -8,11 +8,11 @@ import scala.concurrent.duration.FiniteDuration
 
 /** A test implementation of `Ticker[F]` that fires subscriber callbacks only when you call `tick()`.
   *
-  * Each tick advances the `SimulatedClock` by `step` duration, making `FixedStep.consumeSteps` produce
-  * simulation steps instantly and deterministically — no real wall-clock delays.
+  * Each tick advances the `SimulatedClock` by `step` duration, making `FixedStep.consumeSteps` produce simulation steps
+  * instantly and deterministically — no real wall-clock delays.
   *
-  * For components that block on completion (e.g. transitions using `Deferred`), use
-  * `SlideTestHarness.runWithTicking` to fork the blocking task and tick alongside it.
+  * For components that block on completion (e.g. transitions using `Deferred`), use `SlideTestHarness.runWithTicking`
+  * to fork the blocking task and tick alongside it.
   *
   * Example:
   * {{{
@@ -50,8 +50,8 @@ final class TestTicker[F[_]: Temporal] private (
 
   /** Manually fire ticks — advances the simulated clock and invokes all subscriber callbacks.
     *
-    * No real sleeping occurs. Each tick advances `clock` by `step`, so `FixedStep.consumeSteps`
-    * sees elapsed time instantly.
+    * No real sleeping occurs. Each tick advances `clock` by `step`, so `FixedStep.consumeSteps` sees elapsed time
+    * instantly.
     */
   def tick(times: Int = 1): F[Unit] =
     (0 until times).toList.traverse_ { _ =>
@@ -69,7 +69,8 @@ object TestTicker {
 
   /** Creates a new `TestTicker` with its own `SimulatedClock`.
     *
-    * @param step duration per tick (default 16ms)
+    * @param step
+    *   duration per tick (default 16ms)
     */
   def make[F[_]: Temporal: Ref.Make](
       step: FiniteDuration = scala.concurrent.duration.DurationInt(16).millis

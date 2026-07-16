@@ -1558,4 +1558,3 @@ object Symbols {
       technical.map { case (k, v) => s"technical.$k" -> v } ++
       cjkBrackets.map { case (k, v) => s"cjkBrackets.$k" -> v }
 }
-

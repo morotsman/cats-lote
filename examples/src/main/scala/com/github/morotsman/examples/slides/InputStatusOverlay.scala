@@ -52,17 +52,17 @@ object InputStatusOverlay {
         override def onUserInput(userInput: UserInput)(implicit F: Applicative[F]): F[Unit] = {
           val _ = F
           val label = userInput match {
-            case Character(c)          => s"character '$c'"
-            case Key(SpecialKey.Enter) => "Enter"
-            case Key(SpecialKey.Up)    => "Up"
-            case Key(SpecialKey.Down)  => "Down"
-            case Key(SpecialKey.Left)  => "Left"
-            case Key(SpecialKey.Right) => "Right"
-            case Key(SpecialKey.Space) => "Space"
-            case Key(SpecialKey.Esc)   => "Esc"
+            case Character(c)            => s"character '$c'"
+            case Key(SpecialKey.Enter)   => "Enter"
+            case Key(SpecialKey.Up)      => "Up"
+            case Key(SpecialKey.Down)    => "Down"
+            case Key(SpecialKey.Left)    => "Left"
+            case Key(SpecialKey.Right)   => "Right"
+            case Key(SpecialKey.Space)   => "Space"
+            case Key(SpecialKey.Esc)     => "Esc"
             case Key(SpecialKey.Timeout) => "Timeout"
-            case Key(other)            => other.toString
-            case _                     => userInput.toString
+            case Key(other)              => other.toString
+            case _                       => userInput.toString
           }
 
           stateRef.update(state =>
@@ -75,4 +75,3 @@ object InputStatusOverlay {
       }
     }
 }
-

@@ -8,8 +8,8 @@ import scala.concurrent.duration.{FiniteDuration, NANOSECONDS}
 
 /** A simulated clock for testing animations without wall-clock delays.
   *
-  * Time only advances when you call `advance(duration)`. This makes `FixedStep.consumeSteps` produce
-  * simulation steps instantly and deterministically, without needing `IO.sleep`.
+  * Time only advances when you call `advance(duration)`. This makes `FixedStep.consumeSteps` produce simulation steps
+  * instantly and deterministically, without needing `IO.sleep`.
   *
   * Example:
   * {{{
@@ -48,4 +48,3 @@ object SimulatedClock {
   ): F[SimulatedClock[F]] =
     Ref[F].of(startTime).map(new SimulatedClock[F](_))
 }
-
