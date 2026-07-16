@@ -4,6 +4,20 @@ Do you ever have the urge to create truly underwhelming presentations?
 
 Then this might be for you: A lo-tech presentation tool for making presentations in the terminal, built with Scala, [Cats Effect](https://typelevel.org/cats-effect/), and an unreasonable amount of functional programming, because why use PowerPoint when you can write a monad?
 
+## What Real Audiences Are Saying
+
+> "Oh... what have you done now?"
+
+> "What is that supposed to be?"
+
+> "You sure can do a lot in the terminal."
+
+Trusted by mass audiences of up to three people. Impossible to ignore once it starts rendering in the middle of a standup. Has been described as "technically impressive" by someone who was clearly trying to be polite.
+
+If your goal is to make your colleagues question your priorities, congratulations — you've found the right tool.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
