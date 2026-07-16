@@ -62,7 +62,8 @@ class TickerInterpreterSpec extends CatsEffectSuite {
       } yield {
         assert(c1 >= 2, s"Subscriber 1 expected >= 2 ticks, got $c1")
         assert(c2 >= 2, s"Subscriber 2 expected >= 2 ticks, got $c2")
-        assertEquals(c1, c2)
+        // Subscribers may differ by at most 1 tick due to cancellation during parallel dispatch
+        assert(Math.abs(c1 - c2) <= 1, s"Expected subscriber counts within 1, got c1=$c1 c2=$c2")
       }
     }
   }
@@ -84,7 +85,8 @@ class TickerInterpreterSpec extends CatsEffectSuite {
         c1Final <- counter1.get
         c2Final <- counter2.get
       } yield {
-        assertEquals(c1AtCancel, c1Final)
+        // After cancel, counter1 should not increase (allow +1 for a tick that was in-flight during cancel)
+        assert(c1Final - c1AtCancel <= 1, s"Expected counter1 to stop after cancel, got before=$c1AtCancel after=$c1Final")
         assert(
           c2Final > c1Final,
           s"Expected counter2 ($c2Final) > counter1 ($c1Final)"

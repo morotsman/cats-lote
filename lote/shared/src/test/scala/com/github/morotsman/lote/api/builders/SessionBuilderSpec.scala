@@ -192,7 +192,7 @@ class SessionBuilderIntegrationSpec extends CatsEffectSuite {
 
   override val munitIOTimeout: Duration = 10.seconds
 
-  private val readDelay = 1.millis
+  private val readDelay = 5.millis
   private val defaultScreen = Screen(40, 10)
 
   private def simpleSession: SessionBuilder[IO] =

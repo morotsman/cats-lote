@@ -135,6 +135,8 @@ class IdleSpec extends CatsEffectSuite {
         _ <- IO.sleep(150.millis)
         _ <- idle.applyOverlay(Screen(30, 8), content, content)
         _ <- IO.sleep(100.millis)
+        _ <- idle.applyOverlay(Screen(30, 8), content, content)
+        _ <- IO.sleep(100.millis)
         result <- idle.applyOverlay(Screen(30, 8), content, content)
       } yield {
         assert(
