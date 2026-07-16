@@ -3,14 +3,7 @@ package com.github.morotsman.examples.landscape
 import cats.Monad
 import cats.effect.{Ref, Temporal}
 import cats.implicits._
-import com.github.morotsman.lote.api.{
-  Alignment,
-  AnimationSettings,
-  HorizontalAlignment,
-  ScreenAdjusted,
-  UserInput,
-  VerticalAlignment
-}
+import com.github.morotsman.lote.api.{AnimationSettings, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.api.builders.ContextualF
 import com.github.morotsman.lote.api.support.{Clock, FixedStep}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription}
