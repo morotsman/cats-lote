@@ -1,8 +1,0 @@
-[error] /Users/niklas.leopold/workspace/cats-lote/browser-examples/src/main/scala/com/github/morotsman/examples/BrowserPresentationExample.scala:17:13: value withTitle is not a member of com.github.morotsman.lote.api.builders.TextSlideBuilderStart[cats.effect.IO]
-[error]           _.withTitle("Browser Test")
-[error]             ^
-[warn] /Users/niklas.leopold/workspace/cats-lote/browser-examples/src/main/scala/com/github/morotsman/examples/BrowserPresentationExample.scala:14:66: parameter terminal in anonymous function is never used
-[warn]     TerminalPlatform.xtermTerminal[IO](container).use { implicit terminal =>
-[warn]                                                                  ^
-[warn] one warning found
-[error] one error found

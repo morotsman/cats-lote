@@ -8,3 +8,4 @@
 .DS_Store
 lote/js/target/
 lote/jvm/target
+browser-examples/target
