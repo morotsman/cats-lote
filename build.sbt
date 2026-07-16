@@ -45,7 +45,8 @@ lazy val lote = crossProject(JVMPlatform, JSPlatform)
     libraryDependencies += "org.jline" % "jline" % "3.27.1"
   )
   .jsSettings(
-    scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) }
+    scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) },
+    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.0"
   )
 
 lazy val loteJVM = lote.jvm
@@ -61,8 +62,22 @@ lazy val examples = (project in file("examples"))
     )
   )
 
+lazy val browserExamples = (project in file("browser-examples"))
+  .enablePlugins(ScalaJSPlugin)
+  .dependsOn(loteJS % "test->test;compile->compile")
+  .settings(commonSettings)
+  .settings(
+    scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) },
+    scalaJSUseMainModuleInitializer := true,
+    Compile / mainClass := Some("com.github.morotsman.examples.AdvancedExample"),
+    testFrameworks += new TestFramework("munit.Framework"),
+    scalacOptions ++= Seq(
+      "-Ymacro-annotations"
+    )
+  )
+
 lazy val root = (project in file("."))
-  .aggregate(loteJVM, loteJS, examples)
+  .aggregate(loteJVM, loteJS, examples, browserExamples)
   .settings(
     name := "cats-lote"
   )
