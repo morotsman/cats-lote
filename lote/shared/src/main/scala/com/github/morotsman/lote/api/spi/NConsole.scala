@@ -1,6 +1,6 @@
 package com.github.morotsman.lote.api.spi
 
-import com.github.morotsman.lote.api.{Alignment, Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.api.{Alignment, PlatformCapability, RenderEffect, Screen, ScreenAdjusted, UserInput}
 
 import scala.annotation.implicitNotFound
 
@@ -21,6 +21,19 @@ trait NConsole[F[_]] {
   def close(): F[Unit]
 
   def context: F[Screen]
+
+  /** Returns the platform capabilities of the underlying terminal backend.
+    *
+    * Transitions can use this to decide whether to use plain character-grid animation or richer visual effects.
+    */
+  def capabilities: Set[PlatformCapability] = Set(PlatformCapability.CharacterGrid)
+
+  /** Apply a visual effect to the current rendering.
+    *
+    * On capable backends (WebGL), this triggers GPU-accelerated effects like 3D flips, dissolve, smoke, etc.
+    * On terminal-only backends (JLine, xterm.js), this is a no-op.
+    */
+  def applyEffect(effect: RenderEffect): F[Unit]
 }
 
 object NConsole {

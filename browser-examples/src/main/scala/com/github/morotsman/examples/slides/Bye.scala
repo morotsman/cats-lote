@@ -21,4 +21,3 @@ object Bye {
       |""".stripMargin
 
 }
-

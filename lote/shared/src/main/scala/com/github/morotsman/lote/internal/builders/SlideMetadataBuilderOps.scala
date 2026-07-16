@@ -5,9 +5,12 @@ import com.github.morotsman.lote.api.AnimationSettings
 import com.github.morotsman.lote.api.spi.{NConsole, Ticker, Transition}
 import com.github.morotsman.lote.internal.interpreter.transition.{
   FallingCharactersTransition,
+  FlipTransition,
   GrabTransition,
   MorphTransition,
-  ReplaceTransition
+  ReplaceTransition,
+  RotateTransition,
+  SmokeTransition
 }
 
 private[lote] trait SlideMetadataBuilderOps[F[_], Self] {
@@ -72,6 +75,61 @@ private[lote] trait SlideMetadataBuilderOps[F[_], Self] {
   ): Self = {
     val _ = temporal
     withTransition(GrabTransition.create(stepSize, console, ticker, animationSettings))
+  }
+
+  final def flipTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F],
+      console: NConsole[F],
+      ticker: Ticker[F],
+      animationSettings: AnimationSettings
+  ): Self = {
+    val _ = temporal
+    withTransition(FlipTransition.create(FlipTransition.Horizontal, console, ticker, animationSettings))
+  }
+
+  final def flipVerticalTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F],
+      console: NConsole[F],
+      ticker: Ticker[F],
+      animationSettings: AnimationSettings
+  ): Self = {
+    val _ = temporal
+    withTransition(FlipTransition.create(FlipTransition.Vertical, console, ticker, animationSettings))
+  }
+
+  final def smokeTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F],
+      console: NConsole[F],
+      ticker: Ticker[F],
+      animationSettings: AnimationSettings
+  ): Self = {
+    val _ = temporal
+    withTransition(SmokeTransition.create(SmokeTransition.Smoke, console, ticker, animationSettings))
+  }
+
+  final def dissolveTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F],
+      console: NConsole[F],
+      ticker: Ticker[F],
+      animationSettings: AnimationSettings
+  ): Self = {
+    val _ = temporal
+    withTransition(SmokeTransition.create(SmokeTransition.Dissolve, console, ticker, animationSettings))
+  }
+
+  final def rotateTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F],
+      console: NConsole[F],
+      ticker: Ticker[F],
+      animationSettings: AnimationSettings
+  ): Self = {
+    val _ = temporal
+    withTransition(RotateTransition.create(console, ticker, animationSettings))
   }
 
   final def title(title: String): Self =

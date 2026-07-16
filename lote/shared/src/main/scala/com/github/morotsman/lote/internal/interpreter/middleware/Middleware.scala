@@ -3,7 +3,7 @@ package com.github.morotsman.lote.internal.interpreter.middleware
 import cats.Monad
 import cats.effect.Ref
 import cats.implicits._
-import com.github.morotsman.lote.api.{Alignment, Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.api.{Alignment, PlatformCapability, RenderEffect, Screen, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.internal.algebra.Middleware
 import com.github.morotsman.lote.api.spi.{NConsole, Overlay, Ticker, TickerSubscription}
 
@@ -111,6 +111,10 @@ private[lote] object Middleware {
           console.close()
 
         override def context: F[Screen] = console.context
+
+        override def capabilities: Set[PlatformCapability] = console.capabilities
+
+        override def applyEffect(effect: RenderEffect): F[Unit] = console.applyEffect(effect)
       }
     }
 

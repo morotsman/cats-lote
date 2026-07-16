@@ -33,5 +33,37 @@ trait SlideMetadataDsl[F[_], Self] {
       refMake: Ref.Make[F]
   ): Self
 
+  /** 3D flip transition (WebGL) — falls back to replace on terminal backends. */
+  def flipTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F]
+  ): Self
+
+  /** Vertical 3D flip transition (WebGL) — falls back to replace on terminal backends. */
+  def flipVerticalTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F]
+  ): Self
+
+  /** Smoke dissolve transition (WebGL) — falls back to falling characters on terminal backends. */
+  def smokeTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F]
+  ): Self
+
+  /** Dissolve/fade-out transition (WebGL) — falls back to falling characters on terminal backends. */
+  def dissolveTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F]
+  ): Self
+
+  /** Rotate transition (WebGL) — the slide spins like a panel to reveal the new slide on the other side.
+    * Falls back to replace on terminal backends.
+    */
+  def rotateTransition()(implicit
+      temporal: Temporal[F],
+      refMake: Ref.Make[F]
+  ): Self
+
   def title(title: String): Self
 }

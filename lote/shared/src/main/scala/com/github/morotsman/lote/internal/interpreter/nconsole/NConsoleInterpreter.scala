@@ -9,12 +9,14 @@ import com.github.morotsman.lote.api.{
   Key,
   MouseClick,
   MouseMove,
+  PlatformCapability,
+  RenderEffect,
   Screen,
   ScreenAdjusted,
   SpecialKey,
   UserInput
 }
-import com.github.morotsman.lote.api.spi.{NConsole, Terminal => TerminalAlgebra}
+import com.github.morotsman.lote.api.spi.{EffectfulTerminal, NConsole, Terminal => TerminalAlgebra}
 
 private[lote] object NConsoleInterpreter {
 
@@ -104,6 +106,14 @@ private[lote] object NConsoleInterpreter {
           terminal.close()
 
         override def read(): F[UserInput] = read(0L)
+
+        override def capabilities: Set[PlatformCapability] = terminal.capabilities
+
+        override def applyEffect(effect: RenderEffect): F[Unit] =
+          terminal match {
+            case et: EffectfulTerminal[F @unchecked] => et.applyEffect(effect)
+            case _ => Sync[F].unit
+          }
       }
     }
   }

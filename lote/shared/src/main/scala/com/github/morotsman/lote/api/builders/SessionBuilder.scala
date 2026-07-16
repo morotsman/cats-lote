@@ -3,7 +3,7 @@ package com.github.morotsman.lote.api.builders
 import cats.Monad
 import cats.effect.{Async, Ref}
 import cats.implicits._
-import com.github.morotsman.lote.api.{AnimationSettings, Milestone}
+import com.github.morotsman.lote.api.{AnimationSettings, Milestone, PlatformCapability}
 import com.github.morotsman.lote.api.spi.{NConsole, Overlay, Terminal => TerminalAlgebra, Ticker}
 import com.github.morotsman.lote.internal.builders.{
   SlideBuilder => InternalSlideBuilder,
@@ -41,6 +41,16 @@ class SlideContext[F[_]](
   implicit def nConsole: NConsole[F] = console
   implicit def tickerInstance: Ticker[F] = ticker
   implicit def animationSettingsInstance: AnimationSettings = animationSettings
+
+  /** The platform capabilities of the underlying terminal backend.
+    *
+    * Use this to check whether the platform supports effects, sub-pixel rendering, or 3D transforms,
+    * and choose transitions accordingly.
+    */
+  def capabilities: Set[PlatformCapability] = console.capabilities
+
+  /** Returns true if the backend supports the given capability. */
+  def supports(capability: PlatformCapability): Boolean = capabilities.contains(capability)
 }
 
 /** A high-level builder that encapsulates all the wiring needed to run a presentation with overlays.
