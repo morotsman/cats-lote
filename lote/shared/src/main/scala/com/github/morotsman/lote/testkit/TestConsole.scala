@@ -6,6 +6,8 @@ import com.github.morotsman.lote.api.{
   Alignment,
   HorizontalAlignment,
   Key,
+  PlatformCapability,
+  RenderEffect,
   Screen,
   ScreenAdjusted,
   SpecialKey,
@@ -100,6 +102,13 @@ final class TestConsole[F[_]: Temporal] private (
   override def close(): F[Unit] = Temporal[F].unit
 
   override def context: F[Screen] = Temporal[F].pure(screen)
+
+  override def capabilities: Set[PlatformCapability] = Set(PlatformCapability.CharacterGrid)
+
+  override def applyEffect(effect: RenderEffect): F[Unit] = {
+    val _ = effect
+    Temporal[F].unit
+  }
 
   // --- Test inspection methods ---
 

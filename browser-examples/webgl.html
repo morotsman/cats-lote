@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cats-lote — WebGL / Three.js Example</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+    #terminal { width: 100%; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+
+  <!-- Three.js loaded via CDN as a global (window.THREE) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+  <!-- Scala.js output (ESModule) -->
+  <script type="module" src="./target/scala-2.13/browserexamples-fastopt/main.js"></script>
+</body>
+</html>
+

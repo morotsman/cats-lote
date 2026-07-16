@@ -70,7 +70,7 @@ lazy val browserExamples = (project in file("browser-examples"))
   .settings(
     scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) },
     scalaJSUseMainModuleInitializer := true,
-    Compile / mainClass := Some("com.github.morotsman.examples.AdvancedExample"),
+    Compile / mainClass := Some("com.github.morotsman.examples.AdvancedWebGLExample"),
     testFrameworks += new TestFramework("munit.Framework"),
     scalacOptions ++= Seq(
       "-Ymacro-annotations"

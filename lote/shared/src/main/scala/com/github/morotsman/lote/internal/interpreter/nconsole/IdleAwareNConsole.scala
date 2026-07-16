@@ -2,7 +2,7 @@ package com.github.morotsman.lote.internal.interpreter.nconsole
 
 import cats.Monad
 import cats.implicits._
-import com.github.morotsman.lote.api.{Alignment, MouseClick, MouseMove, Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.api.{Alignment, MouseClick, MouseMove, PlatformCapability, RenderEffect, Screen, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.internal.algebra.IdleDetector
 import com.github.morotsman.lote.api.spi.NConsole
 
@@ -51,5 +51,9 @@ private[lote] object IdleAwareNConsole {
       override def close(): F[Unit] = underlying.close()
 
       override def context: F[Screen] = underlying.context
+
+      override def capabilities: Set[PlatformCapability] = underlying.capabilities
+
+      override def applyEffect(effect: RenderEffect): F[Unit] = underlying.applyEffect(effect)
     }
 }

@@ -1,6 +1,6 @@
 package com.github.morotsman.lote.api.spi
 
-import com.github.morotsman.lote.api.Screen
+import com.github.morotsman.lote.api.{PlatformCapability, Screen}
 
 import scala.annotation.implicitNotFound
 
@@ -38,5 +38,11 @@ trait Terminal[F[_]] {
 
   /** Release terminal resources (restore state, close handles). */
   def close(): F[Unit]
-}
 
+  /** Advertises what this terminal backend can render.
+    *
+    * Override in backends that support richer rendering (sub-pixel positioning, effects, 3D transforms).
+    * The default is `CharacterGrid` only, which is appropriate for JLine and xterm.js terminals.
+    */
+  def capabilities: Set[PlatformCapability] = Set(PlatformCapability.CharacterGrid)
+}

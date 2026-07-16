@@ -1,6 +1,7 @@
 package com.github.morotsman.examples
 
 import cats.effect._
+import com.github.morotsman.examples.landscape.{Landscape3DSlide, LandscapeSlide}
 import com.github.morotsman.examples.slides.{Bye, ExampleInteractiveSlide, SweepRightTransition}
 import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Milestone, TerminalPlatform, VerticalAlignment}
 import com.github.morotsman.lote.api.builders.SessionBuilder
@@ -8,14 +9,15 @@ import org.scalajs.dom
 
 import scala.concurrent.duration.DurationInt
 
-object AdvancedExample extends IOApp.Simple {
+/** The same full-featured presentation as AdvancedExample, rendered via Three.js / WebGL. */
+object AdvancedWebGLExample extends IOApp.Simple {
 
   override def run: IO[Unit] = {
     val container = dom.document
       .getElementById("terminal")
       .asInstanceOf[dom.HTMLElement]
 
-    TerminalPlatform.xtermTerminal[IO](container).use { implicit terminal =>
+    TerminalPlatform.threeJsTerminal[IO](container).use { implicit terminal =>
       SessionBuilder[IO]()
         .withTimer(30.minutes)
         .withProgressBar(
@@ -27,14 +29,15 @@ object AdvancedExample extends IOApp.Simple {
             Milestone("Titles", 9),
             Milestone("Alignment", 10),
             Milestone("Transitions", 11),
-            Milestone("Custom", 15),
-            Milestone("Interactive", 18),
-            Milestone("Summary", 19),
-            Milestone("Bye", 20)
+            Milestone("Custom", 17),
+            Milestone("Interactive", 20),
+            Milestone("Landscapes", 22),
+            Milestone("Summary", 25),
+            Milestone("Bye", 26)
           )
         )
         .withQuickNavigation()
-        .withIdleAnimation(idleTimeout = 5.minutes)
+        .withIdleAnimation(idleTimeout = 10.seconds)
         .withFrameRate(60)
         .withAnimationFrameRate(25)
         .addTextSlide {
@@ -46,9 +49,9 @@ object AdvancedExample extends IOApp.Simple {
                     | \______  /\____|__  /____| /_______  /         |_______ \_______  /____|   /_______  /
                     |        \/         \/               \/                  \/       \/                 \/
                     |
-                    |
-                    |
-                    |
+                    |                          ╔═══════════════════════════╗
+                    |                          ║   WebGL / Three.js Mode   ║
+                    |                          ╚═══════════════════════════╝
                     |""".stripMargin)
             .title("Start")
         }
@@ -194,59 +197,79 @@ object AdvancedExample extends IOApp.Simple {
             |because placement alone was apparently too calm.""".stripMargin
           ).title("Alignment")
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-            .replaceTransition(' ')
+            .flipTransition()
         }
         .addTextSlide {
           _.content(
             """
-            |The transition that brought you here was `ReplaceTransition`.
+            |The transition that brought you here was `FlipTransition`.
             |
-            |Use it when you want a direct, no-nonsense change.
+            |On WebGL, it rotates the terminal plane in 3D.
+            |On a plain terminal, it falls back to a simple replace.
+            |
+            |Leave this slide to see `FlipVerticalTransition`,
+            |which flips around the other axis.""".stripMargin
+          ).title("FlipTransition")
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .flipVerticalTransition()
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |The transition that brought you here was `FlipVerticalTransition`.
+            |
+            |Same idea, different axis — the view rotates left-to-right
+            |instead of top-to-bottom.
+            |
+            |Leave this slide to see `SmokeTransition`,
+            |which is what happens when text decides to evaporate.""".stripMargin
+          ).title("FlipVerticalTransition")
+            .smokeTransition()
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |The transition that brought you here was `SmokeTransition`.
+            |
+            |On WebGL, characters drift upward and fade out
+            |with a slight wobble, like smoke dissipating.
+            |On a plain terminal, it falls back to falling characters.
+            |
+            |Leave this slide to see `DissolveTransition`,
+            |because smoke was apparently too dramatic.""".stripMargin
+          ).title("SmokeTransition")
+            .dissolveTransition()
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |The transition that brought you here was `DissolveTransition`.
+            |
+            |On WebGL, the content fades out and shrinks slightly,
+            |like it's dissolving into the background.
+            |On a plain terminal, it falls back to falling characters.
+            |
+            |Leave this slide to see `RotateTransition`,
+            |which spins the whole view like a panel.""".stripMargin
+          ).title("DissolveTransition")
+            .rotateTransition()
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |The transition that brought you here was `RotateTransition`.
+            |
+            |On WebGL, the slide spins around a vertical axis
+            |like a revolving door or a spinning panel,
+            |revealing the new content on the other side.
             |
             |Leave this slide to see `MorphTransition`,
-            |which is the same idea with slightly better bedside manner.""".stripMargin
-          ).title("ReplaceTransition")
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            |which is back to character-grid territory.""".stripMargin
+          ).title("RotateTransition")
             .morphTransition()
-        }
-        .addTextSlide {
-          _.content(
-            """
-            |The transition that brought you here was `MorphTransition`.
-            |
-            |Use it when the next slide builds on the current one
-            |and you want the text to change smoothly.
-            |
-            |Leave this slide to see `FallingCharactersTransition`,
-            |because subtlety can only survive for so long.""".stripMargin
-          ).title("MorphTransition")
-            .fallingCharactersTransition()
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-        }
-        .addTextSlide {
-          _.content(
-            """
-            |The transition that brought you here was `FallingCharactersTransition`.
-            |
-            |Use it when you want a playful or dramatic way to clear the screen.
-            |
-            |Leave this slide to see `GrabTransition`,
-            |which is what happens when a transition develops ambitions.""".stripMargin
-          ).title("FallingCharactersTransition")
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-            .grabTransition()
-        }
-        .addTextSlide {
-          _.content(
-            """
-            |The transition that brought you here was `GrabTransition`.
-            |
-            |Use it when you want a transition with a strong visual personality,
-            |or when you've accepted that an ASCII snake is now part of your presentation.
-            |
-            |That completes the built-in transition tour —
-            |more emotional range than most decks attempt.""".stripMargin
-          ).title("GrabTransition")
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
         }
         .addTextSlide {
@@ -303,6 +326,35 @@ object AdvancedExample extends IOApp.Simple {
             .map(
               _.title("Interactive")
             )
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |The next two slides show a landscape — first as ASCII art,
+            |then as a full 3D fairy-tale scene rendered with Three.js.
+            |
+            |ASCII landscape controls:
+            |  A — scroll left
+            |  D — scroll right
+            |  S — stop scrolling
+            |
+            |3D landscape controls:
+            |  A / D — rotate camera
+            |  W / S — zoom in / out
+            |  Q — reset to auto-rotate
+            |
+            |Same idea, different dimensions.""".stripMargin
+          ).title("Introducing Landscapes")
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .smokeTransition()
+        }
+        .addSlideF {
+          _.addSlideF(LandscapeSlide.contextual[IO]())
+            .map(_.title("Landscape (ASCII)").smokeTransition())
+        }
+        .addSlideF {
+          _.addSlideF(Landscape3DSlide.contextual[IO]())
+            .map(_.title("Landscape (3D)"))
         }
         .addTextSlide {
           _.content(
