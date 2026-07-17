@@ -18,7 +18,7 @@ class TextSlideSpec extends CatsEffectSuite {
       )
       content <- slide.content
     } yield {
-      assert(content.content.contains("Hello"))
+      assert(content.exists(_.content.contains("Hello")))
     }
   }
 
@@ -70,7 +70,7 @@ class TextSlideSpec extends CatsEffectSuite {
       slide = "Test content".toSlide[IO]()
       content <- slide.content
     } yield {
-      assert(content.content.contains("Test content"))
+      assert(content.exists(_.content.contains("Test content")))
     }
   }
 }

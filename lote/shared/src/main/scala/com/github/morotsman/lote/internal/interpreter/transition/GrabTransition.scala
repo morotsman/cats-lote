@@ -141,8 +141,8 @@ private[lote] object GrabTransition {
     override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
       for {
         screen <- console.context
-        slide1 <- from.content
-        slide2 <- to.content
+        slide1 <- from.content.map(_.getOrElse(ScreenAdjusted("")))
+        slide2 <- to.content.map(_.getOrElse(ScreenAdjusted("")))
         lines1 = slide1.content.split("\n", -1).toVector
         maxSpawnRow = Math.max(
           1,

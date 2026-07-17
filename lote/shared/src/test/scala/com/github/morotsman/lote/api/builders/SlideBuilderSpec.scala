@@ -11,7 +11,7 @@ import munit.CatsEffectSuite
 class SlideBuilderSpec extends CatsEffectSuite {
 
   private def makeSlide(text: String): Slide[IO] = new Slide[IO] {
-    override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
+    override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted(text)))
     override def startShow: IO[Unit] = IO.unit
     override def stopShow: IO[Unit] = IO.unit
     override def userInput(input: UserInput): IO[Unit] = IO.unit
@@ -69,7 +69,7 @@ class SlideBuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      assertEquals(content.content, "my content")
+      assertEquals(content.get.content, "my content")
     }
   }
 

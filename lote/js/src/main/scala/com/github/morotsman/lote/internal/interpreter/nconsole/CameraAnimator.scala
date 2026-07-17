@@ -33,6 +33,9 @@ private[nconsole] class CameraAnimator(scene: WebGLScene) {
   private var baseFov: Double = 50.0
   private var cameraDistance: Double = 2000.0
 
+  /** Exposes the perspective camera reference for Scene3DRef. */
+  private[nconsole] def perspCameraRef: ThreePerspectiveCamera = perspCamera
+
   private val meshDyn = scene.plane.asInstanceOf[scalajs.js.Dynamic]
 
   // Debug zoom
@@ -124,10 +127,16 @@ private[nconsole] class CameraAnimator(scene: WebGLScene) {
     val durationMs = transitionDuration(distance)
     val startTime = dom.window.performance.now()
 
-    // Compute start camera pose
-    val (startCamX, startCamY, startCamZ) = cameraPositionFor(startPos)
+    // Read actual camera state (the camera may have been manipulated by a scene-aware slide)
+    val startCamX = perspCamera.position.x
+    val startCamY = perspCamera.position.y
+    val startCamZ = perspCamera.position.z
+    val startUpX = perspCamera.up.x
+    val startUpY = perspCamera.up.y
+    val startUpZ = perspCamera.up.z
+
+    // LookAt target: use the slide center (the camera was looking at this)
     val (startLookX, startLookY, startLookZ) = slideCenterFor(startPos)
-    val (startUpX, startUpY, startUpZ) = computeUp(startPos)
 
     // Compute target camera pose
     val (targetCamX, targetCamY, targetCamZ) = cameraPositionFor(target)

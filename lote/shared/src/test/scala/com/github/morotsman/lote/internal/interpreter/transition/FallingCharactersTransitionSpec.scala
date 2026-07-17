@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 class FallingCharactersTransitionSpec extends CatsEffectSuite {
 
   private def fixedSlide(text: String): Slide[IO] = new Slide[IO] {
-    override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(text))
+    override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted(text)))
     override def startShow: IO[Unit] = IO.unit
     override def stopShow: IO[Unit] = IO.unit
     override def userInput(input: UserInput): IO[Unit] = IO.unit

@@ -162,8 +162,8 @@ object SlideTestHarness {
     */
   def fixedSlide[F[_]](slideContent: String)(implicit F: Temporal[F]): Slide[F] =
     new Slide[F] {
-      override def content: F[ScreenAdjusted] =
-        F.pure(ScreenAdjusted(slideContent))
+      override def content: F[Option[ScreenAdjusted]] =
+        F.pure(Some(ScreenAdjusted(slideContent)))
       override def startShow: F[Unit] = F.unit
       override def stopShow: F[Unit] = F.unit
       override def userInput(input: UserInput): F[Unit] = F.unit

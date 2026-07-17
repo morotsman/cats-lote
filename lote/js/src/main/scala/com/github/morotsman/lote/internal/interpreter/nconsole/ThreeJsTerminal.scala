@@ -2,7 +2,7 @@ package com.github.morotsman.lote.internal.interpreter.nconsole
 
 import cats.effect.std.{Dispatcher, Queue}
 import cats.effect.{Async, Resource, Sync}
-import com.github.morotsman.lote.api.{PlatformCapability, RenderEffect, Screen, SlidePosition}
+import com.github.morotsman.lote.api.{PlatformCapability, RenderEffect, Scene3DRef, Screen, SlidePosition}
 import com.github.morotsman.lote.api.spi.{EffectfulTerminal, Terminal => TerminalAlgebra}
 import org.scalajs.dom.HTMLElement
 
@@ -57,6 +57,7 @@ object ThreeJsTerminal {
         var slideLayers: Vector[SlideLayer] = Vector.empty
         var slideToLayerIndex: Vector[Int] = Vector.empty  // slide index → layer index
         var activeLayerIndex: Int = -1
+        var sharedSceneRef: Option[Scene3DRef] = None
 
         // ---- Effect renderer ----
         val effectRenderer = new WebGLEffectRenderer(
@@ -116,7 +117,8 @@ object ThreeJsTerminal {
                   if (prev != next) {
                     WebGLCanvasRenderer.renderLine(
                       layer.ctx, next, rowIndex, layer.cols,
-                      CellWidth, CellHeight, FontFamily
+                      CellWidth, CellHeight, FontFamily,
+                      transparentBg = layer.transparentBg
                     )
                     dirty = true
                   }
@@ -175,6 +177,8 @@ object ThreeJsTerminal {
             PlatformCapability.Transforms3D
           )
 
+          override def scene3DRef: Option[Any] = sharedSceneRef
+
           override def applyEffect(effect: RenderEffect): F[Unit] =
             Sync[F].delay {
               effect match {
@@ -184,6 +188,18 @@ object ThreeJsTerminal {
                 case RenderEffect.ActivateLayer(index) =>
                   val layerIdx = if (index >= 0 && index < slideToLayerIndex.length) slideToLayerIndex(index) else index
                   activeLayerIndex = layerIdx
+                  // Update Scene3DRef center to match the active layer's mesh position
+                  sharedSceneRef.foreach { ref =>
+                    if (layerIdx >= 0 && layerIdx < slideLayers.length) {
+                      val mesh = slideLayers(layerIdx).mesh
+                      val meshDyn = mesh.asInstanceOf[scalajs.js.Dynamic]
+                      ref.updateCenter(
+                        meshDyn.position.x.asInstanceOf[Double],
+                        meshDyn.position.y.asInstanceOf[Double],
+                        meshDyn.position.z.asInstanceOf[Double]
+                      )
+                    }
+                  }
 
                 case RenderEffect.MoveCameraTo(target) =>
                   effectRenderer(effect)
@@ -240,7 +256,8 @@ object ThreeJsTerminal {
                 viewportWidth = glScene.viewportWidth,
                 viewportHeight = glScene.viewportHeight,
                 cellWidth = CellWidth,
-                cellHeight = CellHeight
+                cellHeight = CellHeight,
+                transparentBg = pos.transparentBackground
               )
               glScene.scene.add(layer.mesh)
               layer
@@ -251,6 +268,18 @@ object ThreeJsTerminal {
               glScene.viewportWidth,
               glScene.viewportHeight
             )
+
+            // Create Scene3DRef for scene-aware slides
+            sharedSceneRef = Some(new Scene3DRef(
+              threeScene = glScene.scene.asInstanceOf[scalajs.js.Dynamic],
+              _render = () => glScene.render(),
+              perspectiveCamera = cameraAnimator.perspCameraRef.asInstanceOf[scalajs.js.Dynamic],
+              _centerX = 0,
+              _centerY = 0,
+              _centerZ = 0,
+              viewportWidth = glScene.viewportWidth,
+              viewportHeight = glScene.viewportHeight
+            ))
           }
         }
       }

@@ -4,7 +4,7 @@ import cats.Monad
 import cats.effect.{Deferred, Ref, Temporal}
 import cats.effect.implicits._
 import cats.implicits._
-import com.github.morotsman.lote.api.{AnimationSettings, PlatformCapability, RenderEffect, UserInput}
+import com.github.morotsman.lote.api.{AnimationSettings, PlatformCapability, RenderEffect, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.api.support.FixedStep
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, Transition}
 
@@ -51,8 +51,8 @@ private[lote] object SmokeTransition {
     /** GPU-accelerated smoke/dissolve transition. */
     private def effectfulTransition(from: Slide[F], to: Slide[F]): F[Unit] = {
       for {
-        slide1 <- from.content
-        slide2 <- to.content
+        slide1 <- from.content.map(_.getOrElse(ScreenAdjusted("")))
+        slide2 <- to.content.map(_.getOrElse(ScreenAdjusted("")))
         stepperRef <- FixedStep.makeRef[F]
         done <- Deferred[F, Unit]
         progressRef <- Ref[F].of(0.0)

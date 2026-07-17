@@ -109,6 +109,8 @@ private[lote] object NConsoleInterpreter {
 
         override def capabilities: Set[PlatformCapability] = terminal.capabilities
 
+        override def scene3DRef: Option[Any] = terminal.scene3DRef
+
         override def applyEffect(effect: RenderEffect): F[Unit] =
           terminal match {
             case et: EffectfulTerminal[F @unchecked] => et.applyEffect(effect)

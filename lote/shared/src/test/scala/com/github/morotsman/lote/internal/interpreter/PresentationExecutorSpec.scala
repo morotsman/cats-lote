@@ -163,7 +163,7 @@ class PresentationExecutorSpec extends CatsEffectSuite {
       )
       implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       slide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Slide 1"))
+        override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted("Slide 1")))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] =

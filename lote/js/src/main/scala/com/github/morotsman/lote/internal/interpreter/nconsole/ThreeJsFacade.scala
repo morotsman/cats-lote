@@ -43,8 +43,12 @@ class ThreeOrthographicCamera(
 @js.native
 @JSGlobal("THREE.Vector3")
 @nowarn("cat=unused")
-class ThreeVector3(x: Double, y: Double, z: Double) extends js.Object {
+class ThreeVector3(x0: Double, y0: Double, z0: Double) extends js.Object {
+  def this() = this(0, 0, 0)
   def set(x: Double, y: Double, z: Double): ThreeVector3 = js.native
+  val x: Double = js.native
+  val y: Double = js.native
+  val z: Double = js.native
 }
 
 @js.native

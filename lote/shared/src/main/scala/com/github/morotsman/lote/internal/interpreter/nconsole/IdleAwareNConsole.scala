@@ -54,6 +54,8 @@ private[lote] object IdleAwareNConsole {
 
       override def capabilities: Set[PlatformCapability] = underlying.capabilities
 
+      override def scene3DRef: Option[Any] = underlying.scene3DRef
+
       override def applyEffect(effect: RenderEffect): F[Unit] = underlying.applyEffect(effect)
     }
 }

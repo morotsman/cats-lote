@@ -52,6 +52,13 @@ class SlideContext[F[_]](
 
   /** Returns true if the backend supports the given capability. */
   def supports(capability: PlatformCapability): Boolean = capabilities.contains(capability)
+
+  /** Returns a reference to the shared 3D scene, if the backend supports spatial mode.
+    *
+    * On WebGL backends in spatial mode, returns `Some(Scene3DRef)`. Cast to
+    * `com.github.morotsman.lote.api.Scene3DRef` in JS code to access the shared Three.js scene.
+    */
+  def scene3DRef: Option[Any] = console.scene3DRef
 }
 
 /** A high-level builder that encapsulates all the wiring needed to run a presentation with overlays.

@@ -529,11 +529,11 @@ object AdvancedWebGLExample extends IOApp.Simple {
         }
         .addSlideF {
           _.addSlideF(LandscapeSlide.contextual[IO]())
-            .map(_.title("Landscape (ASCII)").at(1800, 12000, 0))
+            .map(_.title("Landscape (ASCII)").at(3600, 12000, 0))
         }
         .addSlideF {
           _.addSlideF(Landscape3DSlide.contextual[IO]())
-            .map(_.title("Landscape (3D)").at(3600, 12000, 0))
+            .map(_.title("Landscape (3D)").at(3600, 12000, -3000).transparentBackground())
         }
         // ═══════════════════════════════════════════════
         //  SUMMARY & BYE

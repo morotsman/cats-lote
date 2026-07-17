@@ -114,6 +114,8 @@ private[lote] object Middleware {
 
         override def capabilities: Set[PlatformCapability] = console.capabilities
 
+        override def scene3DRef: Option[Any] = console.scene3DRef
+
         override def applyEffect(effect: RenderEffect): F[Unit] = console.applyEffect(effect)
       }
     }

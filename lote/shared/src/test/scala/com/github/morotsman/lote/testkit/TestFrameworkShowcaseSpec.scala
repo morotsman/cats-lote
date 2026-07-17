@@ -356,8 +356,8 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
       new Slide[IO] {
         private var subscription: Option[TickerSubscription[IO]] = None
 
-        override def content: IO[ScreenAdjusted] =
-          IO.pure(ScreenAdjusted("counter: 0"))
+        override def content: IO[Option[ScreenAdjusted]] =
+          IO.pure(Some(ScreenAdjusted("counter: 0")))
 
         override def startShow: IO[Unit] =
           ticker
@@ -414,7 +414,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
       _ <- slide.startShow
       _ <- slide.userInput(Character('x'))
       _ <- slide.stopShow
-    } yield assertEquals(content.content, "Hello, world!")
+    } yield assertEquals(content.get.content, "Hello, world!")
   }
 
   // ──────────────────────────────────────────────────────────────────────────

@@ -43,7 +43,8 @@ private[lote] final class SlideBuilder[F[_], State <: BuildState] private (
           z = if (position.z != 0.0 || existing.z == 0.0) position.z else existing.z,
           rotX = if (position.rotX != 0.0 || existing.rotX == 0.0) position.rotX else existing.rotX,
           rotY = if (position.rotY != 0.0 || existing.rotY == 0.0) position.rotY else existing.rotY,
-          rotZ = if (position.rotZ != 0.0 || existing.rotZ == 0.0) position.rotZ else existing.rotZ
+          rotZ = if (position.rotZ != 0.0 || existing.rotZ == 0.0) position.rotZ else existing.rotZ,
+          transparentBackground = position.transparentBackground || existing.transparentBackground
         ))
       case None => Some(position)
     })

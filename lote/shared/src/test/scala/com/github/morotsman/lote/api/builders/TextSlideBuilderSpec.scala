@@ -31,7 +31,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      assert(content.content.contains("Hello World"))
+      assert(content.get.content.contains("Hello World"))
     }
   }
 
@@ -44,7 +44,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      val lines = content.content.split("\n", -1)
+      val lines = content.get.content.split("\n", -1)
       // Vertically centered: (5-1)/2 = 2
       val centerLine = lines(2)
       assert(centerLine.contains("X"))
@@ -63,7 +63,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      val lines = content.content.split("\n", -1)
+      val lines = content.get.content.split("\n", -1)
       assert(lines(0).startsWith("AB"))
     }
   }
@@ -78,7 +78,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      val lines = content.content.split("\n", -1)
+      val lines = content.get.content.split("\n", -1)
       val lastLine = lines(4)
       assert(lastLine.endsWith("Z"))
     }
@@ -163,7 +163,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      val lines = content.content.split("\n", -1)
+      val lines = content.get.content.split("\n", -1)
       assert(lines(0).startsWith("Line 1"))
       assert(lines(1).startsWith("Line 2"))
       assert(lines(2).startsWith("Line 3"))
@@ -180,7 +180,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      val lines = content.content.split("\n", -1)
+      val lines = content.get.content.split("\n", -1)
       // "Hi" right-aligned in 20 chars: starts at index 18
       assert(lines(0).endsWith("Hi"))
       assertEquals(lines(0).indexOf("Hi"), 18)
@@ -201,7 +201,7 @@ class TextSlideBuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      assert(content.content.contains("Hi"))
+      assert(content.get.content.contains("Hi"))
       assertEquals(spec.out, Some(transition))
     }
   }
