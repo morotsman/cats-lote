@@ -27,19 +27,22 @@ object AdvancedWebGLExample extends IOApp.Simple {
             Milestone("Slides", 2),
             Milestone("Overlays", 4),
             Milestone("Titles", 9),
-            Milestone("Alignment", 10),
-            Milestone("Transitions", 11),
-            Milestone("Custom", 17),
-            Milestone("Interactive", 20),
-            Milestone("Landscapes", 22),
-            Milestone("Summary", 25),
-            Milestone("Bye", 26)
+            Milestone("3D Space", 10),
+            Milestone("Transitions", 19),
+            Milestone("Custom", 24),
+            Milestone("Interactive", 26),
+            Milestone("Landscapes", 28),
+            Milestone("Summary", 31),
+            Milestone("Bye", 32)
           )
         )
         .withQuickNavigation()
         .withIdleAnimation(idleTimeout = 10.seconds)
         .withFrameRate(60)
         .withAnimationFrameRate(25)
+        // ═══════════════════════════════════════════════
+        //  START
+        // ═══════════════════════════════════════════════
         .addTextSlide {
           _.content("""
                     |_________     _________________________         .____    ______________________________
@@ -54,7 +57,11 @@ object AdvancedWebGLExample extends IOApp.Simple {
                     |                          ╚═══════════════════════════╝
                     |""".stripMargin)
             .title("Start")
+            .at(0, 0, 0)
         }
+        // ═══════════════════════════════════════════════
+        //  AGENDA
+        // ═══════════════════════════════════════════════
         .addTextSlide {
           _.content(
             """
@@ -62,13 +69,17 @@ object AdvancedWebGLExample extends IOApp.Simple {
             |
             |- text slides and staged reveals
             |- overlays for timing, navigation, and progress
-            |- titles, alignment, and transitions
+            |- 3D slide placement (x, y, z and rotation)
+            |- transitions (grab, morph, replace, falling)
             |- custom overlays and custom transitions
-            |- interactive slides
+            |- interactive slides and landscapes
             |
             |In other words, we are about to spend several slides proving that a terminal can absolutely develop a personality if left unsupervised.""".stripMargin
           ).title("Agenda")
         }
+        // ═══════════════════════════════════════════════
+        //  TEXT SLIDES
+        // ═══════════════════════════════════════════════
         .addTextSlide {
           _.content(
             """
@@ -99,6 +110,9 @@ object AdvancedWebGLExample extends IOApp.Simple {
             .step("Step 3: Keep the same slide, but reveal it gradually so your outline does not breed in public.")
             .title("Step By Step")
         }
+        // ═══════════════════════════════════════════════
+        //  OVERLAYS
+        // ═══════════════════════════════════════════════
         .addTextSlide {
           _.content(
             """
@@ -185,93 +199,252 @@ object AdvancedWebGLExample extends IOApp.Simple {
             |before it learns too much about your slides.""".stripMargin
           ).title("Titles")
         }
+        // ═══════════════════════════════════════════════
+        //  3D SPACE — X/Y movement, Z depth, rotations
+        // ═══════════════════════════════════════════════
         .addTextSlide {
           _.content(
             """
-            |Alignment controls where content lands on the screen.
-            |An easy way to make a splash screen, a note,
-            |or a summary feel deliberately placed rather than just abandoned there.
+            |Slides live in a 3D world.
             |
-            |This is also the first slide with a transition,
-            |so the next slide is where things start moving,
-            |because placement alone was apparently too calm.""".stripMargin
-          ).title("Alignment")
+            |Each slide can be placed with `.at(x, y, z)`.
+            |The camera flies between positions with ease-in-out.
+            |Slides without a position stay in place — content swaps.
+            |
+            |The next few slides demonstrate spatial navigation:
+            |- horizontal and vertical movement
+            |- z-axis depth (zooming in and out)
+            |- rotations
+            |
+            |Use `-` and `+` to zoom the debug camera
+            |and see all slides laid out in space.""".stripMargin
+          ).title("3D Space")
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-            .flipTransition()
+            .at(0, 4800, 0)
         }
         .addTextSlide {
           _.content(
             """
-            |The transition that brought you here was `FlipTransition`.
+            |         ╔═══════════════════════════════════╗
+            |         ║       Horizontal movement         ║
+            |         ╚═══════════════════════════════════╝
             |
-            |On WebGL, it rotates the terminal plane in 3D.
-            |On a plain terminal, it falls back to a simple replace.
+            |This slide is at (1800, 4800, 0).
+            |The camera flew right from (0, 4800, 0).
             |
-            |Leave this slide to see `FlipVerticalTransition`,
-            |which flips around the other axis.""".stripMargin
-          ).title("FlipTransition")
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-            .flipVerticalTransition()
+            |Neighbouring slides are visible during the flight,
+            |because all slides exist as textured planes
+            |in the same Three.js scene.""".stripMargin
+          ).title("Horizontal Movement")
+            .at(1800, 4800, 0)
         }
         .addTextSlide {
           _.content(
             """
-            |The transition that brought you here was `FlipVerticalTransition`.
+            |         ╔═══════════════════════════════════╗
+            |         ║          Diagonal + Depth          ║
+            |         ╚═══════════════════════════════════╝
             |
-            |Same idea, different axis — the view rotates left-to-right
-            |instead of top-to-bottom.
+            |This slide is at (3600, 3600, 0).
+            |The camera flew diagonally — right and up.
             |
-            |Leave this slide to see `SmokeTransition`,
-            |which is what happens when text decides to evaporate.""".stripMargin
-          ).title("FlipVerticalTransition")
+            |Diagonal movement shows that the camera
+            |follows a straight line through 3D space,
+            |not a staircase of horizontal-then-vertical steps.""".stripMargin
+          ).title("Diagonal Movement")
+            .at(3600, 3600, 0)
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |         ╔═══════════════════════════════════╗
+            |         ║         Z-axis: coming closer      ║
+            |         ╚═══════════════════════════════════╝
+            |
+            |This slide is at (3600, 2400, 500).
+            |
+            |Notice the z = 500: this slide is closer to the camera
+            |than the others. When zoomed out with `-` you can see
+            |it sitting in front of its neighbours.
+            |
+            |The z-axis adds depth to the layout.""".stripMargin
+          ).title("Z-Axis: Closer")
+            .at(3600, 2400, 500)
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |         ╔═══════════════════════════════════╗
+            |         ║       Z-axis: far behind           ║
+            |         ╚═══════════════════════════════════╝
+            |
+            |This slide is at (3600, 2400, -3000).
+            |
+            |It sits far behind the previous slide.
+            |The camera flew through the "Closer" slide
+            |to reach this one in the back.
+            |
+            |Use `-` to zoom out and see both slides
+            |stacked along the z-axis — one in front,
+            |one far behind, like looking down a hallway.""".stripMargin
+          ).title("Z-Axis: Far Behind")
+            .at(3600, 2400, -3000)
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |         ╔═══════════════════════════════════╗
+            |         ║     Rotation: tilted slide         ║
+            |         ╚═══════════════════════════════════╝
+            |
+            |This slide is rotated 15° around the Y axis.
+            |
+            |`.rotatedBy(0, 15, 0)` tilts the slide surface
+            |so it faces slightly to the left.
+            |
+            |The camera still flies to the correct position,
+            |and the slide is perfectly readable — just angled,
+            |like a book propped up on a shelf.""".stripMargin
+          ).title("Y-Axis Rotation")
+            .at(5400, 2400, 0)
+            .rotatedBy(0, 15, 0)
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |         ╔═══════════════════════════════════╗
+            |         ║   Rotation: X-axis tilt            ║
+            |         ╚═══════════════════════════════════╝
+            |
+            |This slide is rotated 10° around the X axis.
+            |
+            |`.rotatedBy(10, 0, 0)` tilts the slide backward,
+            |like a monitor angled away from you.
+            |
+            |Combined with z-axis depth, rotations let you
+            |build layouts that feel genuinely three-dimensional
+            |rather than flat grids with extra steps.""".stripMargin
+          ).title("X-Axis Rotation")
+            .at(5400, 3600, 200)
+            .rotatedBy(10, 0, 0)
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |         ╔═══════════════════════════════════╗
+            |         ║   Rotation: Z-axis spin            ║
+            |         ╚═══════════════════════════════════╝
+            |
+            |This slide is rotated 8° around the Z axis.
+            |
+            |`.rotatedBy(0, 0, 8)` spins the slide in the plane,
+            |like a Post-it note stuck on at an angle.
+            |
+            |Z-rotation is fun for emphasis or stylistic flair,
+            |and thoroughly alarming in large quantities.""".stripMargin
+          ).title("Z-Axis Rotation")
+            .at(5400, 4800, 0)
+            .rotatedBy(0, 0, 8)
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |         ╔═══════════════════════════════════╗
+            |         ║   Combined: depth + rotation       ║
+            |         ╚═══════════════════════════════════╝
+            |
+            |This slide combines everything:
+            |  position  (7200, 3600, 3000)
+            |  rotation  (50°, -120°, 30°)
+            |
+            |The camera navigates to this position and orientation
+            |in one smooth flight. Zoom out with `-` to see
+            |how all these slides sit in the scene together.
+            |
+            |That is the full spatial toolkit:
+            |x, y, z placement and rx, ry, rz rotation.""".stripMargin
+          ).title("Combined Depth + Rotation")
+            .at(7200, 3600, 3000)
+            .rotatedBy(50, -120, 30)
+        }
+        // ═══════════════════════════════════════════════
+        //  TRANSITIONS
+        // ═══════════════════════════════════════════════
+        .addTextSlide {
+          _.content(
+            """
+            |Transitions animate the content change between slides.
+            |
+            |Available transitions:
+            |- `grabTransition` — a snake crawls in and drags the content away
+            |- `morphTransition` — characters morph in place
+            |- `replaceTransition` — characters are replaced one by one
+            |- `fallingCharactersTransition` — text falls off the screen
+            |- `smokeTransition` — characters dissolve into smoke particles
+            |
+            |The camera navigation itself provides the spatial movement.
+            |Transitions add character-level animation on top.
+            |
+            |This slide leaves with `grabTransition`.""".stripMargin
+          ).title("Transitions")
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .at(0, 7200, 0)
+            .grabTransition()
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |The transition that brought you here was `GrabTransition`.
+            |
+            |A multi-line ASCII snake crawled in from the right,
+            |found the longest line of text, bit down,
+            |and dragged everything off screen.
+            |
+            |This slide leaves with `morphTransition`.""".stripMargin
+          ).title("Grab Transition")
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .morphTransition()
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |The transition that brought you here was `MorphTransition`.
+            |
+            |Each character morphed in place through a sequence
+            |of intermediate symbols before settling on the new content.
+            |
+            |This slide leaves with `fallingCharactersTransition`.""".stripMargin
+          ).title("Morph Transition")
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .fallingCharactersTransition()
+        }
+        .addTextSlide {
+          _.content(
+            """
+            |The transition that brought you here was `FallingCharactersTransition`.
+            |
+            |Each character fell off the screen with a bit of gravity,
+            |clearing the way for the next slide's content.
+            |
+            |This slide leaves with `smokeTransition`.""".stripMargin
+          ).title("Falling Characters Transition")
+            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
             .smokeTransition()
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
         }
         .addTextSlide {
           _.content(
             """
             |The transition that brought you here was `SmokeTransition`.
             |
-            |On WebGL, characters drift upward and fade out
-            |with a slight wobble, like smoke dissipating.
-            |On a plain terminal, it falls back to falling characters.
-            |
-            |Leave this slide to see `DissolveTransition`,
-            |because smoke was apparently too dramatic.""".stripMargin
-          ).title("SmokeTransition")
-            .dissolveTransition()
+            |Each character broke apart into smoke particles
+            |that drifted, rotated, and faded away,
+            |leaving only empty space and a vague sense of loss.""".stripMargin
+          ).title("Smoke Transition")
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
         }
-        .addTextSlide {
-          _.content(
-            """
-            |The transition that brought you here was `DissolveTransition`.
-            |
-            |On WebGL, the content fades out and shrinks slightly,
-            |like it's dissolving into the background.
-            |On a plain terminal, it falls back to falling characters.
-            |
-            |Leave this slide to see `RotateTransition`,
-            |which spins the whole view like a panel.""".stripMargin
-          ).title("DissolveTransition")
-            .rotateTransition()
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-        }
-        .addTextSlide {
-          _.content(
-            """
-            |The transition that brought you here was `RotateTransition`.
-            |
-            |On WebGL, the slide spins around a vertical axis
-            |like a revolving door or a spinning panel,
-            |revealing the new content on the other side.
-            |
-            |Leave this slide to see `MorphTransition`,
-            |which is back to character-grid territory.""".stripMargin
-          ).title("RotateTransition")
-            .morphTransition()
-            .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-        }
+        // ═══════════════════════════════════════════════
+        //  CUSTOM OVERLAYS & TRANSITIONS
+        // ═══════════════════════════════════════════════
         .addTextSlide {
           _.content(
             """
@@ -303,6 +476,9 @@ object AdvancedWebGLExample extends IOApp.Simple {
             .transition(SweepRightTransition.contextual[IO]())
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
         }
+        // ═══════════════════════════════════════════════
+        //  INTERACTIVE SLIDES
+        // ═══════════════════════════════════════════════
         .addTextSlide {
           _.content(
             """
@@ -327,6 +503,9 @@ object AdvancedWebGLExample extends IOApp.Simple {
               _.title("Interactive")
             )
         }
+        // ═══════════════════════════════════════════════
+        //  LANDSCAPES
+        // ═══════════════════════════════════════════════
         .addTextSlide {
           _.content(
             """
@@ -346,16 +525,19 @@ object AdvancedWebGLExample extends IOApp.Simple {
             |Same idea, different dimensions.""".stripMargin
           ).title("Introducing Landscapes")
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
-            .smokeTransition()
+            .at(0, 12000, 0)
         }
         .addSlideF {
           _.addSlideF(LandscapeSlide.contextual[IO]())
-            .map(_.title("Landscape (ASCII)").smokeTransition())
+            .map(_.title("Landscape (ASCII)").at(1800, 12000, 0))
         }
         .addSlideF {
           _.addSlideF(Landscape3DSlide.contextual[IO]())
-            .map(_.title("Landscape (3D)"))
+            .map(_.title("Landscape (3D)").at(3600, 12000, 0))
         }
+        // ═══════════════════════════════════════════════
+        //  SUMMARY & BYE
+        // ═══════════════════════════════════════════════
         .addTextSlide {
           _.content(
             """
@@ -364,13 +546,15 @@ object AdvancedWebGLExample extends IOApp.Simple {
             |- text slides cover the common case
             |- staged reveals help with pacing
             |- overlays add deck-level information
-            |- transitions and alignment shape the feel
+            |- 3D placement and camera navigation shape the spatial feel
+            |- transitions add character-level animation
             |- custom slides exist for the moment plain text starts wanting side quests
             |
             |The overall model is fairly small,
             |right up until you decide the terminal should also be entertaining.""".stripMargin
           ).title("Summary")
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
+            .at(0, 14400, 0)
         }
         .addTextSlide {
           _.content(
@@ -384,6 +568,7 @@ object AdvancedWebGLExample extends IOApp.Simple {
           ).title("Bye")
             .fallingCharactersTransition()
             .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Center))
+            .at(1800, 14400, 0)
         }
         .run()
     }

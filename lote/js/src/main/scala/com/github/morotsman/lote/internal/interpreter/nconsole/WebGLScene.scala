@@ -31,9 +31,14 @@ private[nconsole] class WebGLScene(container: HTMLElement, val cellWidth: Int, v
 
   val camera = new ThreeOrthographicCamera(
     0, containerWidth, containerHeight, 0,
-    0.1, 100
+    0.1, 10000
   )
-  camera.position.set(0, 0, 5)
+  camera.position.set(0, 0, 5000)
+
+  /** The camera currently used for rendering. Defaults to the orthographic camera;
+    * switched to a perspective camera in spatial mode by `CameraAnimator`.
+    */
+  var activeCamera: scalajs.js.Any = camera
 
   private val rendererOpts = scalajs.js.Dynamic.literal(antialias = true, alpha = true)
   val renderer = new ThreeWebGLRenderer(rendererOpts.asInstanceOf[scalajs.js.UndefOr[scalajs.js.Object]])
@@ -88,7 +93,7 @@ private[nconsole] class WebGLScene(container: HTMLElement, val cellWidth: Int, v
   def viewportWidth: Int = container.clientWidth
   def viewportHeight: Int = container.clientHeight
 
-  def render(): Unit = renderer.render(scene, camera)
+  def render(): Unit = renderer.render(scene, activeCamera)
 
   /** Dispose all Three.js resources. */
   def dispose(): Unit = {

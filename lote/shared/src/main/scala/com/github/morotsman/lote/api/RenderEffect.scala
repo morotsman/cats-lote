@@ -11,20 +11,6 @@ sealed trait RenderEffect
 
 object RenderEffect {
 
-  /** Flip the entire terminal view around the horizontal axis (like turning a page).
-    *
-    * @param progress
-    *   animation progress from 0.0 (flat, showing current content) to 1.0 (flat, showing new content). At 0.5 the view
-    *   is edge-on.
-    */
-  case class FlipHorizontal(progress: Double) extends RenderEffect
-
-  /** Flip the entire terminal view around the vertical axis.
-    *
-    * @param progress
-    *   animation progress from 0.0 to 1.0
-    */
-  case class FlipVertical(progress: Double) extends RenderEffect
 
   /** Dissolve the current frame — characters fade out with per-cell randomized timing.
     *
@@ -56,16 +42,37 @@ object RenderEffect {
     */
   case class Fade(opacity: Double) extends RenderEffect
 
-  /** Rotate the entire terminal view around its center like a spinning panel.
+
+  /** Move the camera to a new position in 3D space with smooth ease-in-out animation.
     *
-    * At progress 0.0 the current content is fully visible (0° rotation).
-    * At progress 0.5 the panel is edge-on (90°) — content should be swapped here.
-    * At progress 1.0 the new content is fully visible (180° rotation, i.e. the "back" now faces forward).
+    * On WebGL backends this triggers a camera flight from the current position to the target.
+    * On terminal backends this is a no-op.
     *
-    * @param progress
-    *   animation progress from 0.0 to 1.0
+    * @param target
+    *   the target slide position (world-space coordinates and rotation)
     */
-  case class Rotate(progress: Double) extends RenderEffect
+  case class MoveCameraTo(target: SlidePosition) extends RenderEffect
+
+  /** Initialize spatial layout mode: create one rendering layer per slide, positioned in 3D space.
+    *
+    * On WebGL backends this creates separate textured planes for each slide.
+    * On terminal backends this is a no-op.
+    *
+    * @param positions
+    *   the world-space position for each slide (by index). `None` means the slide shares
+    *   the position of the previous slide.
+    */
+  case class InitSpatialLayout(positions: Vector[Option[SlidePosition]]) extends RenderEffect
+
+  /** Activate a specific slide layer for subsequent `write()` calls.
+    *
+    * On WebGL backends in spatial mode, `write()` will render to the specified layer's texture.
+    * On terminal backends this is a no-op.
+    *
+    * @param index
+    *   the slide index (0-based)
+    */
+  case class ActivateLayer(index: Int) extends RenderEffect
 
   /** Reset / clear all active effects, returning to normal rendering. */
   case object ClearEffects extends RenderEffect

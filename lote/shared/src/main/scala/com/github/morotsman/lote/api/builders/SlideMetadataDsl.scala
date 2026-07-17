@@ -1,10 +1,28 @@
 package com.github.morotsman.lote.api.builders
 
 import cats.effect.{Ref, Temporal}
+import com.github.morotsman.lote.api.SlidePosition
 import com.github.morotsman.lote.api.spi.Transition
 
 trait SlideMetadataDsl[F[_], Self] {
   def slideContext: SlideContext[F]
+
+  /** Sets the 3D world-space position of this slide.
+    *
+    * On WebGL backends the camera will navigate to this position when the slide becomes active.
+    * On terminal backends this is a no-op.
+    */
+  def at(x: Double, y: Double, z: Double): Self
+
+  /** Sets the 3D rotation (Euler angles in degrees) of this slide's surface.
+    *
+    * On WebGL backends the slide surface is rotated accordingly.
+    * On terminal backends this is a no-op.
+    */
+  def rotatedBy(rx: Double, ry: Double, rz: Double): Self
+
+  /** Sets the full slide position (position + rotation) in one call. */
+  def position(pos: SlidePosition): Self
 
   def transition(transition: Transition[F]): Self
 
@@ -33,18 +51,6 @@ trait SlideMetadataDsl[F[_], Self] {
       refMake: Ref.Make[F]
   ): Self
 
-  /** 3D flip transition (WebGL) — falls back to replace on terminal backends. */
-  def flipTransition()(implicit
-      temporal: Temporal[F],
-      refMake: Ref.Make[F]
-  ): Self
-
-  /** Vertical 3D flip transition (WebGL) — falls back to replace on terminal backends. */
-  def flipVerticalTransition()(implicit
-      temporal: Temporal[F],
-      refMake: Ref.Make[F]
-  ): Self
-
   /** Smoke dissolve transition (WebGL) — falls back to falling characters on terminal backends. */
   def smokeTransition()(implicit
       temporal: Temporal[F],
@@ -53,14 +59,6 @@ trait SlideMetadataDsl[F[_], Self] {
 
   /** Dissolve/fade-out transition (WebGL) — falls back to falling characters on terminal backends. */
   def dissolveTransition()(implicit
-      temporal: Temporal[F],
-      refMake: Ref.Make[F]
-  ): Self
-
-  /** Rotate transition (WebGL) — the slide spins like a panel to reveal the new slide on the other side.
-    * Falls back to replace on terminal backends.
-    */
-  def rotateTransition()(implicit
       temporal: Temporal[F],
       refMake: Ref.Make[F]
   ): Self

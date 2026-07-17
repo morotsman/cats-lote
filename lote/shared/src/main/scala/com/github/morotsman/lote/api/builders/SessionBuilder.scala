@@ -13,7 +13,8 @@ import com.github.morotsman.lote.internal.algebra.{Feature, IdleDetector, Presen
 import com.github.morotsman.lote.internal.interpreter.{
   IdleDetectorConfig,
   IdleDetectorInterpreter,
-  PresentationExecutorInterpreter
+  PresentationExecutorInterpreter,
+  SpatialPresentationExecutorInterpreter
 }
 import com.github.morotsman.lote.internal.interpreter.middleware.{
   Idle,
@@ -364,13 +365,23 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
       // Create executor with composed slide-change callbacks
       executor <- {
         implicit val mc: NConsole[F] = consoleWithMiddleware
-        PresentationExecutorInterpreter.make[F](
-          presentation,
-          { index =>
-            allFeatures.traverse_(_.onSlideChange(index)) *>
-              onSlideChange.fold(Monad[F].unit)(_(index))
-          }
-        )
+        val isSpatial = presentation.slideSpecifications.exists(_.position.isDefined)
+        if (isSpatial)
+          SpatialPresentationExecutorInterpreter.make[F](
+            presentation,
+            { index =>
+              allFeatures.traverse_(_.onSlideChange(index)) *>
+                onSlideChange.fold(Monad[F].unit)(_(index))
+            }
+          )
+        else
+          PresentationExecutorInterpreter.make[F](
+            presentation,
+            { index =>
+              allFeatures.traverse_(_.onSlideChange(index)) *>
+                onSlideChange.fold(Monad[F].unit)(_(index))
+            }
+          )
       }
 
       // Notify features that executor is ready (e.g., QuickNavigation subscribes here)

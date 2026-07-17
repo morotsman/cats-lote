@@ -13,8 +13,10 @@ import org.scalajs.dom.{CanvasRenderingContext2D, HTMLCanvasElement}
   */
 private[nconsole] class WebGLEffectRenderer(
     glScene: WebGLScene,
-    offscreen: HTMLCanvasElement,
-    currentFrame: () => Vector[String]
+    activeOffscreen: () => HTMLCanvasElement,
+    activeFrame: () => Vector[String],
+    cameraAnimator: CameraAnimator,
+    activeLayerMesh: () => Option[scalajs.js.Dynamic]
 ) {
 
   private val meshDyn = glScene.plane.asInstanceOf[scalajs.js.Dynamic]
@@ -23,17 +25,17 @@ private[nconsole] class WebGLEffectRenderer(
   // ---- Smoke particle state ----
   private var smokeParticles: List[scalajs.js.Dynamic] = Nil
   private var smokeActive: Boolean = false
+  private var hiddenLayerMesh: Option[scalajs.js.Dynamic] = None
 
   /** Apply a render effect. Called synchronously from `Sync[F].delay`. */
   def apply(effect: RenderEffect): Unit = effect match {
-    case RenderEffect.FlipHorizontal(progress)  => flipHorizontal(progress)
-    case RenderEffect.FlipVertical(progress)     => flipVertical(progress)
     case RenderEffect.Dissolve(progress)         => dissolve(progress)
     case RenderEffect.Smoke(progress)            => smoke(progress)
     case RenderEffect.Glow(color, intensity)     => glow(color, intensity)
     case RenderEffect.Fade(opacity)              => fade(opacity)
-    case RenderEffect.Rotate(progress)           => rotate(progress)
+    case RenderEffect.MoveCameraTo(target)       => cameraAnimator.moveTo(target)
     case RenderEffect.ClearEffects               => clearEffects()
+    case _                                       => // InitSpatialLayout and ActivateLayer handled by ThreeJsTerminal
   }
 
   /** Clean up any active particle effects and dispose their resources. */
@@ -41,27 +43,6 @@ private[nconsole] class WebGLEffectRenderer(
 
   // ---- Effect implementations ----
 
-  private def flipHorizontal(progress: Double): Unit = {
-    val scaleY = if (progress <= 0.5)
-      Math.max(0.01, 1.0 - progress / 0.5)
-    else
-      Math.max(0.01, (progress - 0.5) / 0.5)
-    val scaleX = 0.85 + 0.15 * scaleY
-    meshDyn.scale.set(scaleX, scaleY, 1.0)
-    meshDyn.position.set(glScene.centerX, glScene.centerY, 0)
-    glScene.render()
-  }
-
-  private def flipVertical(progress: Double): Unit = {
-    val scaleX = if (progress <= 0.5)
-      Math.max(0.01, 1.0 - progress / 0.5)
-    else
-      Math.max(0.01, (progress - 0.5) / 0.5)
-    val scaleY = 0.85 + 0.15 * scaleX
-    meshDyn.scale.set(scaleX, scaleY, 1.0)
-    meshDyn.position.set(glScene.centerX, glScene.centerY, 0)
-    glScene.render()
-  }
 
   private def dissolve(progress: Double): Unit = {
     val opacity = Math.max(0.0, 1.0 - progress)
@@ -76,8 +57,16 @@ private[nconsole] class WebGLEffectRenderer(
     if (!smokeActive) {
       smokeActive = true
       spawnSmokeParticles()
-      matDyn.opacity = 0.0
-      matDyn.needsUpdate = true
+      // Hide the source mesh (slide layer in spatial mode, main plane otherwise)
+      activeLayerMesh() match {
+        case Some(layerMesh) =>
+          hiddenLayerMesh = Some(layerMesh)
+          layerMesh.material.opacity = 0.0
+          layerMesh.material.needsUpdate = true
+        case None =>
+          matDyn.opacity = 0.0
+          matDyn.needsUpdate = true
+      }
     }
 
     smokeParticles.foreach { p =>
@@ -120,17 +109,6 @@ private[nconsole] class WebGLEffectRenderer(
     glScene.render()
   }
 
-  private def rotate(progress: Double): Unit = {
-    val angle = progress * Math.PI
-    val cosA  = Math.cos(angle)
-    val sinA  = Math.sin(angle)
-    val scaleX = Math.max(0.01, Math.abs(cosA))
-    meshDyn.scale.set(scaleX, 1.0, 1.0)
-    val shift = sinA * glScene.viewportWidth * 0.15
-    meshDyn.position.set(glScene.centerX + shift, glScene.centerY, 0)
-    glScene.render()
-  }
-
   private def clearEffects(): Unit = {
     cleanupSmokeParticles()
     meshDyn.rotation.x = 0.0
@@ -155,6 +133,12 @@ private[nconsole] class WebGLEffectRenderer(
     }
     smokeParticles = Nil
     smokeActive = false
+    // Restore hidden layer mesh opacity
+    hiddenLayerMesh.foreach { lm =>
+      lm.material.opacity = 1.0
+      lm.material.needsUpdate = true
+    }
+    hiddenLayerMesh = None
   }
 
   private def spawnSmokeParticles(): Unit = {
@@ -162,7 +146,22 @@ private[nconsole] class WebGLEffectRenderer(
     val cw = glScene.cellWidth
     val ch = glScene.cellHeight
 
-    currentFrame().zipWithIndex.foreach { case (line, row) =>
+    // Determine world-space offset for particles (needed in spatial mode)
+    val (offsetX, offsetY, offsetZ) = activeLayerMesh() match {
+      case Some(layerMesh) =>
+        val pos = layerMesh.position
+        // Mesh center is at (worldX + w/2, worldY + h/2, worldZ)
+        // Particle coords are relative to bottom-left of the viewport area
+        // so offset = meshCenter - (viewportWidth/2, viewportHeight/2, 0)
+        val ox = pos.x.asInstanceOf[Double] - glScene.viewportWidth / 2.0
+        val oy = pos.y.asInstanceOf[Double] - glScene.viewportHeight / 2.0
+        val oz = pos.z.asInstanceOf[Double] + 0.1
+        (ox, oy, oz)
+      case None =>
+        (0.0, 0.0, 0.1)
+    }
+
+    activeFrame().zipWithIndex.foreach { case (line, row) =>
       val styledChars = AnsiParser.parseLine(line)
       styledChars.zipWithIndex.foreach { case (sc, col) =>
         if (sc.char != ' ' && sc.char != '\n') {
@@ -170,7 +169,7 @@ private[nconsole] class WebGLEffectRenderer(
           charCanvas.width = cw
           charCanvas.height = ch
           val charCtx = charCanvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-          charCtx.drawImage(offscreen, col * cw, row * ch, cw, ch, 0, 0, cw, ch)
+          charCtx.drawImage(activeOffscreen(), col * cw, row * ch, cw, ch, 0, 0, cw, ch)
 
           val charTex = new ThreeCanvasTexture(charCanvas)
           charTex.minFilter = ThreeLinearFilter
@@ -180,9 +179,12 @@ private[nconsole] class WebGLEffectRenderer(
           val charGeo = new ThreePlaneGeometry(cw, ch)
           val charMesh = new ThreeMesh(charGeo, charMat)
 
-          val sceneX = col * cw + cw / 2.0
-          val sceneY = h - (row * ch + ch / 2.0)
-          charMesh.position.set(sceneX, sceneY, 0.1)
+          // Position in world space: local position + offset
+          val localX = col * cw + cw / 2.0
+          val localY = h - (row * ch + ch / 2.0)
+          val sceneX = localX + offsetX
+          val sceneY = localY + offsetY
+          charMesh.position.set(sceneX, sceneY, offsetZ)
 
           val p = charMesh.asInstanceOf[scalajs.js.Dynamic]
           p.userData = scalajs.js.Dynamic.literal(
@@ -202,4 +204,3 @@ private[nconsole] class WebGLEffectRenderer(
     }
   }
 }
-

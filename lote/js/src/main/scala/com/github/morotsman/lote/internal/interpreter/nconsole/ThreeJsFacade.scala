@@ -31,7 +31,9 @@ class ThreeOrthographicCamera(
     far: Double
 ) extends js.Object {
   var position: ThreeVector3 = js.native
+  var up: ThreeVector3 = js.native
   def updateProjectionMatrix(): Unit = js.native
+  def lookAt(x: Double, y: Double, z: Double): Unit = js.native
   var left: Double = js.native
   var right: Double = js.native
   var top: Double = js.native
@@ -46,12 +48,29 @@ class ThreeVector3(x: Double, y: Double, z: Double) extends js.Object {
 }
 
 @js.native
+@JSGlobal("THREE.PerspectiveCamera")
+@nowarn("cat=unused")
+class ThreePerspectiveCamera(
+    fov0: Double,
+    aspect0: Double,
+    near: Double,
+    far: Double
+) extends js.Object {
+  var position: ThreeVector3 = js.native
+  var up: ThreeVector3 = js.native
+  def updateProjectionMatrix(): Unit = js.native
+  def lookAt(x: Double, y: Double, z: Double): Unit = js.native
+  var fov: Double = js.native
+  var aspect: Double = js.native
+}
+
+@js.native
 @JSGlobal("THREE.WebGLRenderer")
 @nowarn("cat=unused")
 class ThreeWebGLRenderer(params: js.UndefOr[js.Object] = js.undefined) extends js.Object {
   def setSize(width: Double, height: Double): Unit = js.native
   def setPixelRatio(ratio: Double): Unit = js.native
-  def render(scene: ThreeScene, camera: ThreeOrthographicCamera): Unit = js.native
+  def render(scene: ThreeScene, camera: js.Any): Unit = js.native
   def dispose(): Unit = js.native
   val domElement: dom.HTMLCanvasElement = js.native
 }
@@ -77,6 +96,14 @@ class ThreeMeshBasicMaterial(params: js.UndefOr[js.Object] = js.undefined) exten
 @nowarn("cat=unused")
 class ThreeMesh(geometry: ThreePlaneGeometry, material: ThreeMeshBasicMaterial) extends js.Object {
   var position: ThreeVector3 = js.native
+  var rotation: ThreeEuler = js.native
+}
+
+@js.native
+@JSGlobal("THREE.Euler")
+@nowarn("cat=unused")
+class ThreeEuler() extends js.Object {
+  def set(x: Double, y: Double, z: Double): ThreeEuler = js.native
 }
 
 @js.native
