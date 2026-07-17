@@ -64,4 +64,9 @@ trait SlideMetadataDsl[F[_], Self] {
   ): Self
 
   def title(title: String): Self
+
+  /** Makes this slide's background transparent in spatial mode (WebGL).
+    * This allows 3D scene content behind the slide to show through.
+    */
+  def transparentBackground(): Self
 }

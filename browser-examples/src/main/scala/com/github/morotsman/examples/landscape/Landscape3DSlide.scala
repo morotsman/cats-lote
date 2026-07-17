@@ -4,12 +4,10 @@ import cats.Monad
 import cats.effect.{Async, Ref, Sync}
 import cats.implicits._
 import com.github.morotsman.lote.api.{
-  Alignment,
   AnimationSettings,
-  HorizontalAlignment,
+  Scene3DRef,
   ScreenAdjusted,
-  UserInput,
-  VerticalAlignment
+  UserInput
 }
 import com.github.morotsman.lote.api.builders.ContextualF
 import com.github.morotsman.lote.api.support.{Clock, FixedStep}
@@ -35,8 +33,8 @@ object Landscape3DSlide {
         .create[F](ctx.console, ctx.ticker, ctx.animationSettings)
         .map { animator =>
           new Slide[F] {
-            override def content: F[ScreenAdjusted] =
-              ctx.console.alignText("", Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
+            override def content: F[Option[ScreenAdjusted]] =
+              animator.ensureGeometry().as(None)
 
             override def startShow: F[Unit] = animator.start()
             override def stopShow: F[Unit] = animator.stop()
@@ -51,6 +49,10 @@ object Landscape3DSlide {
 // ---- 3D Animator ----
 
 private[landscape] trait Landscape3DAnimator[F[_]] {
+  /** Ensure the landscape geometry exists in the scene (idempotent).
+    * Called from `content` so geometry is visible before the slide is active.
+    */
+  def ensureGeometry(): F[Unit]
   def start(): F[Unit]
   def stop(): F[Unit]
   def handleInput(input: UserInput): F[Unit]
@@ -74,56 +76,64 @@ private[landscape] object Landscape3DAnimator {
       stepperRef <- FixedStep.makeRef[F]
     } yield new Landscape3DAnimator[F] {
 
-      private def buildScene(): F[js.Dynamic] = Sync[F].delay {
+      /** Resolve Scene3DRef lazily — spatial mode is only initialized after all slides are built. */
+      private def resolveScene3DRef(): Option[Scene3DRef] =
+        console.scene3DRef.map(_.asInstanceOf[Scene3DRef])
+
+      /** Build all landscape geometry and add it to the scene. Does NOT touch the camera
+        * or start animation — that happens in `start()`.
+        */
+      private def buildGeometry(): F[js.Dynamic] = Sync[F].delay {
         val THREE = g.THREE
+        val scene3DRefOpt = resolveScene3DRef()
+        val isShared = scene3DRefOpt.isDefined
 
-        // ---- Renderer ----
-        val container = dom.document.getElementById("terminal").asInstanceOf[HTMLElement]
-        val renderer = js.Dynamic.newInstance(THREE.WebGLRenderer)(
-          js.Dynamic.literal(antialias = true, alpha = false)
-        )
-        renderer.setSize(container.clientWidth, container.clientHeight)
-        renderer.setPixelRatio(dom.window.devicePixelRatio)
-        renderer.shadowMap.enabled = true
-        renderer.shadowMap.`type` = THREE.PCFSoftShadowMap
-        renderer.domElement.style.position = "absolute"
-        renderer.domElement.style.top = "0"
-        renderer.domElement.style.left = "0"
-        renderer.domElement.style.zIndex = "1000"
-        container.appendChild(renderer.domElement.asInstanceOf[dom.Node])
+        // All landscape geometry goes into a root group.
+        val landscapeGroup = js.Dynamic.newInstance(THREE.Group)()
 
-        // ---- Scene ----
-        val scene = js.Dynamic.newInstance(THREE.Scene)()
-        scene.background = js.Dynamic.newInstance(THREE.Color)("#1a0a2e")
+        // Determine center offsets
+        val (cx, cy, cz) = scene3DRefOpt match {
+          case Some(ref) => (ref.centerX, ref.centerY, ref.centerZ)
+          case None      => (0.0, 0.0, 0.0)
+        }
+        landscapeGroup.position.set(cx, cy, cz)
 
-        // Fog for depth/fairy-tale atmosphere
-        scene.fog = js.Dynamic.newInstance(THREE.FogExp2)("#1a0a2e", 0.012)
+        // ---- Renderer / Scene / Camera (mode-dependent) ----
+        val (renderer, scene, camera, container) = scene3DRefOpt match {
+          case Some(ref) =>
+            // Shared mode — use the presentation's existing scene & camera.
+            // Do NOT reposition the camera here — that's done in start().
+            val cam = ref.perspectiveCamera
+            cam.far = Math.max(cam.far.asInstanceOf[Double], 500.0)
+            cam.updateProjectionMatrix()
+            (js.undefined.asInstanceOf[js.Any], ref.threeScene, cam, js.undefined.asInstanceOf[js.Any])
+          case None =>
+            // Isolated mode DISABLED for debugging — throw to verify shared mode is used
+            throw new RuntimeException("[Landscape3D] ERROR: Isolated mode triggered! scene3DRef is None — shared mode should be active.")
+        }
 
-        // ---- Camera ----
-        val aspect = container.clientWidth.toDouble / container.clientHeight.toDouble
-        val camera = js.Dynamic.newInstance(THREE.PerspectiveCamera)(60, aspect, 0.1, 200)
-        camera.position.set(0, 12, 35)
-        camera.lookAt(0, 3, 0)
+        // The target for all add() calls
+        val sceneRoot = landscapeGroup
 
         // ---- Lighting (warm fairy-tale) ----
         val ambientLight = js.Dynamic.newInstance(THREE.AmbientLight)("#2d1b69", 0.4)
-        scene.add(ambientLight)
+        sceneRoot.add(ambientLight)
 
         val moonLight = js.Dynamic.newInstance(THREE.DirectionalLight)("#aabbff", 0.8)
         moonLight.position.set(-20, 30, 10)
         moonLight.castShadow = true
         moonLight.shadow.mapSize.width = 2048
         moonLight.shadow.mapSize.height = 2048
-        scene.add(moonLight)
+        sceneRoot.add(moonLight)
 
         val warmLight = js.Dynamic.newInstance(THREE.PointLight)("#ffaa44", 0.6, 60)
         warmLight.position.set(5, 8, 5)
-        scene.add(warmLight)
+        sceneRoot.add(warmLight)
 
         // Castle glow
         val castleGlow = js.Dynamic.newInstance(THREE.PointLight)("#ffdd88", 1.0, 25)
         castleGlow.position.set(-8, 6, -5)
-        scene.add(castleGlow)
+        sceneRoot.add(castleGlow)
 
         // ---- Ground / Terrain ----
         val terrainGeo = js.Dynamic.newInstance(THREE.PlaneGeometry)(120, 120, 80, 80)
@@ -149,7 +159,7 @@ private[landscape] object Landscape3DAnimator {
         )
         val terrain = js.Dynamic.newInstance(THREE.Mesh)(terrainGeo, terrainMat)
         terrain.receiveShadow = true
-        scene.add(terrain)
+        sceneRoot.add(terrain)
 
         // ---- Path (winding dirt path) ----
         val pathGeo = js.Dynamic.newInstance(THREE.PlaneGeometry)(3, 80, 1, 40)
@@ -172,7 +182,7 @@ private[landscape] object Landscape3DAnimator {
           js.Dynamic.literal(color = "#8B6914")
         )
         val path = js.Dynamic.newInstance(THREE.Mesh)(pathGeo, pathMat)
-        scene.add(path)
+        sceneRoot.add(path)
 
         // ---- Water (small pond) ----
         val waterGeo = js.Dynamic.newInstance(THREE.CircleGeometry)(5, 32)
@@ -182,7 +192,7 @@ private[landscape] object Landscape3DAnimator {
         )
         val water = js.Dynamic.newInstance(THREE.Mesh)(waterGeo, waterMat)
         water.position.set(18, 0.1, 8)
-        scene.add(water)
+        sceneRoot.add(water)
 
         // ---- Trees ----
         def makeTree(x: Double, z: Double, scale: Double, treeType: Int): Unit = {
@@ -199,7 +209,7 @@ private[landscape] object Landscape3DAnimator {
           val trunk = js.Dynamic.newInstance(THREE.Mesh)(trunkGeo, trunkMat)
           trunk.position.set(x, terrainY + 1.0 * scale, z)
           trunk.castShadow = true
-          scene.add(trunk)
+          sceneRoot.add(trunk)
 
           treeType match {
             case 0 => // Conifer (cone)
@@ -210,7 +220,7 @@ private[landscape] object Landscape3DAnimator {
               val foliage = js.Dynamic.newInstance(THREE.Mesh)(foliageGeo, foliageMat)
               foliage.position.set(x, terrainY + 3.5 * scale, z)
               foliage.castShadow = true
-              scene.add(foliage)
+              sceneRoot.add(foliage)
 
             case 1 => // Rounded tree (sphere)
               val foliageGeo = js.Dynamic.newInstance(THREE.SphereGeometry)(1.5 * scale, 8, 6)
@@ -220,7 +230,7 @@ private[landscape] object Landscape3DAnimator {
               val foliage = js.Dynamic.newInstance(THREE.Mesh)(foliageGeo, foliageMat)
               foliage.position.set(x, terrainY + 3.0 * scale, z)
               foliage.castShadow = true
-              scene.add(foliage)
+              sceneRoot.add(foliage)
 
             case _ => // Mushroom-shaped fairy-tale tree
               val foliageGeo = js.Dynamic.newInstance(THREE.SphereGeometry)(1.8 * scale, 10, 6)
@@ -231,7 +241,7 @@ private[landscape] object Landscape3DAnimator {
               val foliage = js.Dynamic.newInstance(THREE.Mesh)(foliageGeo, foliageMat)
               foliage.position.set(x, terrainY + 2.8 * scale, z)
               foliage.castShadow = true
-              scene.add(foliage)
+              sceneRoot.add(foliage)
           }
         }
 
@@ -249,11 +259,11 @@ private[landscape] object Landscape3DAnimator {
         }
 
         // ---- Castle ----
-        def makeCastle(cx: Double, cz: Double): Unit = {
+        def makeCastle(castleX: Double, castleZ: Double): Unit = {
           val terrainY =
-            2.5 * Math.sin(cx * 0.08) * Math.cos(cz * 0.06) +
-              1.5 * Math.sin(cx * 0.15 + 1.0) * Math.sin(cz * 0.12 + 0.5) +
-              0.8 * Math.sin(cx * 0.25 + 2.0) * Math.cos(cz * 0.2 + 1.0)
+            2.5 * Math.sin(castleX * 0.08) * Math.cos(castleZ * 0.06) +
+              1.5 * Math.sin(castleX * 0.15 + 1.0) * Math.sin(castleZ * 0.12 + 0.5) +
+              0.8 * Math.sin(castleX * 0.25 + 2.0) * Math.cos(castleZ * 0.2 + 1.0)
 
           val stoneColor = "#8a7b6b"
           val roofColor = "#4a1a3a"
@@ -264,10 +274,10 @@ private[landscape] object Landscape3DAnimator {
             js.Dynamic.literal(color = stoneColor)
           )
           val keep = js.Dynamic.newInstance(THREE.Mesh)(keepGeo, keepMat)
-          keep.position.set(cx, terrainY + 3, cz)
+          keep.position.set(castleX, terrainY + 3, castleZ)
           keep.castShadow = true
           keep.receiveShadow = true
-          scene.add(keep)
+          sceneRoot.add(keep)
 
           // Roof
           val roofGeo = js.Dynamic.newInstance(THREE.ConeGeometry)(3.5, 3, 4)
@@ -275,10 +285,10 @@ private[landscape] object Landscape3DAnimator {
             js.Dynamic.literal(color = roofColor)
           )
           val roof = js.Dynamic.newInstance(THREE.Mesh)(roofGeo, roofMat)
-          roof.position.set(cx, terrainY + 7.5, cz)
+          roof.position.set(castleX, terrainY + 7.5, castleZ)
           roof.rotation.y = Math.PI / 4
           roof.castShadow = true
-          scene.add(roof)
+          sceneRoot.add(roof)
 
           // Towers (4 corners)
           val offsets = List((-2.5, -2.5), (2.5, -2.5), (-2.5, 2.5), (2.5, 2.5))
@@ -288,9 +298,9 @@ private[landscape] object Landscape3DAnimator {
               js.Dynamic.literal(color = stoneColor)
             )
             val tower = js.Dynamic.newInstance(THREE.Mesh)(towerGeo, towerMat)
-            tower.position.set(cx + ox, terrainY + 3.5, cz + oz)
+            tower.position.set(castleX + ox, terrainY + 3.5, castleZ + oz)
             tower.castShadow = true
-            scene.add(tower)
+            sceneRoot.add(tower)
 
             // Tower cap
             val capGeo = js.Dynamic.newInstance(THREE.ConeGeometry)(1.1, 2, 8)
@@ -298,26 +308,40 @@ private[landscape] object Landscape3DAnimator {
               js.Dynamic.literal(color = roofColor)
             )
             val cap = js.Dynamic.newInstance(THREE.Mesh)(capGeo, capMat)
-            cap.position.set(cx + ox, terrainY + 8, cz + oz)
+            cap.position.set(castleX + ox, terrainY + 8, castleZ + oz)
             cap.castShadow = true
-            scene.add(cap)
+            sceneRoot.add(cap)
           }
 
-          // Castle windows (glowing)
+          // Castle windows (glowing) — all four sides
           val windowGeo = js.Dynamic.newInstance(THREE.PlaneGeometry)(0.4, 0.6)
           val windowMat = js.Dynamic.newInstance(THREE.MeshBasicMaterial)(
-            js.Dynamic.literal(color = "#ffdd66")
+            js.Dynamic.literal(color = "#ffdd66", side = THREE.DoubleSide)
           )
-          val windowPositions = List(
-            (cx - 2.01, terrainY + 4.0, cz),
-            (cx - 2.01, terrainY + 2.5, cz + 1),
-            (cx - 2.01, terrainY + 2.5, cz - 1)
+          // (x, y, z, rotationY) — windows on -X, +X, -Z, +Z faces
+          val windowSpecs = List(
+            // -X face
+            (castleX - 2.01, terrainY + 4.0, castleZ,       Math.PI / 2),
+            (castleX - 2.01, terrainY + 2.5, castleZ + 1,   Math.PI / 2),
+            (castleX - 2.01, terrainY + 2.5, castleZ - 1,   Math.PI / 2),
+            // +X face
+            (castleX + 2.01, terrainY + 4.0, castleZ,       Math.PI / 2),
+            (castleX + 2.01, terrainY + 2.5, castleZ + 1,   Math.PI / 2),
+            (castleX + 2.01, terrainY + 2.5, castleZ - 1,   Math.PI / 2),
+            // -Z face
+            (castleX,       terrainY + 4.0, castleZ - 2.01, 0.0),
+            (castleX + 1,   terrainY + 2.5, castleZ - 2.01, 0.0),
+            (castleX - 1,   terrainY + 2.5, castleZ - 2.01, 0.0),
+            // +Z face
+            (castleX,       terrainY + 4.0, castleZ + 2.01, 0.0),
+            (castleX + 1,   terrainY + 2.5, castleZ + 2.01, 0.0),
+            (castleX - 1,   terrainY + 2.5, castleZ + 2.01, 0.0)
           )
-          windowPositions.foreach { case (wx, wy, wz) =>
+          windowSpecs.foreach { case (wx, wy, wz, ry) =>
             val win = js.Dynamic.newInstance(THREE.Mesh)(windowGeo, windowMat)
             win.position.set(wx, wy, wz)
-            win.rotation.y = Math.PI / 2
-            scene.add(win)
+            win.rotation.y = ry
+            sceneRoot.add(win)
           }
         }
 
@@ -326,7 +350,7 @@ private[landscape] object Landscape3DAnimator {
 
         // ---- Roaming figures (simple capsule-like shapes) ----
         val figureGroup = js.Dynamic.newInstance(THREE.Group)()
-        scene.add(figureGroup)
+        sceneRoot.add(figureGroup)
 
         val figRng = new scala.util.Random(99)
         val figures = js.Array[js.Dynamic]()
@@ -390,7 +414,7 @@ private[landscape] object Landscape3DAnimator {
           js.Dynamic.literal(color = "#ffffff", size = 0.3, sizeAttenuation = true)
         )
         val stars = js.Dynamic.newInstance(THREE.Points)(starGeo, starMat)
-        scene.add(stars)
+        sceneRoot.add(stars)
 
         // ---- Moon ----
         val moonGeo = js.Dynamic.newInstance(THREE.SphereGeometry)(2.5, 16, 16)
@@ -399,7 +423,7 @@ private[landscape] object Landscape3DAnimator {
         )
         val moon = js.Dynamic.newInstance(THREE.Mesh)(moonGeo, moonMat)
         moon.position.set(-25, 30, -30)
-        scene.add(moon)
+        sceneRoot.add(moon)
 
         // Moon glow
         val moonGlowGeo = js.Dynamic.newInstance(THREE.SphereGeometry)(3.5, 16, 16)
@@ -408,7 +432,7 @@ private[landscape] object Landscape3DAnimator {
         )
         val moonGlow = js.Dynamic.newInstance(THREE.Mesh)(moonGlowGeo, moonGlowMat)
         moonGlow.position.set(-25, 30, -30)
-        scene.add(moonGlow)
+        sceneRoot.add(moonGlow)
 
         // ---- Fireflies (small glowing particles near ground) ----
         val fireflyCount = 30
@@ -425,22 +449,36 @@ private[landscape] object Landscape3DAnimator {
         )
         fireflyGeo.setAttribute("position", js.Dynamic.newInstance(THREE.BufferAttribute)(fireflyFloat32, 3))
         val fireflyMat = js.Dynamic.newInstance(THREE.PointsMaterial)(
-          js.Dynamic.literal(color = "#ffff44", size = 0.4, sizeAttenuation = true, transparent = true, opacity = 0.8)
+          js.Dynamic.literal(color = "#ff9922", size = 0.4, sizeAttenuation = true, transparent = true, opacity = 0.8)
         )
         val fireflies = js.Dynamic.newInstance(THREE.Points)(fireflyGeo, fireflyMat)
-        scene.add(fireflies)
+        sceneRoot.add(fireflies)
+
+        // ---- Attach the landscape group to the scene ----
+        scene3DRefOpt match {
+          case Some(ref) =>
+            ref.addToScene(landscapeGroup)
+            ref.render() // re-render so geometry is immediately visible
+          case None =>
+            scene.add(landscapeGroup)
+        }
 
         // Return scene state for animation
         js.Dynamic.literal(
           renderer = renderer,
           scene = scene,
           camera = camera,
-          container = container.asInstanceOf[js.Any],
+          container = container,
+          landscapeGroup = landscapeGroup,
           figures = figureSpeeds,
           fireflies = fireflies,
           stars = stars,
           water = water,
-          tick = 0.asInstanceOf[js.Any]
+          tick = 0.asInstanceOf[js.Any],
+          centerX = cx,
+          centerY = cy,
+          centerZ = cz,
+          shared = isShared
         )
       }
 
@@ -494,16 +532,26 @@ private[landscape] object Landscape3DAnimator {
         state.water.material.opacity = waterOpacity
 
         // Render
-        state.renderer.render(state.scene, state.camera)
+        if (state.shared.asInstanceOf[Boolean]) {
+          resolveScene3DRef().foreach(_.render())
+        } else {
+          state.renderer.render(state.scene, state.camera)
+        }
       }
 
       private def updateCamera(state: js.Dynamic, angle: Double, dist: Double): F[Unit] = Sync[F].delay {
         val camera = state.camera
+        val ocx = state.centerX.asInstanceOf[Double]
+        val ocy = state.centerY.asInstanceOf[Double]
+        val ocz = state.centerZ.asInstanceOf[Double]
         val x = Math.sin(angle) * dist
         val z = Math.cos(angle) * dist
-        camera.position.set(x, 12, z)
-        camera.lookAt(0, 3, 0)
+        camera.position.set(ocx + x, ocy + 12, ocz + z)
+        camera.lookAt(ocx, ocy + 3, ocz)
       }
+
+      private val targetDist = 35.0
+      private val lerpFactor = 0.03 // smooth interpolation per step (exponential ease-out)
 
       private val tickerCallback: F[Unit] = for {
         nrOfSteps <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
@@ -519,7 +567,9 @@ private[landscape] object Landscape3DAnimator {
                   rotSpeed <- rotSpeedRef.get
                   zoomSpeed <- zoomSpeedRef.get
                   newAngle = angle + rotSpeed * nrOfSteps
-                  newDist = Math.max(15, Math.min(60, dist + zoomSpeed * nrOfSteps))
+                  // Smoothly lerp distance toward target
+                  lerpedDist = dist + (targetDist - dist) * Math.min(1.0, lerpFactor * nrOfSteps)
+                  newDist = Math.max(15, Math.min(500, lerpedDist + zoomSpeed * nrOfSteps))
                   _ <- cameraAngleRef.set(newAngle)
                   _ <- cameraDistRef.set(newDist)
                   _ <- updateCamera(state, newAngle, newDist)
@@ -529,11 +579,44 @@ private[landscape] object Landscape3DAnimator {
             } yield ()
       } yield ()
 
+      /** Idempotent: build geometry and add to scene if not already done. */
+      override def ensureGeometry(): F[Unit] = for {
+        existing <- sceneRef.get
+        _ <- existing match {
+          case Some(_) => Monad[F].unit // already materialized
+          case None =>
+            for {
+              state <- buildGeometry()
+              _ <- sceneRef.set(Some(state))
+            } yield ()
+        }
+      } yield ()
+
+      /** Compute current camera angle and distance relative to landscape center. */
+      private def computeCameraOrbit(state: js.Dynamic): (Double, Double) = {
+        val camera = state.camera
+        val cx = state.centerX.asInstanceOf[Double]
+        val cz = state.centerZ.asInstanceOf[Double]
+        val camX = camera.position.x.asInstanceOf[Double] - cx
+        val camZ = camera.position.z.asInstanceOf[Double] - cz
+        val dist = Math.sqrt(camX * camX + camZ * camZ)
+        val angle = Math.atan2(camX, camZ)
+        (angle, Math.max(15, Math.min(500, dist)))
+      }
+
       override def start(): F[Unit] = for {
-        state <- buildScene()
-        _ <- sceneRef.set(Some(state))
-        _ <- cameraAngleRef.set(0.0)
-        _ <- cameraDistRef.set(35.0)
+        _ <- ensureGeometry()
+        maybeState <- sceneRef.get
+        // Derive initial angle/distance from the current camera position
+        // so there's no abrupt jump when the ticker takes over.
+        _ <- maybeState.traverse_ { state =>
+          Sync[F].delay {
+            val (angle, dist) = computeCameraOrbit(state)
+            (angle, dist)
+          }.flatMap { case (angle, dist) =>
+            cameraAngleRef.set(angle) >> cameraDistRef.set(dist)
+          }
+        }
         _ <- rotSpeedRef.set(0.003) // Gentle auto-rotate
         _ <- zoomSpeedRef.set(0.0)
         _ <- FixedStep.reset(stepperRef)
@@ -549,15 +632,25 @@ private[landscape] object Landscape3DAnimator {
         maybeScene <- sceneRef.get
         _ <- maybeScene.traverse_ { state =>
           Sync[F].delay {
-            val container = state.container.asInstanceOf[HTMLElement]
-            val rendererDom = state.renderer.domElement.asInstanceOf[dom.Node]
-            state.renderer.dispose()
-            if (container.contains(rendererDom)) {
-              container.removeChild(rendererDom)
+            if (state.shared.asInstanceOf[Boolean]) {
+              // Shared mode: keep geometry in the scene so it's visible from other slides.
+              // Only the animation ticker was stopped above — the static landscape remains.
+            } else {
+              // Isolated mode: dispose the private renderer
+              val container = state.container.asInstanceOf[HTMLElement]
+              val rendererDom = state.renderer.domElement.asInstanceOf[dom.Node]
+              state.renderer.dispose()
+              if (container.contains(rendererDom)) {
+                container.removeChild(rendererDom)
+              }
             }
           }
         }
-        _ <- sceneRef.set(None)
+        // In isolated mode, clear the ref so start() rebuilds. In shared mode, keep it.
+        _ <- maybeScene.traverse_ { state =>
+          if (!state.shared.asInstanceOf[Boolean]) sceneRef.set(None)
+          else Monad[F].unit
+        }
       } yield ()
 
       override def handleInput(input: UserInput): F[Unit] = input match {

@@ -45,4 +45,12 @@ trait Terminal[F[_]] {
     * The default is `CharacterGrid` only, which is appropriate for JLine and xterm.js terminals.
     */
   def capabilities: Set[PlatformCapability] = Set(PlatformCapability.CharacterGrid)
+
+  /** Returns a reference to the shared 3D scene, if the backend supports spatial mode.
+    *
+    * On WebGL backends in spatial mode, this returns `Some(Scene3DRef)` which can be cast
+    * to `com.github.morotsman.lote.api.Scene3DRef` for adding 3D geometry to the shared scene.
+    * On terminal backends this returns `None`.
+    */
+  def scene3DRef: Option[Any] = None
 }

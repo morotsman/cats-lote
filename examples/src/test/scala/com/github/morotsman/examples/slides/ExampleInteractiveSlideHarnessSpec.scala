@@ -39,13 +39,13 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
 
   // --- Slide ↔ Animator delegation tests (recording animator) ---
 
-  test("content returns an empty centered screen") {
+  test("content returns None for animated slide") {
     for {
       console <- TestConsole.make[IO](screen = Screen(4, 3))
       state <- Ref[IO].of(RecordingState())
       slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
       content <- slide.content
-    } yield assertEquals(content.content, "    \n    \n    ")
+    } yield assertEquals(content, None)
   }
 
   test("startShow delegates to animator.animate") {

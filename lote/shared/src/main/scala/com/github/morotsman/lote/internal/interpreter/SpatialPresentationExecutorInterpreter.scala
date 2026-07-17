@@ -5,7 +5,7 @@ import cats.effect.Temporal
 import cats.effect.implicits._
 import cats.effect.kernel.{Fiber, Ref}
 import cats.implicits._
-import com.github.morotsman.lote.api.{Key, RenderEffect, SlidePosition, SpecialKey, UserInput}
+import com.github.morotsman.lote.api.{Key, RenderEffect, ScreenAdjusted, SlidePosition, SpecialKey, UserInput}
 import com.github.morotsman.lote.internal.algebra.PresentationExecutor
 import com.github.morotsman.lote.api.spi.NConsole
 import com.github.morotsman.lote.internal.model.Presentation
@@ -91,7 +91,10 @@ private[lote] object SpatialPresentationExecutorInterpreter {
               for {
                 _ <- NConsole[F].applyEffect(RenderEffect.ActivateLayer(idx))
                 content <- spec.slide.content
-                _ <- NConsole[F].writeString(content)
+                _ <- content match {
+                  case Some(c) => NConsole[F].writeString(c)
+                  case None    => NConsole[F].writeString(ScreenAdjusted("")) // clear layer text for animated slides
+                }
               } yield ()
             } else {
               Monad[F].unit
@@ -123,7 +126,10 @@ private[lote] object SpatialPresentationExecutorInterpreter {
                     val activateAndRender = for {
                       _ <- NConsole[F].applyEffect(RenderEffect.ActivateLayer(currentIndex))
                       content <- current.slide.content
-                      _ <- NConsole[F].writeString(content)
+                      _ <- content match {
+                        case Some(c) => NConsole[F].writeString(c)
+                        case None    => NConsole[F].writeString(ScreenAdjusted("")) // clear stale text
+                      }
                     } yield ()
 
                     lastCameraPos = Some(targetPos)

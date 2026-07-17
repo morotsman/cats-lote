@@ -70,6 +70,9 @@ private[lote] object BuilderDslAdapters {
     override final def position(pos: SlidePosition): Self =
       update(b => applyPosition(b, pos))
 
+    override final def transparentBackground(): Self =
+      update(b => applyPosition(b, SlidePosition(transparentBackground = true)))
+
     override final def transition(transition: Transition[F]): Self =
       update(b => applyTransition(b, transition))
 

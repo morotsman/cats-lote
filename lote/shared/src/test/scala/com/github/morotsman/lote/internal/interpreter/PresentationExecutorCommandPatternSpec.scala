@@ -24,7 +24,7 @@ class PresentationExecutorCommandPatternSpec extends CatsEffectSuite {
       stopRef: Ref[IO, Int],
       inputRef: Ref[IO, List[UserInput]]
   ): Slide[IO] = new Slide[IO] {
-    override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted(name))
+    override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted(name)))
     override def startShow: IO[Unit] = startRef.update(_ + 1)
     override def stopShow: IO[Unit] = stopRef.update(_ + 1)
     override def userInput(input: UserInput): IO[Unit] = inputRef.update(_ :+ input)
@@ -256,7 +256,7 @@ class PresentationExecutorCommandPatternSpec extends CatsEffectSuite {
       )
       implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       slide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Interactive"))
+        override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted("Interactive")))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] =
@@ -283,7 +283,7 @@ class PresentationExecutorCommandPatternSpec extends CatsEffectSuite {
       )
       implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       slide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("CharSlide"))
+        override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted("CharSlide")))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] =
@@ -380,7 +380,7 @@ class PresentationExecutorCommandPatternSpec extends CatsEffectSuite {
       executorRef <- IO.ref(Option.empty[com.github.morotsman.lote.internal.algebra.PresentationExecutor[IO]])
       // Create a slide that triggers setSlide when it gets input
       jumpSlide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Jump"))
+        override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted("Jump")))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] =
@@ -581,7 +581,7 @@ class PresentationExecutorCommandPatternSpec extends CatsEffectSuite {
       )
       implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
       slide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Clickable"))
+        override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted("Clickable")))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] =

@@ -11,6 +11,7 @@ package com.github.morotsman.lote.api
   * @param rotX  rotation around X axis in degrees
   * @param rotY  rotation around Y axis in degrees
   * @param rotZ  rotation around Z axis in degrees
+  * @param transparentBackground  if true, the slide's background is transparent (WebGL spatial mode only)
   */
 final case class SlidePosition(
     x: Double = 0.0,
@@ -18,6 +19,7 @@ final case class SlidePosition(
     z: Double = 0.0,
     rotX: Double = 0.0,
     rotY: Double = 0.0,
-    rotZ: Double = 0.0
+    rotZ: Double = 0.0,
+    transparentBackground: Boolean = false
 )
 

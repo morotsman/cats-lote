@@ -26,7 +26,7 @@ class BuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      val lines = content.content.split("\n", -1)
+      val lines = content.get.content.split("\n", -1)
       assert(lines(0).startsWith("Test"))
     }
   }
@@ -40,7 +40,7 @@ class BuilderSpec extends CatsEffectSuite {
         .build()
       content <- spec.slide.content
     } yield {
-      val lines = content.content.split("\n", -1)
+      val lines = content.get.content.split("\n", -1)
       assert(lines(2).contains("Hi"))
     }
   }
@@ -49,8 +49,8 @@ class BuilderSpec extends CatsEffectSuite {
     for {
       _ <- IO.unit
       slide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] =
-          IO.pure(ScreenAdjusted("content"))
+        override def content: IO[Option[ScreenAdjusted]] =
+          IO.pure(Some(ScreenAdjusted("content")))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] = IO.unit

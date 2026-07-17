@@ -21,8 +21,8 @@ object LandscapeSlide {
         .create[F](ctx.console, ctx.ticker, ctx.animationSettings)
         .map { animator =>
           new Slide[F] {
-            override def content: F[ScreenAdjusted] =
-              animator.lastFrame
+            override def content: F[Option[ScreenAdjusted]] =
+              animator.lastFrame.map(Some(_))
 
             override def startShow: F[Unit] = animator.start()
             override def stopShow: F[Unit] = animator.stop()

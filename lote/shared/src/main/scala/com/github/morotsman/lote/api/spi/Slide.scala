@@ -3,7 +3,7 @@ package com.github.morotsman.lote.api.spi
 import com.github.morotsman.lote.api.{ScreenAdjusted, UserInput}
 
 trait Slide[F[_]] {
-  def content: F[ScreenAdjusted]
+  def content: F[Option[ScreenAdjusted]]
 
   def startShow: F[Unit]
 

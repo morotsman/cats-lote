@@ -166,8 +166,8 @@ private[lote] object CharactersTransition {
       }
 
       for {
-        slide1 <- from.content
-        slide2 <- to.content
+        slide1 <- from.content.map(_.getOrElse(ScreenAdjusted("")))
+        slide2 <- to.content.map(_.getOrElse(ScreenAdjusted("")))
         positions = setupPositions(slide1, slide2)
         randomIndexes = Random.shuffle(positions.indices.toList).toSet
         initialState = TransitionState(positions, randomIndexes, 1.0)

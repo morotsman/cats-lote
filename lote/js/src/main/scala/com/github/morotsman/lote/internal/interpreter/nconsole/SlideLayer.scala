@@ -19,7 +19,8 @@ private[nconsole] class SlideLayer(
     viewportWidth: Int,
     viewportHeight: Int,
     cellWidth: Int,
-    cellHeight: Int
+    cellHeight: Int,
+    val transparentBg: Boolean = false
 ) {
 
   val cols: Int = viewportWidth / cellWidth
@@ -34,9 +35,13 @@ private[nconsole] class SlideLayer(
   val ctx: CanvasRenderingContext2D =
     offscreen.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
 
-  // Clear to black initially
-  ctx.fillStyle = "#000000"
-  ctx.fillRect(0, 0, offscreen.width, offscreen.height)
+  // Clear initially — transparent or black
+  if (transparentBg) {
+    ctx.clearRect(0, 0, offscreen.width, offscreen.height)
+  } else {
+    ctx.fillStyle = "#000000"
+    ctx.fillRect(0, 0, offscreen.width, offscreen.height)
+  }
 
   // Three.js texture and mesh
   val texture = new ThreeCanvasTexture(offscreen)
@@ -48,6 +53,11 @@ private[nconsole] class SlideLayer(
     scalajs.js.Dynamic.literal(map = texture, transparent = true, side = 2)
       .asInstanceOf[scalajs.js.UndefOr[scalajs.js.Object]]
   )
+  // Transparent-background slides must not write to the depth buffer,
+  // otherwise their invisible plane occludes 3D geometry behind them.
+  if (transparentBg) {
+    mat.asInstanceOf[scalajs.js.Dynamic].depthWrite = false
+  }
   val mesh = new ThreeMesh(geo, mat)
 
   // Position the mesh at world coordinates

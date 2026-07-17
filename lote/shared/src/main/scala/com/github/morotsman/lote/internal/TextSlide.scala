@@ -34,11 +34,11 @@ object TextSlide {
       alignment: Alignment
   ): Slide[F] =
     new Slide[F] {
-      override def content: F[ScreenAdjusted] =
-        NConsole[F].alignText(slideContent, alignment)
+      override def content: F[Option[ScreenAdjusted]] =
+        NConsole[F].alignText(slideContent, alignment).map(Some(_))
 
       override def startShow: F[Unit] =
-        content >>= (c => NConsole[F].writeString(c))
+        content >>= (_.traverse_(c => NConsole[F].writeString(c)))
 
       override def stopShow: F[Unit] =
         Monad[F].unit
@@ -68,13 +68,13 @@ object TextSlide {
       NConsole[F].alignText(stagesWithHint(index), alignment)
 
     new Slide[F] {
-      override def content: F[ScreenAdjusted] =
-        renderStage(stageIndex.get())
+      override def content: F[Option[ScreenAdjusted]] =
+        renderStage(stageIndex.get()).map(Some(_))
 
       override def startShow: F[Unit] =
         for {
           _ <- Monad[F].pure(stageIndex.set(0))
-          current <- content
+          current <- renderStage(0)
           _ <- NConsole[F].writeString(current)
         } yield ()
 

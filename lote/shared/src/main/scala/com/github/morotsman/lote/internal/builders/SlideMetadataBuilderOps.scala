@@ -112,4 +112,10 @@ private[lote] trait SlideMetadataBuilderOps[F[_], Self] {
 
   final def position(pos: SlidePosition): Self =
     withPosition(pos)
+
+  /** Makes this slide's background transparent in spatial mode (WebGL).
+    * This allows 3D scene content behind the slide to show through.
+    */
+  final def transparentBackground(): Self =
+    withPosition(SlidePosition(transparentBackground = true))
 }

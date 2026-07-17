@@ -167,7 +167,7 @@ class SessionBuilderSpec extends FunSuite {
 
   test("addSlideF can build slides from an effectful custom slide") {
     val slide = new Slide[IO] {
-      override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Hello"))
+      override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted("Hello")))
       override def startShow: IO[Unit] = IO.unit
       override def stopShow: IO[Unit] = IO.unit
       override def userInput(input: UserInput): IO[Unit] = IO.unit
@@ -427,7 +427,7 @@ class SessionBuilderIntegrationSpec extends CatsEffectSuite {
     for {
       receivedInputs <- IO.ref(List.empty[UserInput])
       slide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Interactive"))
+        override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted("Interactive")))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] =
@@ -503,7 +503,7 @@ class SessionBuilderIntegrationSpec extends CatsEffectSuite {
     for {
       constructed <- IO.ref(false)
       slide = new Slide[IO] {
-        override def content: IO[ScreenAdjusted] = IO.pure(ScreenAdjusted("Effectful"))
+        override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted("Effectful")))
         override def startShow: IO[Unit] = IO.unit
         override def stopShow: IO[Unit] = IO.unit
         override def userInput(input: UserInput): IO[Unit] = IO.unit

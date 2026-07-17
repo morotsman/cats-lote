@@ -5,13 +5,10 @@ import cats.effect.{Ref, Temporal}
 import cats.effect.std.Queue
 import cats.implicits._
 import com.github.morotsman.lote.api.{
-  Alignment,
   AnimationSettings,
   Character,
-  HorizontalAlignment,
   ScreenAdjusted,
-  UserInput,
-  VerticalAlignment
+  UserInput
 }
 import com.github.morotsman.lote.api.builders.ContextualF
 import com.github.morotsman.lote.api.support.{Clock, FixedStep}
@@ -35,14 +32,8 @@ object ExampleInteractiveSlide {
   )(implicit monad: Monad[F]): Slide[F] = {
 
     new Slide[F] {
-      override def content: F[ScreenAdjusted] =
-        console.alignText(
-          "",
-          Alignment(
-            VerticalAlignment.Center,
-            HorizontalAlignment.Center
-          )
-        )
+      override def content: F[Option[ScreenAdjusted]] =
+        monad.pure(None)
 
       override def startShow: F[Unit] =
         animator.animate()

@@ -26,14 +26,19 @@ private[nconsole] object WebGLCanvasRenderer {
       cols: Int,
       cellWidth: Int,
       cellHeight: Int,
-      fontFamily: String
+      fontFamily: String,
+      transparentBg: Boolean = false
   ): Unit = {
     val y = row * cellHeight
     val styledChars = AnsiParser.parseLine(line)
 
     // Clear the row
-    ctx.fillStyle = "#000000"
-    ctx.fillRect(0, y, cols * cellWidth, cellHeight)
+    if (transparentBg) {
+      ctx.clearRect(0, y, cols * cellWidth, cellHeight)
+    } else {
+      ctx.fillStyle = "#000000"
+      ctx.fillRect(0, y, cols * cellWidth, cellHeight)
+    }
 
     styledChars.zipWithIndex.foreach { case (sc, col) =>
       val x = col * cellWidth
@@ -71,8 +76,12 @@ private[nconsole] object WebGLCanvasRenderer {
 
     // Clear remaining cells beyond content
     if (styledChars.length < cols) {
-      ctx.fillStyle = "#000000"
-      ctx.fillRect(styledChars.length * cellWidth, y, (cols - styledChars.length) * cellWidth, cellHeight)
+      if (transparentBg) {
+        ctx.clearRect(styledChars.length * cellWidth, y, (cols - styledChars.length) * cellWidth, cellHeight)
+      } else {
+        ctx.fillStyle = "#000000"
+        ctx.fillRect(styledChars.length * cellWidth, y, (cols - styledChars.length) * cellWidth, cellHeight)
+      }
     }
   }
 }

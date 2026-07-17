@@ -55,8 +55,8 @@ object SweepRightTransition {
       override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
         for {
           screen <- console.context
-          fromContent <- from.content
-          toContent <- to.content
+          fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
+          toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
           contentWidth = {
             val fromMax = fromContent.content.split("\n", -1).map(_.stripTrailing().length).maxOption.getOrElse(0)
             val toMax = toContent.content.split("\n", -1).map(_.stripTrailing().length).maxOption.getOrElse(0)
