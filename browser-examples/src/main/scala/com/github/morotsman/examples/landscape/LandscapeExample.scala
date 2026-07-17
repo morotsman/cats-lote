@@ -42,7 +42,7 @@ object LandscapeExample extends IOApp.Simple {
               |""".stripMargin
           ).title("Welcome")
             .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
-            .flipTransition()
+            .grabTransition()
         }
         .addSlideF {
           _.addSlideF(LandscapeSlide.contextual[IO]())
@@ -69,7 +69,7 @@ object LandscapeExample extends IOApp.Simple {
               |""".stripMargin
           ).title("3D Intro")
             .alignment(Alignment(VerticalAlignment.Center, HorizontalAlignment.Center))
-            .flipTransition()
+            .grabTransition()
         }
         .addSlideF {
           _.addSlideF(Landscape3DSlide.contextual[IO]())

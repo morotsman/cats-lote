@@ -2,7 +2,7 @@ package com.github.morotsman.lote.internal.builders
 
 import cats.effect.Temporal
 import com.github.morotsman.lote.api.spi.{NConsole, Transition}
-import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, VerticalAlignment}
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, SlidePosition, VerticalAlignment}
 import com.github.morotsman.lote.internal.builders.TextSlideBuilder.{BuildState, ContentAdded}
 import com.github.morotsman.lote.internal.model.SlideSpecification
 import com.github.morotsman.lote.internal.TextSlide
@@ -29,7 +29,8 @@ private[lote] final class TextSlideBuilder[
     private val currentSeparator: String,
     private val currentHint: Option[String],
     private val currentOut: Option[Transition[F]],
-    private val currentTitle: Option[String]
+    private val currentTitle: Option[String],
+    private val currentPosition: Option[SlidePosition]
 ) extends SlideMetadataBuilderOps[F, TextSlideBuilder[F, State]] {
 
   private def copy[NextState <: BuildState](
@@ -39,14 +40,29 @@ private[lote] final class TextSlideBuilder[
       separator: String = currentSeparator,
       hint: Option[String] = currentHint,
       out: Option[Transition[F]] = currentOut,
-      slideTitle: Option[String] = currentTitle
+      slideTitle: Option[String] = currentTitle,
+      slidePosition: Option[SlidePosition] = currentPosition
   ): TextSlideBuilder[F, NextState] =
-    new TextSlideBuilder[F, NextState](alignment, content, steps, separator, hint, out, slideTitle)
+    new TextSlideBuilder[F, NextState](alignment, content, steps, separator, hint, out, slideTitle, slidePosition)
 
   override protected def withTransition(
       transition: Transition[F]
   ): TextSlideBuilder[F, State] =
     this.copy[State](out = Some(transition))
+
+  override protected def withPosition(position: SlidePosition): TextSlideBuilder[F, State] =
+    this.copy[State](slidePosition = currentPosition match {
+      case Some(existing) =>
+        Some(SlidePosition(
+          x = if (position.x != 0.0 || existing.x == 0.0) position.x else existing.x,
+          y = if (position.y != 0.0 || existing.y == 0.0) position.y else existing.y,
+          z = if (position.z != 0.0 || existing.z == 0.0) position.z else existing.z,
+          rotX = if (position.rotX != 0.0 || existing.rotX == 0.0) position.rotX else existing.rotX,
+          rotY = if (position.rotY != 0.0 || existing.rotY == 0.0) position.rotY else existing.rotY,
+          rotZ = if (position.rotZ != 0.0 || existing.rotZ == 0.0) position.rotZ else existing.rotZ
+        ))
+      case None => Some(position)
+    })
 
   def content(content: String): TextSlideBuilder[F, State with ContentAdded] =
     this.copy[State with ContentAdded](content = Some(content))
@@ -104,9 +120,10 @@ private[lote] final class TextSlideBuilder[
 
     val builderWithSlide = SlideBuilder[F]().addSlide(slide)
     val builderWithTransition = currentOut.fold(builderWithSlide)(builderWithSlide.transition)
-    val builderWithMetadata = currentTitle.fold(builderWithTransition)(builderWithTransition.title)
+    val builderWithTitle = currentTitle.fold(builderWithTransition)(builderWithTransition.title)
+    val builderWithPosition = currentPosition.fold(builderWithTitle)(builderWithTitle.position)
 
-    builderWithMetadata.build()
+    builderWithPosition.build()
   }
 
 }
@@ -118,7 +135,7 @@ private[lote] object TextSlideBuilder {
   def apply[F[_]: Temporal]()(implicit
       console: NConsole[F]
   ): TextSlideBuilder[F, WithoutContent] =
-    new TextSlideBuilder(None, None, Vector.empty, TextSlide.DefaultStepSeparator, None, None, None)
+    new TextSlideBuilder(None, None, Vector.empty, TextSlide.DefaultStepSeparator, None, None, None, None)
 
   sealed trait BuildState
 

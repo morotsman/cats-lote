@@ -2,7 +2,7 @@ package com.github.morotsman.lote.api.builders
 
 import cats.Functor
 import cats.effect.{Ref, Temporal}
-import com.github.morotsman.lote.api.Alignment
+import com.github.morotsman.lote.api.{Alignment, SlidePosition}
 import com.github.morotsman.lote.api.spi.{Slide, Transition}
 import com.github.morotsman.lote.internal.builders.{
   SlideBuilder => InternalSlideBuilder,
@@ -48,22 +48,27 @@ private[lote] object BuilderDslAdapters {
         refMake: Ref.Make[F]
     ): Builder
 
-    protected def applyFlip(builder: Builder)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
-
-    protected def applyFlipVertical(builder: Builder)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
-
     protected def applySmoke(builder: Builder)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
 
     protected def applyDissolve(builder: Builder)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
 
-    protected def applyRotate(builder: Builder)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Builder
-
     protected def applyTitle(builder: Builder, title: String): Builder
+
+    protected def applyPosition(builder: Builder, position: SlidePosition): Builder
 
     override final def slideContext: SlideContext[F] = ctx
 
     protected final def update(next: Builder => Builder): Self =
       wrap(next(builder))
+
+    override final def at(x: Double, y: Double, z: Double): Self =
+      update(b => applyPosition(b, SlidePosition(x, y, z)))
+
+    override final def rotatedBy(rx: Double, ry: Double, rz: Double): Self =
+      update(b => applyPosition(b, SlidePosition(rotX = rx, rotY = ry, rotZ = rz)))
+
+    override final def position(pos: SlidePosition): Self =
+      update(b => applyPosition(b, pos))
 
     override final def transition(transition: Transition[F]): Self =
       update(b => applyTransition(b, transition))
@@ -86,20 +91,11 @@ private[lote] object BuilderDslAdapters {
     override final def grabTransition(stepSize: Int)(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Self =
       update(b => applyGrab(b, stepSize))
 
-    override final def flipTransition()(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Self =
-      update(b => applyFlip(b))
-
-    override final def flipVerticalTransition()(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Self =
-      update(b => applyFlipVertical(b))
-
     override final def smokeTransition()(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Self =
       update(b => applySmoke(b))
 
     override final def dissolveTransition()(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Self =
       update(b => applyDissolve(b))
-
-    override final def rotateTransition()(implicit temporal: Temporal[F], refMake: Ref.Make[F]): Self =
-      update(b => applyRotate(b))
 
     override final def title(title: String): Self =
       update(b => applyTitle(b, title))
@@ -157,18 +153,6 @@ private[lote] object BuilderDslAdapters {
     ): InternalSlideBuilder[F, State] =
       builder.grabTransition(stepSize)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
-    override protected final def applyFlip(builder: InternalSlideBuilder[F, State])(implicit
-        temporal: Temporal[F],
-        refMake: Ref.Make[F]
-    ): InternalSlideBuilder[F, State] =
-      builder.flipTransition()(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
-
-    override protected final def applyFlipVertical(builder: InternalSlideBuilder[F, State])(implicit
-        temporal: Temporal[F],
-        refMake: Ref.Make[F]
-    ): InternalSlideBuilder[F, State] =
-      builder.flipVerticalTransition()(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
-
     override protected final def applySmoke(builder: InternalSlideBuilder[F, State])(implicit
         temporal: Temporal[F],
         refMake: Ref.Make[F]
@@ -181,17 +165,17 @@ private[lote] object BuilderDslAdapters {
     ): InternalSlideBuilder[F, State] =
       builder.dissolveTransition()(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
-    override protected final def applyRotate(builder: InternalSlideBuilder[F, State])(implicit
-        temporal: Temporal[F],
-        refMake: Ref.Make[F]
-    ): InternalSlideBuilder[F, State] =
-      builder.rotateTransition()(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
-
     override protected final def applyTitle(
         builder: InternalSlideBuilder[F, State],
         title: String
     ): InternalSlideBuilder[F, State] =
       builder.title(title)
+
+    override protected final def applyPosition(
+        builder: InternalSlideBuilder[F, State],
+        position: SlidePosition
+    ): InternalSlideBuilder[F, State] =
+      builder.position(position)
   }
 
   private trait TextMetadataAdapter[F[_], State <: TextSlideBuildState, Self]
@@ -234,18 +218,6 @@ private[lote] object BuilderDslAdapters {
     ): InternalTextSlideBuilder[F, State] =
       builder.grabTransition(stepSize)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
-    override protected final def applyFlip(builder: InternalTextSlideBuilder[F, State])(implicit
-        temporal: Temporal[F],
-        refMake: Ref.Make[F]
-    ): InternalTextSlideBuilder[F, State] =
-      builder.flipTransition()(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
-
-    override protected final def applyFlipVertical(builder: InternalTextSlideBuilder[F, State])(implicit
-        temporal: Temporal[F],
-        refMake: Ref.Make[F]
-    ): InternalTextSlideBuilder[F, State] =
-      builder.flipVerticalTransition()(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
-
     override protected final def applySmoke(builder: InternalTextSlideBuilder[F, State])(implicit
         temporal: Temporal[F],
         refMake: Ref.Make[F]
@@ -258,17 +230,18 @@ private[lote] object BuilderDslAdapters {
     ): InternalTextSlideBuilder[F, State] =
       builder.dissolveTransition()(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
-    override protected final def applyRotate(builder: InternalTextSlideBuilder[F, State])(implicit
-        temporal: Temporal[F],
-        refMake: Ref.Make[F]
-    ): InternalTextSlideBuilder[F, State] =
-      builder.rotateTransition()(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
     override protected final def applyTitle(
         builder: InternalTextSlideBuilder[F, State],
         title: String
     ): InternalTextSlideBuilder[F, State] =
       builder.title(title)
+
+    override protected final def applyPosition(
+        builder: InternalTextSlideBuilder[F, State],
+        position: SlidePosition
+    ): InternalTextSlideBuilder[F, State] =
+      builder.position(position)
   }
 
   def slideStart[F[_]](
