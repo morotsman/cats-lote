@@ -10,15 +10,13 @@ import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker}
 
 /** A scroll slide with a fixed marker at screen centre.
   *
-  * This is the simpler version of `SimpleScrollSlide` — the background
-  * scrolls horizontally while a `>` marker stays fixed at the centre of
-  * the viewport. It demonstrates `renderOntoScrolled` without any
-  * overlay animation, making it easier to observe the sub-pixel grid
-  * scrolling in isolation.
+  * This is the simpler version of `SimpleScrollSlide` — the background scrolls horizontally while a `>` marker stays
+  * fixed at the centre of the viewport. It demonstrates `renderOntoScrolled` without any overlay animation, making it
+  * easier to observe the sub-pixel grid scrolling in isolation.
   *
   * Press `a` to scroll left, `d` to scroll right, `s` to stop.
   *
-  * == Usage ==
+  * ==Usage==
   * {{{
   * SessionBuilder[F]()
   *   .addSlideF {
@@ -57,7 +55,7 @@ object SimpleStaticMarkerScrollSlide {
 
   private case class ScrollState(
       cameraX: Double, // left edge of viewport in world coordinates
-      speed: Double    // cells per step
+      speed: Double // cells per step
   )
 
   // ── Slide creation ───────────────────────────────────────────────
@@ -129,4 +127,3 @@ object SimpleStaticMarkerScrollSlide {
     Vector(SmoothChar('>', col, row, "#ffff00", key = 0))
   }
 }
-

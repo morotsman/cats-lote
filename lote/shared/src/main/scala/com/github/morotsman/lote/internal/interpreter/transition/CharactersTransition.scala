@@ -191,9 +191,9 @@ private[lote] object CharactersTransition {
 
         for {
           gridLayer <- GlideLayer.make[F](console, animationSettings.step, wrapThreshold = 1000)
-          stateRef  <- Ref[F].of(initialState)
-          _         <- console.writeString(slide1)
-          _         <- if (isFinished(initialState)) complete else Monad[F].unit
+          stateRef <- Ref[F].of(initialState)
+          _ <- console.writeString(slide1)
+          _ <- if (isFinished(initialState)) complete else Monad[F].unit
         } yield TickedTransition.TickHandler(
           onTick = (nrOfSteps: Int, _progress: Double) => {
             if (nrOfSteps <= 0) {
@@ -234,4 +234,3 @@ private[lote] object CharactersTransition {
   }
 
 }
-

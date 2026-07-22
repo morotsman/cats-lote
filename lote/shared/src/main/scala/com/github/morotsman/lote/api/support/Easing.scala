@@ -2,9 +2,8 @@ package com.github.morotsman.lote.api.support
 
 /** Common easing functions for use with `TickedTransition.Builder.withEasing`.
   *
-  * Each function maps a linear progress value `t ∈ [0.0, 1.0]` to an eased
-  * value in (approximately) the same range, producing smoother or more
-  * expressive animation curves.
+  * Each function maps a linear progress value `t ∈ [0.0, 1.0]` to an eased value in (approximately) the same range,
+  * producing smoother or more expressive animation curves.
   *
   * ==Usage==
   * {{{
@@ -83,26 +82,21 @@ object Easing {
   // ── Sine ───────────────────────────────────────────────────────
 
   /** Sine ease in. */
-  val easeInSine: Double => Double = t =>
-    1 - Math.cos(t * Math.PI / 2)
+  val easeInSine: Double => Double = t => 1 - Math.cos(t * Math.PI / 2)
 
   /** Sine ease out. */
-  val easeOutSine: Double => Double = t =>
-    Math.sin(t * Math.PI / 2)
+  val easeOutSine: Double => Double = t => Math.sin(t * Math.PI / 2)
 
   /** Sine ease in-out. */
-  val easeInOutSine: Double => Double = t =>
-    -(Math.cos(Math.PI * t) - 1) / 2
+  val easeInOutSine: Double => Double = t => -(Math.cos(Math.PI * t) - 1) / 2
 
   // ── Exponential ────────────────────────────────────────────────
 
   /** Exponential ease in. */
-  val easeInExpo: Double => Double = t =>
-    if (t == 0) 0.0 else Math.pow(2, 10 * (t - 1))
+  val easeInExpo: Double => Double = t => if (t == 0) 0.0 else Math.pow(2, 10 * (t - 1))
 
   /** Exponential ease out. */
-  val easeOutExpo: Double => Double = t =>
-    if (t == 1) 1.0 else 1 - Math.pow(2, -10 * t)
+  val easeOutExpo: Double => Double = t => if (t == 1) 1.0 else 1 - Math.pow(2, -10 * t)
 
   // ── Bounce ─────────────────────────────────────────────────────
 
@@ -123,8 +117,7 @@ object Easing {
   }
 
   /** Bounce ease in. */
-  val easeInBounce: Double => Double = t =>
-    1 - easeOutBounce(1 - t)
+  val easeInBounce: Double => Double = t => 1 - easeOutBounce(1 - t)
 
   // ── Elastic ────────────────────────────────────────────────────
 
@@ -137,4 +130,3 @@ object Easing {
     }
   }
 }
-

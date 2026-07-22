@@ -10,17 +10,21 @@ trait SlideMetadataDsl[F[_], Self] {
   /** Sets the 3D world-space position of this slide.
     *
     * Coordinates are in CSS-pixel-scale world units. A typical 80×24 slide surface is 800 × 480 units (based on
-    * `WebGLConfig.cellWidth` × `cellHeight`). Use spacing of ~1800 horizontally and ~1200–2400 vertically to
-    * avoid overlap. Positive x = right, positive y = down, positive z = toward camera.
+    * `WebGLConfig.cellWidth` × `cellHeight`). Use spacing of ~1800 horizontally and ~1200–2400 vertically to avoid
+    * overlap. Positive x = right, positive y = down, positive z = toward camera.
     *
     * On WebGL backends the camera will navigate to this position when the slide becomes active. On terminal backends
     * this is a no-op.
     *
-    * @param x world-space X position in CSS-pixel-scale units
-    * @param y world-space Y position in CSS-pixel-scale units
-    * @param z world-space Z position (positive = toward camera, negative = away)
+    * @param x
+    *   world-space X position in CSS-pixel-scale units
+    * @param y
+    *   world-space Y position in CSS-pixel-scale units
+    * @param z
+    *   world-space Z position (positive = toward camera, negative = away)
     *
-    * @see [[com.github.morotsman.lote.api.SlidePosition SlidePosition]] for full coordinate system documentation
+    * @see
+    *   [[com.github.morotsman.lote.api.SlidePosition SlidePosition]] for full coordinate system documentation
     */
   def at(x: Double, y: Double, z: Double): Self
 
@@ -35,8 +39,8 @@ trait SlideMetadataDsl[F[_], Self] {
 
   /** Moves this slide to the right of the previous slide by `d` world-space units.
     *
-    * Relative positioning methods accumulate: `.right(1000).down(500)` produces offset `(1000, 500, 0)`.
-    * On WebGL backends the camera navigates to the computed position. On terminal backends this is a no-op.
+    * Relative positioning methods accumulate: `.right(1000).down(500)` produces offset `(1000, 500, 0)`. On WebGL
+    * backends the camera navigates to the computed position. On terminal backends this is a no-op.
     */
   def right(d: Double): Self
 

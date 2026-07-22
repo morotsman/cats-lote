@@ -111,13 +111,13 @@ object GlideLayer {
     /** Render characters onto a frame with smooth sub-pixel grid scrolling.
       *
       * This is a higher-level convenience that combines `SetCanvasOffset` (for smooth background grid scrolling) with
-      * overlay rendering (for smooth character interpolation) in a single call, abstracting away all
-      * platform-specific branching.
+      * overlay rendering (for smooth character interpolation) in a single call, abstracting away all platform-specific
+      * branching.
       *
-      * '''Note:''' Unlike [[renderOnto]], which returns an `F[ScreenAdjusted]` for the caller to write,
-      * this method writes the frame to the console internally and returns `F[Unit]`. This is because the
-      * scrolled rendering path requires precise ordering of console effects (offset → write → reset → overlay)
-      * that would be error-prone to leave to the caller.
+      * '''Note:''' Unlike [[renderOnto]], which returns an `F[ScreenAdjusted]` for the caller to write, this method
+      * writes the frame to the console internally and returns `F[Unit]`. This is because the scrolled rendering path
+      * requires precise ordering of console effects (offset → write → reset → overlay) that would be error-prone to
+      * leave to the caller.
       *
       * On WebGL backends:
       *   - Optionally clears / sets fixed rows (rows that should not scroll with the grid).
@@ -140,8 +140,8 @@ object GlideLayer {
       * @param scrollY
       *   vertical sub-pixel offset for the grid
       * @param fixedRows
-      *   row indices that should remain fixed (not affected by the grid scroll), e.g., an info bar row.
-      *   Pass an empty set to skip fixed-row management entirely.
+      *   row indices that should remain fixed (not affected by the grid scroll), e.g., an info bar row. Pass an empty
+      *   set to skip fixed-row management entirely.
       */
     def renderOntoScrolled(
         frame: ScreenAdjusted,

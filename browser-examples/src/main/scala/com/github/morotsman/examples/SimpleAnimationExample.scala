@@ -7,9 +7,8 @@ import org.scalajs.dom
 
 /** A lightweight browser example that runs only the simple animation demos.
   *
-  * Uses `SharedSimpleExamplesPresentation` — just 9 slides covering the core
-  * animation concepts (counter, glide, scroll, wipe transition). No 3D
-  * positioning, no heavy textures, instant startup.
+  * Uses `SharedSimpleExamplesPresentation` — just 9 slides covering the core animation concepts (counter, glide,
+  * scroll, wipe transition). No 3D positioning, no heavy textures, instant startup.
   *
   * To run this example, change `Compile / mainClass` in build.sbt to:
   * {{{
@@ -40,4 +39,3 @@ object SimpleAnimationExample extends IOApp.Simple {
     }
   }
 }
-

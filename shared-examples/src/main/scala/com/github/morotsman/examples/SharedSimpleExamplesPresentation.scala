@@ -2,24 +2,32 @@ package com.github.morotsman.examples
 
 import cats.effect._
 import cats.implicits._
-import com.github.morotsman.examples.slides.{SimpleCounterSlide, SimpleGlideSlide, SimpleScrollSlide, SimpleStaticMarkerScrollSlide, SimpleEasedWipeTransition, SimpleSweepGlideTransition, SimpleSweepTransition, SimpleTypewriterTransition, SimpleWipeTransition}
+import com.github.morotsman.examples.slides.{
+  SimpleCounterSlide,
+  SimpleGlideSlide,
+  SimpleScrollSlide,
+  SimpleStaticMarkerScrollSlide,
+  SimpleEasedWipeTransition,
+  SimpleSweepGlideTransition,
+  SimpleSweepTransition,
+  SimpleTypewriterTransition,
+  SimpleWipeTransition
+}
 import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Milestone, VerticalAlignment}
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
-/** A small, standalone presentation that demonstrates the core animation
-  * concepts one at a time.
+/** A small, standalone presentation that demonstrates the core animation concepts one at a time.
   *
-  * Run this when you want to study the building blocks without the overhead of
-  * the full `SharedAdvancedPresentation`. Each slide introduces exactly one new
-  * concept:
+  * Run this when you want to study the building blocks without the overhead of the full `SharedAdvancedPresentation`.
+  * Each slide introduces exactly one new concept:
   *
   *   1. `SimpleCounterSlide` — the simplest custom `Slide[F]` (Ref + Ticker + userInput)
   *   2. `SimpleGlideSlide` — adds `GlideLayer` and `FixedStep` (smooth overlay rendering)
   *   3. `SimpleScrollSlide` — adds `renderOntoScrolled` (sub-pixel grid scrolling + fixed rows)
   *   4. `SimpleWipeTransition` — the simplest custom `Transition[F]` (FixedStep + Deferred)
   *
-  * The presentation is intentionally lightweight (few slides, no 3D positioning)
-  * so it starts instantly and runs smoothly on any backend.
+  * The presentation is intentionally lightweight (few slides, no 3D positioning) so it starts instantly and runs
+  * smoothly on any backend.
   */
 object SharedSimpleExamplesPresentation {
 
@@ -345,5 +353,3 @@ object SharedSimpleExamplesPresentation {
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
       }
 }
-
-

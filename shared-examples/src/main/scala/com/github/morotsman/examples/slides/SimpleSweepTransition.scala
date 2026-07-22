@@ -11,9 +11,8 @@ import scala.concurrent.duration._
 
 /** Simplified version of `SweepRightTransition` using `TickedTransition`.
   *
-  * Compare this (~40 lines) with the original SweepRightTransition (~147 lines).
-  * The ticker subscribe/unsubscribe, FixedStep, Deferred, and lifecycle
-  * management are all handled by the helper.
+  * Compare this (~40 lines) with the original SweepRightTransition (~147 lines). The ticker subscribe/unsubscribe,
+  * FixedStep, Deferred, and lifecycle management are all handled by the helper.
   */
 object SimpleSweepTransition {
 
@@ -42,8 +41,7 @@ object SimpleSweepTransition {
   )(implicit clock: AnimationClock[F]): Transition[F] =
     create(duration, TickedTransition(console, ticker, animationSettings))
 
-  /** Returns the index of the last column where from and to differ on any row,
-    * or -1 if they are identical.
+  /** Returns the index of the last column where from and to differ on any row, or -1 if they are identical.
     */
   private def lastDifferingColumn(
       from: ScreenAdjusted,
@@ -51,7 +49,7 @@ object SimpleSweepTransition {
       screenWidth: Int
   ): Int = {
     val fromLines = from.content.split("\n", -1).toVector
-    val toLines   = to.content.split("\n", -1).toVector
+    val toLines = to.content.split("\n", -1).toVector
     val height = math.max(fromLines.length, toLines.length)
     val width = math.min(
       math.max(
@@ -102,4 +100,3 @@ object SimpleSweepTransition {
     truncated + (" " * (width - truncated.length))
   }
 }
-

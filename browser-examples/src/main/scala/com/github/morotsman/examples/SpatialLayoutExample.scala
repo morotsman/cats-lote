@@ -6,12 +6,11 @@ import com.github.morotsman.lote.api.builders.SessionBuilder
 
 /** Demonstrates spatial layout of slides in 3D space (WebGL).
   *
-  * This example focuses exclusively on slide positioning — no overlays,
-  * no transitions, just the spatial arrangement of slides.
+  * This example focuses exclusively on slide positioning — no overlays, no transitions, just the spatial arrangement of
+  * slides.
   *
-  * Part 1: Layout helpers — grid, circle, spiral — that compute
-  *         positions automatically via `addLayoutSection`.
-  * Part 2: Relative positioning — `.right()`, `.down()`, etc.
+  * Part 1: Layout helpers — grid, circle, spiral — that compute positions automatically via `addLayoutSection`. Part 2:
+  * Relative positioning — `.right()`, `.down()`, etc.
   *
   * To run:
   * {{{
@@ -97,62 +96,75 @@ object SpatialLayoutExample extends IOApp.Simple {
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
           .at(0, 2400, 0)
       }
-      .addLayoutSection(Layout.grid(cols = 3, spacingX = 1800, spacingY = 1200, origin = SlidePosition(0, 3600, 0))) { section =>
-        section
-          .addTextSlide { _.content(
-            """
+      .addLayoutSection(Layout.grid(cols = 3, spacingX = 1800, spacingY = 1200, origin = SlidePosition(0, 3600, 0))) {
+        section =>
+          section
+            .addTextSlide {
+              _.content(
+                """
             |  ┌──────────────┐
             |  │  Grid (0,0)  │
             |  └──────────────┘
             |
             |  Row 0, Column 0
             |  Auto-positioned""".stripMargin
-          ).title("Grid (0,0)") }
-          .addTextSlide { _.content(
-            """
+              ).title("Grid (0,0)")
+            }
+            .addTextSlide {
+              _.content(
+                """
             |  ┌──────────────┐
             |  │  Grid (0,1)  │
             |  └──────────────┘
             |
             |  Row 0, Column 1
             |  Auto-positioned""".stripMargin
-          ).title("Grid (0,1)") }
-          .addTextSlide { _.content(
-            """
+              ).title("Grid (0,1)")
+            }
+            .addTextSlide {
+              _.content(
+                """
             |  ┌──────────────┐
             |  │  Grid (0,2)  │
             |  └──────────────┘
             |
             |  Row 0, Column 2
             |  Auto-positioned""".stripMargin
-          ).title("Grid (0,2)") }
-          .addTextSlide { _.content(
-            """
+              ).title("Grid (0,2)")
+            }
+            .addTextSlide {
+              _.content(
+                """
             |  ┌──────────────┐
             |  │  Grid (1,0)  │
             |  └──────────────┘
             |
             |  Row 1, Column 0
             |  Auto-positioned""".stripMargin
-          ).title("Grid (1,0)") }
-          .addTextSlide { _.content(
-            """
+              ).title("Grid (1,0)")
+            }
+            .addTextSlide {
+              _.content(
+                """
             |  ┌──────────────┐
             |  │  Grid (1,1)  │
             |  └──────────────┘
             |
             |  Row 1, Column 1
             |  Auto-positioned""".stripMargin
-          ).title("Grid (1,1)") }
-          .addTextSlide { _.content(
-            """
+              ).title("Grid (1,1)")
+            }
+            .addTextSlide {
+              _.content(
+                """
             |  ┌──────────────┐
             |  │  Grid (1,2)  │
             |  └──────────────┘
             |
             |  Row 1, Column 2
             |  Auto-positioned""".stripMargin
-          ).title("Grid (1,2)") }
+              ).title("Grid (1,2)")
+            }
       }
       // ═══════════════════════════════════════════════
       //  CIRCLE LAYOUT via Layout.circle
@@ -179,54 +191,66 @@ object SpatialLayoutExample extends IOApp.Simple {
       }
       .addLayoutSection(Layout.circle(radius = 2400, centerX = 1800, centerY = 12000)) { section =>
         section
-          .addTextSlide { _.content(
-            """
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Circle  0°    │
             |  └────────────────┘
             |
             |  Auto-positioned at 0°""".stripMargin
-          ).title("Circle 0°") }
-          .addTextSlide { _.content(
-            """
+            ).title("Circle 0°")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Circle  60°   │
             |  └────────────────┘
             |
             |  Auto-positioned at 60°""".stripMargin
-          ).title("Circle 60°") }
-          .addTextSlide { _.content(
-            """
+            ).title("Circle 60°")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Circle  120°  │
             |  └────────────────┘
             |
             |  Auto-positioned at 120°""".stripMargin
-          ).title("Circle 120°") }
-          .addTextSlide { _.content(
-            """
+            ).title("Circle 120°")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Circle  180°  │
             |  └────────────────┘
             |
             |  Auto-positioned at 180°""".stripMargin
-          ).title("Circle 180°") }
-          .addTextSlide { _.content(
-            """
+            ).title("Circle 180°")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Circle  240°  │
             |  └────────────────┘
             |
             |  Auto-positioned at 240°""".stripMargin
-          ).title("Circle 240°") }
-          .addTextSlide { _.content(
-            """
+            ).title("Circle 240°")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Circle  300°  │
             |  └────────────────┘
             |
             |  Auto-positioned at 300°""".stripMargin
-          ).title("Circle 300°") }
+            ).title("Circle 300°")
+          }
       }
       // ═══════════════════════════════════════════════
       //  SPIRAL LAYOUT via Layout.spiral
@@ -251,56 +275,70 @@ object SpatialLayoutExample extends IOApp.Simple {
           .alignment(Alignment(VerticalAlignment.Up, HorizontalAlignment.Left))
           .at(0, 16800, 0)
       }
-      .addLayoutSection(Layout.spiral(startRadius = 800, growth = 400, angleStep = 60, zStep = -500, centerX = 1800, centerY = 19200)) { section =>
+      .addLayoutSection(
+        Layout.spiral(startRadius = 800, growth = 400, angleStep = 60, zStep = -500, centerX = 1800, centerY = 19200)
+      ) { section =>
         section
-          .addTextSlide { _.content(
-            """
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Spiral  #0    │
             |  └────────────────┘
             |
             |  Auto-positioned (r=800, 0°)""".stripMargin
-          ).title("Spiral #0") }
-          .addTextSlide { _.content(
-            """
+            ).title("Spiral #0")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Spiral  #1    │
             |  └────────────────┘
             |
             |  Auto-positioned (r=1200, 60°)""".stripMargin
-          ).title("Spiral #1") }
-          .addTextSlide { _.content(
-            """
+            ).title("Spiral #1")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Spiral  #2    │
             |  └────────────────┘
             |
             |  Auto-positioned (r=1600, 120°)""".stripMargin
-          ).title("Spiral #2") }
-          .addTextSlide { _.content(
-            """
+            ).title("Spiral #2")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Spiral  #3    │
             |  └────────────────┘
             |
             |  Auto-positioned (r=2000, 180°)""".stripMargin
-          ).title("Spiral #3") }
-          .addTextSlide { _.content(
-            """
+            ).title("Spiral #3")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Spiral  #4    │
             |  └────────────────┘
             |
             |  Auto-positioned (r=2400, 240°)""".stripMargin
-          ).title("Spiral #4") }
-          .addTextSlide { _.content(
-            """
+            ).title("Spiral #4")
+          }
+          .addTextSlide {
+            _.content(
+              """
             |  ┌────────────────┐
             |  │  Spiral  #5    │
             |  └────────────────┘
             |
             |  Auto-positioned (r=2800, 300°)""".stripMargin
-          ).title("Spiral #5") }
+            ).title("Spiral #5")
+          }
       }
       // ═══════════════════════════════════════════════
       //  RELATIVE POSITIONING
@@ -369,7 +407,8 @@ object SpatialLayoutExample extends IOApp.Simple {
           |  Offsets accumulate!
           |  .left(1800).down(1200)""".stripMargin
         ).title("Left + Down")
-          .left(1800).down(1200)
+          .left(1800)
+          .down(1200)
       }
       .addTextSlide {
         _.content(
@@ -382,7 +421,8 @@ object SpatialLayoutExample extends IOApp.Simple {
           |  .right(1800).back(2000)
           |  — moves right AND away from camera.""".stripMargin
         ).title("Right + Back")
-          .right(1800).back(2000)
+          .right(1800)
+          .back(2000)
       }
       .addTextSlide {
         _.content(
@@ -395,7 +435,8 @@ object SpatialLayoutExample extends IOApp.Simple {
           |  .right(1800).rotateY(15)
           |  — tilts 15° more than the previous slide.""".stripMargin
         ).title("Right + RotateY")
-          .right(1800).rotateY(15)
+          .right(1800)
+          .rotateY(15)
       }
       .addTextSlide {
         _.content(
@@ -408,7 +449,8 @@ object SpatialLayoutExample extends IOApp.Simple {
           |  Now rotated 30° total from the
           |  "Relative Intro" slide.""".stripMargin
         ).title("RotateY Again")
-          .right(1800).rotateY(15)
+          .right(1800)
+          .rotateY(15)
       }
       .addTextSlide {
         _.content(
@@ -421,7 +463,9 @@ object SpatialLayoutExample extends IOApp.Simple {
           |  Multiple rotation axes at once:
           |  .down(1200).rotateX(10).rotateZ(-5)""".stripMargin
         ).title("Multi-axis Rotation")
-          .down(1200).rotateX(10).rotateZ(-5)
+          .down(1200)
+          .rotateX(10)
+          .rotateZ(-5)
       }
       // ═══════════════════════════════════════════════
       //  SUMMARY

@@ -12,9 +12,8 @@ import com.github.morotsman.lote.testkit.SlideTestHarness
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.duration.FiniteDuration
 
-/** Eliminates the boilerplate around ticker subscription, FixedStep,
-  * Deferred-based completion signalling, and GlideLayer lifecycle that every
-  * animated transition repeats.
+/** Eliminates the boilerplate around ticker subscription, FixedStep, Deferred-based completion signalling, and
+  * GlideLayer lifecycle that every animated transition repeats.
   *
   * ==Minimal usage (progress-based)==
   * {{{
@@ -97,14 +96,23 @@ object TickedTransition {
   /** Create a transition using the SlideContext provided by the DSL builder. */
   def contextual[F[_]](f: Builder[F] => Transition[F]): Contextual[F, Transition[F]] =
     Contextual { ctx =>
-      f(Builder(ctx.console, ctx.ticker, ctx.animationSettings, glideConfig = None, easingFn = None, skipOnInput = false))
+      f(
+        Builder(
+          ctx.console,
+          ctx.ticker,
+          ctx.animationSettings,
+          glideConfig = None,
+          easingFn = None,
+          skipOnInput = false
+        )
+      )
     }
 
-  /** Create a pre-wired builder from a `SlideTestHarness`, eliminating the need
-    * to manually thread `AnimationClock[F]` and other implicits in tests.
+  /** Create a pre-wired builder from a `SlideTestHarness`, eliminating the need to manually thread `AnimationClock[F]`
+    * and other implicits in tests.
     *
-    * The harness provides `AnimationClock[F]`, `NConsole[F]`, `Ticker[F]`, and
-    * `AnimationSettings` — so you don't need to import or wire any of them.
+    * The harness provides `AnimationClock[F]`, `NConsole[F]`, `Ticker[F]`, and `AnimationSettings` — so you don't need
+    * to import or wire any of them.
     *
     * ==Example==
     * {{{
@@ -122,7 +130,14 @@ object TickedTransition {
     * }}}
     */
   def forTest[F[_]](harness: SlideTestHarness[F]): Builder[F] =
-    Builder(harness.console, harness.ticker, harness.animationSettings, glideConfig = None, easingFn = None, skipOnInput = false)
+    Builder(
+      harness.console,
+      harness.ticker,
+      harness.animationSettings,
+      glideConfig = None,
+      easingFn = None,
+      skipOnInput = false
+    )
 
   // ── Configuration ────────────────────────────────────────────────
 
@@ -133,12 +148,12 @@ object TickedTransition {
 
   /** Context passed to the `buildProgress` render callback.
     *
-    * Bundles the animation progress together with the actual screen dimensions,
-    * eliminating the need to hardcode estimated widths/heights.
+    * Bundles the animation progress together with the actual screen dimensions, eliminating the need to hardcode
+    * estimated widths/heights.
     */
   final case class ProgressContext(
-      /** Animation progress from 0.0 (start) to 1.0 (complete).
-        * If an easing function is set, this value is already eased.
+      /** Animation progress from 0.0 (start) to 1.0 (complete). If an easing function is set, this value is already
+        * eased.
         */
       progress: Double,
       /** Actual screen width in characters. */
@@ -149,10 +164,9 @@ object TickedTransition {
 
   /** Result of a progress-based render callback that can signal early completion.
     *
-    * Use [[ProgressResult.continue]] to emit a frame and keep animating, or
-    * [[ProgressResult.done]] to emit a final frame and complete the transition
-    * immediately — useful when the visual effect finishes before the duration
-    * expires (e.g. a wipe over short content).
+    * Use [[ProgressResult.continue]] to emit a frame and keep animating, or [[ProgressResult.done]] to emit a final
+    * frame and complete the transition immediately — useful when the visual effect finishes before the duration expires
+    * (e.g. a wipe over short content).
     */
   sealed trait ProgressResult {
     def frame: ScreenAdjusted
@@ -160,6 +174,7 @@ object TickedTransition {
   }
 
   object ProgressResult {
+
     /** Emit the frame and continue animating. */
     def continue(frame: ScreenAdjusted): ProgressResult = Continue(frame)
 
@@ -201,11 +216,10 @@ object TickedTransition {
     def withGlideLayer(wrapThreshold: Int = 1): Builder[F] =
       copy(glideConfig = Some(GlideConfig(wrapThreshold = wrapThreshold)))
 
-    /** Apply an easing function to the linear progress value before it is
-      * passed to `renderFrame` in `buildProgress` and `buildProgressWithGlide`.
+    /** Apply an easing function to the linear progress value before it is passed to `renderFrame` in `buildProgress`
+      * and `buildProgressWithGlide`.
       *
-      * Has no effect on `buildStepped` or `buildWithSetup` (which don't use
-      * the built-in progress calculation).
+      * Has no effect on `buildStepped` or `buildWithSetup` (which don't use the built-in progress calculation).
       *
       * Common easing functions are provided in [[Easing]]:
       * {{{
@@ -216,12 +230,10 @@ object TickedTransition {
     def withEasing(f: Double => Double): Builder[F] =
       copy(easingFn = Some(f))
 
-    /** When enabled, any `userInput` event will immediately skip (fast-forward)
-      * the transition to its final state. The final `to` frame is rendered
-      * automatically.
+    /** When enabled, any `userInput` event will immediately skip (fast-forward) the transition to its final state. The
+      * final `to` frame is rendered automatically.
       *
-      * Works with `buildProgress`, `buildProgressWithGlide`, `buildStepped`,
-      * and `buildWithSetup`.
+      * Works with `buildProgress`, `buildProgressWithGlide`, `buildStepped`, and `buildWithSetup`.
       *
       * {{{
       * builder.withSkipOnInput
@@ -239,15 +251,12 @@ object TickedTransition {
 
     /** Build a progress-based transition with a specified duration.
       *
-      * The `duration` represents the maximum time the transition takes — the
-      * time it would need to sweep the entire screen. If the render callback
-      * signals [[ProgressResult.done]] before progress reaches 1.0 the
-      * transition completes early, which is the recommended way to handle
-      * content that is shorter than the full screen.
+      * The `duration` represents the maximum time the transition takes — the time it would need to sweep the entire
+      * screen. If the render callback signals [[ProgressResult.done]] before progress reaches 1.0 the transition
+      * completes early, which is the recommended way to handle content that is shorter than the full screen.
       *
-      * The `renderFrame` function receives the from/to content and a
-      * [[ProgressContext]] containing the (optionally eased) progress value
-      * and actual screen dimensions.
+      * The `renderFrame` function receives the from/to content and a [[ProgressContext]] containing the (optionally
+      * eased) progress value and actual screen dimensions.
       *
       * ==Example==
       * {{{
@@ -261,12 +270,12 @@ object TickedTransition {
       * }}}
       *
       * @param duration
-      *   maximum wall-clock duration. The number of simulation steps is
-      *   computed as `duration / animationSettings.step`. The transition may
-      *   finish earlier if the render callback returns `ProgressResult.done`.
+      *   maximum wall-clock duration. The number of simulation steps is computed as
+      *   `duration / animationSettings.step`. The transition may finish earlier if the render callback returns
+      *   `ProgressResult.done`.
       * @param renderFrame
-      *   `(from, to, ctx) => ProgressResult` where `ctx.progress ∈ [0.0, 1.0]`
-      *   and `ctx.screenWidth`/`ctx.screenHeight` are actual terminal dimensions.
+      *   `(from, to, ctx) => ProgressResult` where `ctx.progress ∈ [0.0, 1.0]` and `ctx.screenWidth`/`ctx.screenHeight`
+      *   are actual terminal dimensions.
       */
     def buildProgress(duration: FiniteDuration)(
         renderFrame: (ScreenAdjusted, ScreenAdjusted, ProgressContext) => ProgressResult
@@ -279,13 +288,13 @@ object TickedTransition {
         override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
           for {
             fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-            toContent   <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-            screen      <- console.context
-            stepRef     <- Ref[F].of(0)
-            stepperRef  <- FixedStep.makeRef[F]
-            done        <- Deferred[F, Unit]
-            skip        <- Deferred[F, Unit]
-            _            = if (builder.skipOnInput) skipRef.set(skip)
+            toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
+            screen <- console.context
+            stepRef <- Ref[F].of(0)
+            stepperRef <- FixedStep.makeRef[F]
+            done <- Deferred[F, Unit]
+            skip <- Deferred[F, Unit]
+            _ = if (builder.skipOnInput) skipRef.set(skip)
             onTick = for {
               stepsAndProgress <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
               (nrOfSteps, fractional) = stepsAndProgress
@@ -294,20 +303,21 @@ object TickedTransition {
                 (next, next)
               }
               rawProgress = math.min(1.0, (currentStep.toDouble + fractional) / totalSteps.toDouble)
-              progress    = builder.applyEasing(rawProgress)
-              ctx         = ProgressContext(progress, screen.screenWidth, screen.screenHeight)
-              result      = renderFrame(fromContent, toContent, ctx)
+              progress = builder.applyEasing(rawProgress)
+              ctx = ProgressContext(progress, screen.screenWidth, screen.screenHeight)
+              result = renderFrame(fromContent, toContent, ctx)
               _ <- console.clear()
               _ <- console.writeString(result.frame)
-              _ <- if (currentStep >= totalSteps || result.isDone) done.complete(()).attempt.void
-                   else Monad[F].unit
+              _ <-
+                if (currentStep >= totalSteps || result.isDone) done.complete(()).attempt.void
+                else Monad[F].unit
             } yield ()
             sub <- ticker.subscribe(onTick)
-            _   <- ticker.start
-            _   <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
-                     .guarantee(sub.cancel)
-            _    = skipRef.set(null)
-            _   <- console.clear() *> console.writeString(toContent)
+            _ <- ticker.start
+            _ <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
+              .guarantee(sub.cancel)
+            _ = skipRef.set(null)
+            _ <- console.clear() *> console.writeString(toContent)
           } yield ()
 
         override def userInput(input: UserInput): F[Unit] =
@@ -320,20 +330,17 @@ object TickedTransition {
       }
     }
 
-
     // ── Build: stepped (more control) ────────────────────────────
 
     /** Build a transition with full control over each tick.
       *
-      * The `onTick` callback receives a `StepContext` that provides the from/to
-      * content, screen dimensions, a `render` helper, and a `complete` signal.
-      * Call `ctx.complete` when the transition is finished.
+      * The `onTick` callback receives a `StepContext` that provides the from/to content, screen dimensions, a `render`
+      * helper, and a `complete` signal. Call `ctx.complete` when the transition is finished.
       *
       * @param onTick
-      *   `(steps: Int, progress: Double, ctx: StepContext[F]) => F[Unit]`
-      *   where `steps` is the number of elapsed simulation steps this tick,
-      *   `progress` is fractional progress toward the next step, and `ctx`
-      *   provides rendering utilities.
+      *   `(steps: Int, progress: Double, ctx: StepContext[F]) => F[Unit]` where `steps` is the number of elapsed
+      *   simulation steps this tick, `progress` is fractional progress toward the next step, and `ctx` provides
+      *   rendering utilities.
       */
     def buildStepped(
         onTick: (Int, Double, StepContext[F]) => F[Unit]
@@ -345,17 +352,17 @@ object TickedTransition {
         override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
           for {
             fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-            toContent   <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-            screen      <- console.context
-            done        <- Deferred[F, Unit]
-            skip        <- Deferred[F, Unit]
-            _            = if (builder.skipOnInput) skipRef.set(skip)
-            stepperRef  <- FixedStep.makeRef[F]
+            toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
+            screen <- console.context
+            done <- Deferred[F, Unit]
+            skip <- Deferred[F, Unit]
+            _ = if (builder.skipOnInput) skipRef.set(skip)
+            stepperRef <- FixedStep.makeRef[F]
             ctx = new StepContext[F] {
-              val from: ScreenAdjusted        = fromContent
-              val to: ScreenAdjusted          = toContent
-              val screenWidth: Int             = screen.screenWidth
-              val screenHeight: Int            = screen.screenHeight
+              val from: ScreenAdjusted = fromContent
+              val to: ScreenAdjusted = toContent
+              val screenWidth: Int = screen.screenWidth
+              val screenHeight: Int = screen.screenHeight
               def render(frame: ScreenAdjusted): F[Unit] =
                 console.clear() *> console.writeString(frame)
               def complete: F[Unit] = done.complete(()).attempt.void
@@ -366,11 +373,11 @@ object TickedTransition {
               _ <- onTick(nrOfSteps, progress, ctx)
             } yield ()
             sub <- ticker.subscribe(tickCallback)
-            _   <- ticker.start
-            _   <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
-                     .guarantee(sub.cancel)
-            _    = skipRef.set(null)
-            _   <- console.clear() *> console.writeString(toContent)
+            _ <- ticker.start
+            _ <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
+              .guarantee(sub.cancel)
+            _ = skipRef.set(null)
+            _ <- console.clear() *> console.writeString(toContent)
           } yield ()
 
         override def userInput(input: UserInput): F[Unit] =
@@ -385,40 +392,37 @@ object TickedTransition {
 
     // ── Build: progress with GlideLayer ──────────────────────────
 
-    /** Like `buildProgress` but also provides a `GlideLayer.Overlay` for
-      * sub-pixel rendering on WebGL backends.
+    /** Like `buildProgress` but also provides a `GlideLayer.Overlay` for sub-pixel rendering on WebGL backends.
       *
       * Easing is applied to the progress value before it reaches `renderFrame`.
       *
-      * Prefer the duration-based overload (`buildProgressWithGlide(500.millis)`)
-      * for consistency with [[buildProgress]]. This step-based variant is retained
-      * for backwards compatibility and cases where exact step control is needed.
+      * Prefer the duration-based overload (`buildProgressWithGlide(500.millis)`) for consistency with
+      * [[buildProgress]]. This step-based variant is retained for backwards compatibility and cases where exact step
+      * control is needed.
       *
       * @param totalSteps
       *   how many discrete simulation steps the transition takes.
       * @param renderFrame
-      *   `(from, to, progress, glide) => F[ScreenAdjusted]` — use the glide
-      *   overlay for smooth character interpolation at the transition edge.
+      *   `(from, to, progress, glide) => F[ScreenAdjusted]` — use the glide overlay for smooth character interpolation
+      *   at the transition edge.
       */
     def buildProgressWithGlide(totalSteps: Int = 20)(
         renderFrame: (ScreenAdjusted, ScreenAdjusted, Double, GlideLayer.Overlay[F]) => F[ScreenAdjusted]
     )(implicit F: Temporal[F], refMake: Ref.Make[F], clock: AnimationClock[F]): Transition[F] =
       buildProgressWithGlideInternal(totalSteps)(renderFrame)
 
-    /** Like `buildProgress` but also provides a `GlideLayer.Overlay` for
-      * sub-pixel rendering on WebGL backends.
+    /** Like `buildProgress` but also provides a `GlideLayer.Overlay` for sub-pixel rendering on WebGL backends.
       *
-      * This overload accepts a `FiniteDuration` instead of a step count, making
-      * it consistent with [[buildProgress]]. The number of simulation steps is
-      * computed as `duration / animationSettings.step`.
+      * This overload accepts a `FiniteDuration` instead of a step count, making it consistent with [[buildProgress]].
+      * The number of simulation steps is computed as `duration / animationSettings.step`.
       *
       * Easing is applied to the progress value before it reaches `renderFrame`.
       *
       * @param duration
       *   the maximum wall-clock time for the transition.
       * @param renderFrame
-      *   `(from, to, progress, glide) => F[ScreenAdjusted]` — use the glide
-      *   overlay for smooth character interpolation at the transition edge.
+      *   `(from, to, progress, glide) => F[ScreenAdjusted]` — use the glide overlay for smooth character interpolation
+      *   at the transition edge.
       */
     def buildProgressWithGlide(duration: FiniteDuration)(
         renderFrame: (ScreenAdjusted, ScreenAdjusted, Double, GlideLayer.Overlay[F]) => F[ScreenAdjusted]
@@ -437,14 +441,14 @@ object TickedTransition {
       new Transition[F] {
         override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
           for {
-            gridLayer   <- GlideLayer.make[F](console, animationSettings.step, gc.wrapThreshold)
+            gridLayer <- GlideLayer.make[F](console, animationSettings.step, gc.wrapThreshold)
             fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-            toContent   <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-            stepRef     <- Ref[F].of(0)
-            stepperRef  <- FixedStep.makeRef[F]
-            done        <- Deferred[F, Unit]
-            skip        <- Deferred[F, Unit]
-            _            = if (builder.skipOnInput) skipRef.set(skip)
+            toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
+            stepRef <- Ref[F].of(0)
+            stepperRef <- FixedStep.makeRef[F]
+            done <- Deferred[F, Unit]
+            skip <- Deferred[F, Unit]
+            _ = if (builder.skipOnInput) skipRef.set(skip)
             onTick = for {
               stepsAndProgress <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
               (nrOfSteps, fractional) = stepsAndProgress
@@ -453,19 +457,20 @@ object TickedTransition {
                 (next, next)
               }
               rawProgress = math.min(1.0, (currentStep.toDouble + fractional) / totalSteps.toDouble)
-              progress    = builder.applyEasing(rawProgress)
-              frame      <- renderFrame(fromContent, toContent, progress, gridLayer)
+              progress = builder.applyEasing(rawProgress)
+              frame <- renderFrame(fromContent, toContent, progress, gridLayer)
               _ <- console.clear()
               _ <- console.writeString(frame)
-              _ <- if (currentStep >= totalSteps) done.complete(()).attempt.void
-                   else Monad[F].unit
+              _ <-
+                if (currentStep >= totalSteps) done.complete(()).attempt.void
+                else Monad[F].unit
             } yield ()
             sub <- ticker.subscribe(onTick)
-            _   <- ticker.start
-            _   <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
-                     .guarantee(sub.cancel *> gridLayer.clear())
-            _    = skipRef.set(null)
-            _   <- console.clear() *> console.writeString(toContent)
+            _ <- ticker.start
+            _ <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
+              .guarantee(sub.cancel *> gridLayer.clear())
+            _ = skipRef.set(null)
+            _ <- console.clear() *> console.writeString(toContent)
           } yield ()
 
         override def userInput(input: UserInput): F[Unit] =
@@ -482,14 +487,12 @@ object TickedTransition {
 
     /** Build a transition with custom setup and cleanup phases.
       *
-      * This is the most flexible variant — it handles the FixedStep, Deferred,
-      * and ticker subscribe/cancel lifecycle, while letting you perform arbitrary
-      * initialization (create Refs, GlideLayer, write initial frame, etc.) and
+      * This is the most flexible variant — it handles the FixedStep, Deferred, and ticker subscribe/cancel lifecycle,
+      * while letting you perform arbitrary initialization (create Refs, GlideLayer, write initial frame, etc.) and
       * cleanup (clear effects, clear overlay, etc.).
       *
-      * The `setup` function receives the resolved from/to content and a
-      * `complete` signal, and must return the tick handler and an optional
-      * cleanup effect (run in `guarantee` after the transition finishes).
+      * The `setup` function receives the resolved from/to content and a `complete` signal, and must return the tick
+      * handler and an optional cleanup effect (run in `guarantee` after the transition finishes).
       *
       * ==Example==
       * {{{
@@ -515,23 +518,23 @@ object TickedTransition {
         override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
           for {
             fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-            toContent   <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-            stepperRef  <- FixedStep.makeRef[F]
-            done        <- Deferred[F, Unit]
-            skip        <- Deferred[F, Unit]
-            _            = if (builder.skipOnInput) skipRef.set(skip)
-            handler     <- setup(fromContent, toContent, done.complete(()).attempt.void)
+            toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
+            stepperRef <- FixedStep.makeRef[F]
+            done <- Deferred[F, Unit]
+            skip <- Deferred[F, Unit]
+            _ = if (builder.skipOnInput) skipRef.set(skip)
+            handler <- setup(fromContent, toContent, done.complete(()).attempt.void)
             tickCallback = for {
               stepsAndProgress <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
               (nrOfSteps, progress) = stepsAndProgress
               _ <- handler.onTick(nrOfSteps, progress)
             } yield ()
             sub <- ticker.subscribe(tickCallback)
-            _   <- ticker.start
-            _   <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
-                     .guarantee(sub.cancel *> handler.cleanup)
-            _    = skipRef.set(null)
-            _   <- console.clear() *> console.writeString(toContent)
+            _ <- ticker.start
+            _ <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
+              .guarantee(sub.cancel *> handler.cleanup)
+            _ = skipRef.set(null)
+            _ <- console.clear() *> console.writeString(toContent)
           } yield ()
 
         override def userInput(input: UserInput): F[Unit] =

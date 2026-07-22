@@ -6,16 +6,14 @@ import com.github.morotsman.lote.api.builders.Contextual
 import com.github.morotsman.lote.api.support.{AnimationClock, SmoothChar, TickedTransition}
 import com.github.morotsman.lote.api.spi.{NConsole, Ticker, Transition}
 
-/** Demonstrates `TickedTransition.buildProgressWithGlide` — a transition
-  * that uses a `GlideLayer.Overlay` for smooth sub-pixel character animation
-  * at the transition edge.
+/** Demonstrates `TickedTransition.buildProgressWithGlide` — a transition that uses a `GlideLayer.Overlay` for smooth
+  * sub-pixel character animation at the transition edge.
   *
-  * This is a left-to-right sweep (like `SimpleSweepTransition`) but with the
-  * leading edge characters rendered via the GlideLayer overlay. On WebGL this
-  * produces buttery-smooth interpolation; on terminal it gracefully falls back
-  * to integer grid positions.
+  * This is a left-to-right sweep (like `SimpleSweepTransition`) but with the leading edge characters rendered via the
+  * GlideLayer overlay. On WebGL this produces buttery-smooth interpolation; on terminal it gracefully falls back to
+  * integer grid positions.
   *
-  * == Key concept ==
+  * ==Key concept==
   * {{{
   * builder
   *   .withGlideLayer(wrapThreshold = columnsPerStep)
@@ -26,7 +24,7 @@ import com.github.morotsman.lote.api.spi.{NConsole, Ticker, Transition}
   *   }
   * }}}
   *
-  * == Usage ==
+  * ==Usage==
   * {{{
   * .transition(SimpleSweepGlideTransition.contextual[F]())
   * }}}
@@ -58,18 +56,20 @@ object SimpleSweepGlideTransition {
       .buildWithSetup { (from, to, complete) =>
         import cats.syntax.all._
         val fromLines = from.content.split("\n", -1).toVector
-        val toLines   = to.content.split("\n", -1).toVector
-        val height    = math.max(fromLines.length, toLines.length)
+        val toLines = to.content.split("\n", -1).toVector
+        val height = math.max(fromLines.length, toLines.length)
         val contentWidth = math.max(
           fromLines.map(_.length).maxOption.getOrElse(0),
           toLines.map(_.length).maxOption.getOrElse(0)
         )
 
         for {
-          glide      <- com.github.morotsman.lote.api.support.GlideLayer.make[F](
-                          builder.console, builder.animationSettings.step, columnsPerStep
-                        )
-          revealRef  <- cats.effect.Ref[F].of(0)
+          glide <- com.github.morotsman.lote.api.support.GlideLayer.make[F](
+            builder.console,
+            builder.animationSettings.step,
+            columnsPerStep
+          )
+          revealRef <- cats.effect.Ref[F].of(0)
         } yield TickedTransition.TickHandler(
           onTick = (nrOfSteps: Int, _: Double) => {
             for {
@@ -78,21 +78,23 @@ object SimpleSweepGlideTransition {
                 (0 until height)
                   .map { row =>
                     val fromLine = padLine(fromLines.lift(row).getOrElse(""), contentWidth)
-                    val toLine   = padLine(toLines.lift(row).getOrElse(""), contentWidth)
+                    val toLine = padLine(toLines.lift(row).getOrElse(""), contentWidth)
                     toLine.take(revealCol) + fromLine.drop(revealCol)
                   }
                   .mkString("\n")
               )
-              edgeChars = if (revealCol < contentWidth) {
-                (0 until height).map { row =>
-                  val toLine = padLine(toLines.lift(row).getOrElse(""), contentWidth)
-                  val col    = math.min(revealCol, contentWidth - 1)
-                  val ch     = if (col < toLine.length) toLine.charAt(col) else ' '
-                  SmoothChar(ch, col, row)
-                }.toVector
-              } else Vector.empty
-              rendered <- if (edgeChars.nonEmpty) glide.renderOnto(backgroundFrame, edgeChars)
-                          else glide.clear().as(backgroundFrame)
+              edgeChars =
+                if (revealCol < contentWidth) {
+                  (0 until height).map { row =>
+                    val toLine = padLine(toLines.lift(row).getOrElse(""), contentWidth)
+                    val col = math.min(revealCol, contentWidth - 1)
+                    val ch = if (col < toLine.length) toLine.charAt(col) else ' '
+                    SmoothChar(ch, col, row)
+                  }.toVector
+                } else Vector.empty
+              rendered <-
+                if (edgeChars.nonEmpty) glide.renderOnto(backgroundFrame, edgeChars)
+                else glide.clear().as(backgroundFrame)
               _ <- builder.console.clear()
               _ <- builder.console.writeString(rendered)
               _ <- if (revealCol >= contentWidth) complete else cats.Monad[F].unit
@@ -108,5 +110,3 @@ object SimpleSweepGlideTransition {
     truncated + (" " * (width - truncated.length))
   }
 }
-
-

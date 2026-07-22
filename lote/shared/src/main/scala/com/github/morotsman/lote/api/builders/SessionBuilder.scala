@@ -511,14 +511,16 @@ object SessionBuilder {
       f: BuiltEffectfulSlideStep[F]
   ) extends SlideStep[F]
 
-  /** Wraps a slide step to pre-apply a layout position. The position is set on the builder before the user's
-    * lambda runs, so explicit `.at()` calls inside the lambda override the layout position.
+  /** Wraps a slide step to pre-apply a layout position. The position is set on the builder before the user's lambda
+    * runs, so explicit `.at()` calls inside the lambda override the layout position.
     */
   private[builders] def wrapWithPosition[F[_]](step: SlideStep[F], pos: SlidePosition): SlideStep[F] =
     step match {
       case TextSlideStep(f) =>
         TextSlideStep(new BuiltTextSlideStep[F] {
-          override def build(builder: TextSlideBuilderStart[F])(implicit ctx: SlideContext[F]): TextSlideBuilderReady[F] =
+          override def build(builder: TextSlideBuilderStart[F])(implicit
+              ctx: SlideContext[F]
+          ): TextSlideBuilderReady[F] =
             f.build(builder.at(pos.x, pos.y, pos.z))
         })
       case CustomSlide(f) =>

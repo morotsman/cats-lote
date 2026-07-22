@@ -56,7 +56,7 @@ private[lote] object SmokeTransition {
         .buildWithSetup { (slide1, _slide2, complete) =>
           for {
             progressRef <- Ref[F].of(0.0)
-            _           <- console.writeString(slide1)
+            _ <- console.writeString(slide1)
           } yield TickedTransition.TickHandler(
             onTick = (nrOfSteps: Int, _progress: Double) => {
               for {

@@ -8,17 +8,16 @@ import com.github.morotsman.lote.api.builders.Contextual
 import com.github.morotsman.lote.api.support.{AnimationClock, TickedTransition}
 import com.github.morotsman.lote.api.spi.{NConsole, Ticker, Transition}
 
-/** Demonstrates `TickedTransition.buildStepped` — a transition where you
-  * manually track state and decide when to signal completion.
+/** Demonstrates `TickedTransition.buildStepped` — a transition where you manually track state and decide when to signal
+  * completion.
   *
-  * This is a "typewriter reveal": the next slide's content is revealed
-  * character by character, left-to-right then top-to-bottom.
+  * This is a "typewriter reveal": the next slide's content is revealed character by character, left-to-right then
+  * top-to-bottom.
   *
-  * == Key concept ==
-  * Unlike `buildProgress` (which manages step counting and gives you a 0→1
-  * progress value), `buildStepped` gives you raw step counts on each tick.
-  * You have access to `ctx.from`, `ctx.to`, `ctx.screenWidth`,
-  * `ctx.screenHeight`, `ctx.render(frame)`, and `ctx.complete`.
+  * ==Key concept==
+  * Unlike `buildProgress` (which manages step counting and gives you a 0→1 progress value), `buildStepped` gives you
+  * raw step counts on each tick. You have access to `ctx.from`, `ctx.to`, `ctx.screenWidth`, `ctx.screenHeight`,
+  * `ctx.render(frame)`, and `ctx.complete`.
   *
   * {{{
   * builder.buildStepped { (nrOfSteps, _, ctx) =>
@@ -31,12 +30,11 @@ import com.github.morotsman.lote.api.spi.{NConsole, Ticker, Transition}
   * }
   * }}}
   *
-  * Note: since `buildStepped` doesn't provide a setup phase for creating
-  * Refs, this example uses `buildWithSetup` under the hood — which is the
-  * idiomatic pattern when `buildStepped` would need external mutable state.
-  * The `buildStepped` API is shown in the ScalaDoc above for reference.
+  * Note: since `buildStepped` doesn't provide a setup phase for creating Refs, this example uses `buildWithSetup` under
+  * the hood — which is the idiomatic pattern when `buildStepped` would need external mutable state. The `buildStepped`
+  * API is shown in the ScalaDoc above for reference.
   *
-  * == Usage ==
+  * ==Usage==
   * {{{
   * .transition(SimpleTypewriterTransition.contextual[F]())
   * }}}
@@ -72,11 +70,11 @@ object SimpleTypewriterTransition {
           onTick = (nrOfSteps: Int, _: Double) => {
             for {
               revealed <- revealRef.updateAndGet(_ + nrOfSteps * charsPerStep)
-              clamped   = math.min(revealed, totalChars)
-              frame     = buildFrame(fromContent, toContent, clamped)
-              _        <- builder.console.clear()
-              _        <- builder.console.writeString(frame)
-              _        <- if (revealed >= totalChars) complete else Monad[F].unit
+              clamped = math.min(revealed, totalChars)
+              frame = buildFrame(fromContent, toContent, clamped)
+              _ <- builder.console.clear()
+              _ <- builder.console.writeString(frame)
+              _ <- if (revealed >= totalChars) complete else Monad[F].unit
             } yield ()
           }
         )
@@ -84,8 +82,8 @@ object SimpleTypewriterTransition {
     }
   }
 
-  /** Builds a frame where `revealedChars` characters of the `to` content are
-    * shown, and the rest shows the `from` content.
+  /** Builds a frame where `revealedChars` characters of the `to` content are shown, and the rest shows the `from`
+    * content.
     */
   private def buildFrame(
       from: ScreenAdjusted,
@@ -93,8 +91,8 @@ object SimpleTypewriterTransition {
       revealedChars: Int
   ): ScreenAdjusted = {
     val fromChars = from.content.toVector
-    val toChars   = to.content.toVector
-    val maxLen    = math.max(fromChars.length, toChars.length)
+    val toChars = to.content.toVector
+    val maxLen = math.max(fromChars.length, toChars.length)
 
     val result = (0 until maxLen).map { i =>
       if (i < revealedChars)
@@ -106,5 +104,3 @@ object SimpleTypewriterTransition {
     ScreenAdjusted(result.mkString)
   }
 }
-
-

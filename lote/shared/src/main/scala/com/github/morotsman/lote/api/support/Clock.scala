@@ -11,8 +11,8 @@ import scala.concurrent.duration.FiniteDuration
   * with a `SimulatedClock` that advances only when you tell it to, making animation tests instantaneous and
   * deterministic.
   *
-  * Named `AnimationClock` (rather than just `Clock`) to avoid confusion with `cats.effect.Clock`,
-  * which is a different abstraction from the Cats Effect library.
+  * Named `AnimationClock` (rather than just `Clock`) to avoid confusion with `cats.effect.Clock`, which is a different
+  * abstraction from the Cats Effect library.
   */
 @implicitNotFound(
   "No implicit AnimationClock[${F}] found. An AnimationClock instance is derived automatically from Temporal[${F}], or you can provide a SimulatedClock in tests via SlideTestHarness."
@@ -38,4 +38,3 @@ trait AnimationClockLowPriority {
       override def monotonic: F[FiniteDuration] = Temporal[F].monotonic
     }
 }
-

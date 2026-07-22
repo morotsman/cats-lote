@@ -9,13 +9,13 @@ import com.github.morotsman.lote.api.spi.{NConsole, Ticker, Transition}
 
 import scala.concurrent.duration._
 
-/** Demonstrates `TickedTransition.withEasing` — the same wipe logic as
-  * `SimpleWipeTransition` but with an ease-in-out-cubic curve applied.
+/** Demonstrates `TickedTransition.withEasing` — the same wipe logic as `SimpleWipeTransition` but with an
+  * ease-in-out-cubic curve applied.
   *
-  * The wipe starts slowly, accelerates through the middle, and decelerates
-  * at the end — producing a more polished feel with zero extra rendering code.
+  * The wipe starts slowly, accelerates through the middle, and decelerates at the end — producing a more polished feel
+  * with zero extra rendering code.
   *
-  * == Key concept ==
+  * ==Key concept==
   * {{{
   * builder
   *   .withEasing(Easing.easeInOutCubic)
@@ -26,7 +26,7 @@ import scala.concurrent.duration._
   *   }
   * }}}
   *
-  * == Usage ==
+  * ==Usage==
   * {{{
   * .transition(SimpleEasedWipeTransition.contextual[F]())
   * }}}
@@ -64,8 +64,8 @@ object SimpleEasedWipeTransition {
         else ProgressResult.continue(frame)
       }
 
-  /** Returns the index of the last row where from and to visually differ,
-    * or -1 if they are identical (transition completes immediately).
+  /** Returns the index of the last row where from and to visually differ, or -1 if they are identical (transition
+    * completes immediately).
     */
   private def lastDifferingRow(
       from: ScreenAdjusted,
@@ -73,7 +73,7 @@ object SimpleEasedWipeTransition {
       screenHeight: Int
   ): Int = {
     val fromLines = from.content.split("\n", -1).toVector
-    val toLines   = to.content.split("\n", -1).toVector
+    val toLines = to.content.split("\n", -1).toVector
     val height = math.min(math.max(fromLines.length, toLines.length), screenHeight)
     (0 until height).reverse
       .find { row =>
@@ -89,9 +89,9 @@ object SimpleEasedWipeTransition {
       screenHeight: Int
   ): ScreenAdjusted = {
     val fromLines = from.content.split("\n", -1).toVector
-    val toLines   = to.content.split("\n", -1).toVector
+    val toLines = to.content.split("\n", -1).toVector
     val contentHt = math.max(fromLines.length, toLines.length)
-    val height    = math.min(contentHt, screenHeight)
+    val height = math.min(contentHt, screenHeight)
     val width = math.max(
       fromLines.map(_.length).maxOption.getOrElse(0),
       toLines.map(_.length).maxOption.getOrElse(0)
@@ -114,4 +114,3 @@ object SimpleEasedWipeTransition {
     truncated + (" " * (width - truncated.length))
   }
 }
-

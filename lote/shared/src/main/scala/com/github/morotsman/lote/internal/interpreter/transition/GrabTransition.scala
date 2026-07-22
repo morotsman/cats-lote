@@ -233,7 +233,7 @@ private[lote] object GrabTransition {
       .buildWithSetup { (slide1Content, _slide2Content, complete) =>
         for {
           gridLayer <- GlideLayer.make[F](console, animationSettings.step, wrapThreshold = stepSize)
-          screen    <- console.context
+          screen <- console.context
           lines1 = slide1Content.content.split("\n", -1).toVector
           maxSpawnRow = Math.max(1, Math.min(lines1.length, screen.screenHeight) - snakeHeight)
           spawnRow = Random.nextInt(maxSpawnRow)
@@ -244,8 +244,8 @@ private[lote] object GrabTransition {
           horizontalDistance = startCol - targetCol
           crawlTotalSteps = Math.max(1, horizontalDistance / stepSize)
           initialPhase: GrabPhase = CrawlIn(0, crawlTotalSteps, spawnRow, snakeTargetRow, targetCol)
-          phaseRef      <- Ref[F].of(initialPhase)
-          snakeInfoRef  <- Ref[F].of(Option.empty[SnakeRenderInfo])
+          phaseRef <- Ref[F].of(initialPhase)
+          snakeInfoRef <- Ref[F].of(Option.empty[SnakeRenderInfo])
           holdFrames = Vector(4, 5, 3)
           cumulativeBiteFrames = holdFrames.scanLeft(0)(_ + _).tail
           totalBiteFrames = cumulativeBiteFrames.last
@@ -276,7 +276,8 @@ private[lote] object GrabTransition {
                 } else {
                   val sceneIdx = cumulativeBiteFrames.indexWhere(_ > frame)
                   val snakeArt = scenes(sceneIdx)
-                  val content = renderScene(lines1, screen.screenWidth, screen.screenHeight, snakeTargetRow, targetCol, snakeArt)
+                  val content =
+                    renderScene(lines1, screen.screenWidth, screen.screenHeight, snakeTargetRow, targetCol, snakeArt)
                   GrabStepResult(
                     renderedFrame = Some(ScreenAdjusted(content)),
                     nextPhase = Bite(frame + 1),
@@ -289,7 +290,15 @@ private[lote] object GrabTransition {
                 val snakeArt = crawlFrames(frameIndex)
                 val snakeCol = sCol + (step * stepSize)
                 val dragOffset = step * stepSize
-                val content = renderScene(lines1, screen.screenWidth, screen.screenHeight, grabberRow, snakeCol, snakeArt, dragOffset)
+                val content = renderScene(
+                  lines1,
+                  screen.screenWidth,
+                  screen.screenHeight,
+                  grabberRow,
+                  snakeCol,
+                  snakeArt,
+                  dragOffset
+                )
                 GrabStepResult(
                   renderedFrame = Some(ScreenAdjusted(content)),
                   nextPhase = if (step >= totalSteps) Done else DragOut(step + 1, totalSteps, grabberRow, sCol),

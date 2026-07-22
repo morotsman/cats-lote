@@ -35,13 +35,11 @@ trait Terminal[F[_]] {
   /** Write a raw string to the terminal output. */
   def write(s: String): F[Unit]
 
-  /** Write a raw ANSI escape string directly to the terminal output,
-    * bypassing any frame-diffing or buffering logic.
+  /** Write a raw ANSI escape string directly to the terminal output, bypassing any frame-diffing or buffering logic.
     *
-    * The default implementation delegates to `write`, which is correct for
-    * backends that do not perform differential rendering. Backends that use
-    * frame-diffing (e.g. JLineTerminal) should override this to write
-    * directly to the underlying output stream.
+    * The default implementation delegates to `write`, which is correct for backends that do not perform differential
+    * rendering. Backends that use frame-diffing (e.g. JLineTerminal) should override this to write directly to the
+    * underlying output stream.
     */
   def writeRaw(s: String): F[Unit] = write(s)
 

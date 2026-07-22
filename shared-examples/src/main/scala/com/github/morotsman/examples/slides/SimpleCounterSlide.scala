@@ -10,9 +10,8 @@ import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker}
 
 /** A minimal interactive slide that keeps a counter on screen.
   *
-  * Press `w` to increment and `s` to decrement. The counter re-renders on every
-  * ticker tick so the display stays responsive. This is the simplest possible
-  * example of a custom `Slide[F]` — no GlideLayer, no FixedStep, no animation
+  * Press `w` to increment and `s` to decrement. The counter re-renders on every ticker tick so the display stays
+  * responsive. This is the simplest possible example of a custom `Slide[F]` — no GlideLayer, no FixedStep, no animation
   * loop — just:
   *
   *   - a `Ref` holding the counter value
@@ -20,21 +19,15 @@ import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker}
   *   - `userInput` to handle key presses
   *   - `NConsole.alignText` to center content (no manual padding math)
   *
-  * == How it works ==
+  * ==How it works==
   *
-  *  1. `content` returns `None` so the framework does not paint a static
-  *     background. The slide paints itself.
+  *   1. `content` returns `None` so the framework does not paint a static background. The slide paints itself.
+  *   2. `startShow` subscribes to the shared `Ticker`. On each tick the slide reads the current count, uses
+  *      `console.alignText` to center the text, and writes it to the console.
+  *   3. `stopShow` cancels the ticker subscription and resets the state.
+  *   4. `userInput` pattern-matches on `Character('w')` and `Character('s')` to update the counter.
   *
-  *  2. `startShow` subscribes to the shared `Ticker`. On each tick the
-  *     slide reads the current count, uses `console.alignText` to center
-  *     the text, and writes it to the console.
-  *
-  *  3. `stopShow` cancels the ticker subscription and resets the state.
-  *
-  *  4. `userInput` pattern-matches on `Character('w')` and
-  *     `Character('s')` to update the counter.
-  *
-  * == Usage ==
+  * ==Usage==
   * {{{
   * SessionBuilder[F]()
   *   .addSlideF {
@@ -45,8 +38,8 @@ import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker}
   */
 object SimpleCounterSlide {
 
-  /** Wraps construction in a `ContextualF` so the slide receives the shared
-    * console, ticker, and animation settings from the presentation framework.
+  /** Wraps construction in a `ContextualF` so the slide receives the shared console, ticker, and animation settings
+    * from the presentation framework.
     */
   def contextual[F[_]: Temporal: Ref.Make](): ContextualF[F, Slide[F]] =
     TickedSlide.contextual[F] { builder =>
@@ -80,8 +73,8 @@ object SimpleCounterSlide {
 
   /** Creates the slide given an `NConsole` and a `Ticker`.
     *
-    * Separated from `contextual` so it can also be used standalone in tests or
-    * single-slide runners without the full `SessionBuilder` machinery.
+    * Separated from `contextual` so it can also be used standalone in tests or single-slide runners without the full
+    * `SessionBuilder` machinery.
     */
   def create[F[_]: Temporal: Ref.Make](
       console: NConsole[F],

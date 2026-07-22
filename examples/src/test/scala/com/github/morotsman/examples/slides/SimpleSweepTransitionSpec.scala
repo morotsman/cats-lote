@@ -10,10 +10,9 @@ import scala.concurrent.duration._
 
 /** Demonstrates testing a `TickedTransition.contextual`-based transition.
   *
-  * `SimpleSweepTransition` uses `TickedTransition.contextual[F]` to receive
-  * console, ticker, and animation settings from the framework. In tests, we
-  * use `TickedTransition.forTest(harness)` to get a pre-wired builder and
-  * thread `harness.clockInstance` as the implicit `AnimationClock`.
+  * `SimpleSweepTransition` uses `TickedTransition.contextual[F]` to receive console, ticker, and animation settings
+  * from the framework. In tests, we use `TickedTransition.forTest(harness)` to get a pre-wired builder and thread
+  * `harness.clockInstance` as the implicit `AnimationClock`.
   *
   * This pattern works for any transition built with `TickedTransition`.
   */
@@ -22,9 +21,9 @@ class SimpleSweepTransitionSpec extends CatsEffectSuite {
   /** Helper: creates a SimpleSweepTransition using the harness.
     *
     * The key steps are:
-    *  1. Get the implicit `AnimationClock` from `harness.clockInstance`
-    *  2. Get a pre-wired `TickedTransition.Builder` via `TickedTransition.forTest(harness)`
-    *  3. Pass the builder to the transition's `create` method
+    *   1. Get the implicit `AnimationClock` from `harness.clockInstance`
+    *   2. Get a pre-wired `TickedTransition.Builder` via `TickedTransition.forTest(harness)`
+    *   3. Pass the builder to the transition's `create` method
     */
   private def createTransition(harness: SlideTestHarness[IO], duration: FiniteDuration = 500.millis) = {
     implicit val clock: AnimationClock[IO] = harness.clockInstance

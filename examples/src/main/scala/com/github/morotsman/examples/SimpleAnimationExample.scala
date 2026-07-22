@@ -5,8 +5,8 @@ import com.github.morotsman.lote.api.TerminalPlatform
 
 /** Terminal version of the SimpleAnimationExample.
   *
-  * Runs the same `SharedSimpleExamplesPresentation` (counter, glide, scroll,
-  * wipe transition) but renders to a JLine terminal instead of a WebGL canvas.
+  * Runs the same `SharedSimpleExamplesPresentation` (counter, glide, scroll, wipe transition) but renders to a JLine
+  * terminal instead of a WebGL canvas.
   *
   * To run:
   * {{{
@@ -22,4 +22,3 @@ object SimpleAnimationExample extends IOApp.Simple {
         .run()
     }
 }
-

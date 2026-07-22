@@ -9,33 +9,26 @@ import com.github.morotsman.lote.api.support.{AnimationClock, TickedSlide}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker}
 import scala.concurrent.duration.FiniteDuration
 
-/** A minimal slide that demonstrates `GlideLayer.renderOntoScrolled`
-  * combined with a perfectly smooth elliptical orbit.
+/** A minimal slide that demonstrates `GlideLayer.renderOntoScrolled` combined with a perfectly smooth elliptical orbit.
   *
-  * A repeating pattern scrolls horizontally across the screen. A marker
-  * character (`>`) orbits the screen centre at sub-pixel precision using
-  * `RenderEffect.RenderFloatingChars` directly.
+  * A repeating pattern scrolls horizontally across the screen. A marker character (`>`) orbits the screen centre at
+  * sub-pixel precision using `RenderEffect.RenderFloatingChars` directly.
   *
   * Press `a` to scroll left, `d` to scroll right, `s` to stop.
   *
-  * == Why not GlideLayer for the orbit? ==
+  * ==Why not GlideLayer for the orbit?==
   *
-  * GlideLayer is designed for integer cell positions with linear
-  * interpolation between discrete steps. This works well for game
-  * elements that move cell-by-cell, but for a smooth elliptical orbit
-  * it introduces two artefacts:
+  * GlideLayer is designed for integer cell positions with linear interpolation between discrete steps. This works well
+  * for game elements that move cell-by-cell, but for a smooth elliptical orbit it introduces two artefacts:
   *
-  *   - '''Staircase motion''' — col and row cross integer boundaries at
-  *     different times, causing horizontal-then-vertical movement instead
-  *     of diagonal.
-  *   - '''Limited resolution''' — the path is quantized to integer cells
-  *     regardless of the circle radius.
+  *   - '''Staircase motion''' — col and row cross integer boundaries at different times, causing
+  *     horizontal-then-vertical movement instead of diagonal.
+  *   - '''Limited resolution''' — the path is quantized to integer cells regardless of the circle radius.
   *
-  * By emitting `FloatingChar` with exact fractional `(cellX, cellY)`
-  * every frame, the WebGL overlay renders the marker at true sub-pixel
-  * positions, tracing a mathematically perfect ellipse.
+  * By emitting `FloatingChar` with exact fractional `(cellX, cellY)` every frame, the WebGL overlay renders the marker
+  * at true sub-pixel positions, tracing a mathematically perfect ellipse.
   *
-  * == Usage ==
+  * ==Usage==
   * {{{
   * SessionBuilder[F]()
   *   .addSlideF {
@@ -59,7 +52,7 @@ object SimpleScrollSlide {
   /** Build the world line for a given row (repeating pattern). */
   private def worldLine(row: Int, screenHeight: Int): String = {
     val pattern = row match {
-      case r if r == 0              => "~" * WorldWidth
+      case r if r == 0                => "~" * WorldWidth
       case r if r == screenHeight - 2 => "-" * WorldWidth
       case _ =>
         (0 until WorldWidth).map { x =>
@@ -74,8 +67,8 @@ object SimpleScrollSlide {
 
   /** Scroll state for the logical text-grid camera. */
   private case class ScrollState(
-      cameraX: Double,          // left edge of viewport in world coordinates (fractional for sub-pixel smoothness)
-      speed: Double,            // cells per step (positive = scroll right, negative = scroll left, zero = stopped)
+      cameraX: Double, // left edge of viewport in world coordinates (fractional for sub-pixel smoothness)
+      speed: Double, // cells per step (positive = scroll right, negative = scroll left, zero = stopped)
       startTime: FiniteDuration // wall-clock time when the slide started; used to compute the marker's orbit angle
   )
 
@@ -88,7 +81,7 @@ object SimpleScrollSlide {
       animationSettings: AnimationSettings
   )(implicit clock: AnimationClock[F]): F[Slide[F]] =
     for {
-      now      <- clock.monotonic
+      now <- clock.monotonic
       stateRef <- Ref[F].of(ScrollState(cameraX = 0.0, speed = 0.5, startTime = now))
       slide <- TickedSlide[F](console, ticker, animationSettings)
         .withGlideLayer(wrapThreshold = 20)
@@ -130,9 +123,8 @@ object SimpleScrollSlide {
             case Character(c) if c == 's' => stateRef.update(_.copy(speed = 0.0))
             case _                        => Monad[F].unit
           },
-          onStart = clock.monotonic.flatMap(now =>
-            stateRef.set(ScrollState(cameraX = 0.0, speed = 0.5, startTime = now))
-          )
+          onStart =
+            clock.monotonic.flatMap(now => stateRef.set(ScrollState(cameraX = 0.0, speed = 0.5, startTime = now)))
         )
     } yield slide
 
@@ -158,17 +150,16 @@ object SimpleScrollSlide {
 
   /** Compute the marker's position as exact fractional cell coordinates.
     *
-    * Unlike `SmoothChar` (which takes integer col/row and relies on
-    * GlideLayer for interpolation), `FloatingChar` accepts Double
-    * coordinates that the WebGL renderer uses directly. This gives a
-    * mathematically perfect elliptical path with zero staircase artefacts.
+    * Unlike `SmoothChar` (which takes integer col/row and relies on GlideLayer for interpolation), `FloatingChar`
+    * accepts Double coordinates that the WebGL renderer uses directly. This gives a mathematically perfect elliptical
+    * path with zero staircase artefacts.
     */
   private def orbitMarker(width: Int, height: Int, elapsedSec: Double): Vector[RenderEffect.FloatingChar] = {
-    val angle   = elapsedSec * OrbitRadPerSec
+    val angle = elapsedSec * OrbitRadPerSec
     val radiusX = (width / 2.0) - 4.0
     val radiusY = (height / 2.0) - 6.0
-    val cellX   = width / 2.0 + radiusX * math.cos(angle)
-    val cellY   = height / 2.0 + radiusY * math.sin(angle)
+    val cellX = width / 2.0 + radiusX * math.cos(angle)
+    val cellY = height / 2.0 + radiusY * math.sin(angle)
     Vector(RenderEffect.FloatingChar('>', cellX, cellY, "#ffff00"))
   }
 }

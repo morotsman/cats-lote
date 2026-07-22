@@ -10,4 +10,3 @@ package object support {
   @deprecated("Use AnimationClock instead", "0.1.0")
   val Clock: AnimationClock.type = AnimationClock
 }
-

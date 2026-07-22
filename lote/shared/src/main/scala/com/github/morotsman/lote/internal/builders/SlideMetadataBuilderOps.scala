@@ -167,4 +167,3 @@ private[lote] trait SlideMetadataBuilderOps[F[_], Self] {
   final def rotateY(degrees: Double): Self = withRotationOffset(0, degrees, 0)
   final def rotateZ(degrees: Double): Self = withRotationOffset(0, 0, degrees)
 }
-

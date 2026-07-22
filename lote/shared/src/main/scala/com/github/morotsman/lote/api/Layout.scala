@@ -2,8 +2,8 @@ package com.github.morotsman.lote.api
 
 /** Layout generators that compute slide positions for common spatial arrangements.
   *
-  * A `Layout` produces positions for a given number of slides. Use with
-  * `SessionBuilder.addLayoutSection` to apply positions automatically:
+  * A `Layout` produces positions for a given number of slides. Use with `SessionBuilder.addLayoutSection` to apply
+  * positions automatically:
   *
   * {{{
   * SessionBuilder[F]()
@@ -27,10 +27,14 @@ object Layout {
 
   /** Arranges slides in a row-major grid (left-to-right, then top-to-bottom).
     *
-    * @param cols     number of columns per row
-    * @param spacingX horizontal spacing between columns (default 1800)
-    * @param spacingY vertical spacing between rows (default 1200)
-    * @param origin   position of the first slide (top-left corner of the grid)
+    * @param cols
+    *   number of columns per row
+    * @param spacingX
+    *   horizontal spacing between columns (default 1800)
+    * @param spacingY
+    *   vertical spacing between rows (default 1200)
+    * @param origin
+    *   position of the first slide (top-left corner of the grid)
     */
   def grid(
       cols: Int,
@@ -54,11 +58,16 @@ object Layout {
 
   /** Arranges slides evenly spaced around a circle.
     *
-    * @param radius     distance from center to each slide position
-    * @param centerX    X coordinate of the circle center
-    * @param centerY    Y coordinate of the circle center
-    * @param centerZ    Z coordinate of the circle center (default 0)
-    * @param startAngle starting angle in degrees (0 = right, 90 = down)
+    * @param radius
+    *   distance from center to each slide position
+    * @param centerX
+    *   X coordinate of the circle center
+    * @param centerY
+    *   Y coordinate of the circle center
+    * @param centerZ
+    *   Z coordinate of the circle center (default 0)
+    * @param startAngle
+    *   starting angle in degrees (0 = right, 90 = down)
     */
   def circle(
       radius: Double,
@@ -87,13 +96,20 @@ object Layout {
 
   /** Arranges slides along a spiral (helix) path with increasing radius.
     *
-    * @param startRadius initial distance from center for the first slide
-    * @param growth      radius increase per slide
-    * @param angleStep   angle between consecutive slides in degrees (default 60)
-    * @param zStep       Z-axis change per slide (negative = away from camera)
-    * @param centerX     X coordinate of the spiral center
-    * @param centerY     Y coordinate of the spiral center
-    * @param centerZ     starting Z coordinate
+    * @param startRadius
+    *   initial distance from center for the first slide
+    * @param growth
+    *   radius increase per slide
+    * @param angleStep
+    *   angle between consecutive slides in degrees (default 60)
+    * @param zStep
+    *   Z-axis change per slide (negative = away from camera)
+    * @param centerX
+    *   X coordinate of the spiral center
+    * @param centerY
+    *   Y coordinate of the spiral center
+    * @param centerZ
+    *   starting Z coordinate
     */
   def spiral(
       startRadius: Double = 800.0,
@@ -122,11 +138,16 @@ object Layout {
     *
     * The direction vector is normalized internally, so only its direction matters, not its magnitude.
     *
-    * @param spacing distance between consecutive slides along the line
-    * @param dirX    X component of the line direction (default 1 = horizontal)
-    * @param dirY    Y component of the line direction (default 0)
-    * @param dirZ    Z component of the line direction (default 0)
-    * @param origin  starting position of the first slide
+    * @param spacing
+    *   distance between consecutive slides along the line
+    * @param dirX
+    *   X component of the line direction (default 1 = horizontal)
+    * @param dirY
+    *   Y component of the line direction (default 0)
+    * @param dirZ
+    *   Z component of the line direction (default 0)
+    * @param origin
+    *   starting position of the first slide
     */
   def line(
       spacing: Double = 1800.0,
@@ -152,4 +173,3 @@ object Layout {
     }
   }
 }
-

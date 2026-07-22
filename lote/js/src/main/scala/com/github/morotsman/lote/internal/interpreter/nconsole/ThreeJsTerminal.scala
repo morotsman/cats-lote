@@ -89,10 +89,10 @@ import cats.Monad
 object ThreeJsTerminal {
 
   /** Width of a single character cell in CSS pixels. */
-  private val DefaultCellWidth = 10
+  
 
   /** Height of a single character cell in CSS pixels. */
-  private val DefaultCellHeight = 20
+  
 
   /** CSS font-family stack used for monospace text rendering on the offscreen canvases. */
   private val FontFamily = "'Courier New', Courier, monospace"

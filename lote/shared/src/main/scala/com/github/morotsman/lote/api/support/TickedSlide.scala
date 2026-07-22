@@ -9,8 +9,8 @@ import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscri
 
 import scala.concurrent.duration.FiniteDuration
 
-/** Eliminates the boilerplate around ticker subscription, FixedStep, and
-  * GlideLayer lifecycle that every animated slide repeats.
+/** Eliminates the boilerplate around ticker subscription, FixedStep, and GlideLayer lifecycle that every animated slide
+  * repeats.
   *
   * ==Minimal usage (no GlideLayer, no FixedStep)==
   * {{{
@@ -64,9 +64,8 @@ object TickedSlide {
 
   /** Create a slide using the `SlideContext` provided by the DSL builder.
     *
-    * Symmetric with `TickedTransition.contextual` — the framework injects
-    * `NConsole`, `Ticker`, and `AnimationSettings` so the caller only supplies
-    * the slide-specific logic via the `Builder`.
+    * Symmetric with `TickedTransition.contextual` — the framework injects `NConsole`, `Ticker`, and `AnimationSettings`
+    * so the caller only supplies the slide-specific logic via the `Builder`.
     *
     * {{{
     * TickedSlide.contextual[F] { builder =>
@@ -111,10 +110,14 @@ object TickedSlide {
 
     /** Build a slide with a simple tick callback (no FixedStep, no GlideLayer).
       *
-      * @param onTick  called every ticker tick
-      * @param onInput called on user input
-      * @param onStart called when the slide starts (reset custom state here)
-      * @param onStop  optional extra cleanup when the slide stops
+      * @param onTick
+      *   called every ticker tick
+      * @param onInput
+      *   called on user input
+      * @param onStart
+      *   called when the slide starts (reset custom state here)
+      * @param onStop
+      *   optional extra cleanup when the slide stops
       */
     def build(
         onTick: F[Unit],
@@ -148,14 +151,17 @@ object TickedSlide {
 
     /** Build a slide with FixedStep (discrete simulation steps).
       *
-      * The `onTick` callback receives `(steps: Int, progress: Double)` —
-      * the number of simulation steps elapsed and the fractional progress
-      * toward the next step.
+      * The `onTick` callback receives `(steps: Int, progress: Double)` — the number of simulation steps elapsed and the
+      * fractional progress toward the next step.
       *
-      * @param onTick  called every ticker tick with `(steps, progress)`
-      * @param onInput called on user input
-      * @param onStart called when the slide starts (reset custom state here)
-      * @param onStop  optional extra cleanup when the slide stops
+      * @param onTick
+      *   called every ticker tick with `(steps, progress)`
+      * @param onInput
+      *   called on user input
+      * @param onStart
+      *   called when the slide starts (reset custom state here)
+      * @param onStop
+      *   optional extra cleanup when the slide stops
       */
     def buildStepped(
         onTick: (Int, Double) => F[Unit],
@@ -164,12 +170,12 @@ object TickedSlide {
         onStop: Option[F[Unit]] = None
     )(implicit F: Monad[F], refMake: Ref.Make[F], clock: AnimationClock[F]): F[Slide[F]] =
       for {
-        subRef     <- Ref[F].of(Option.empty[TickerSubscription[F]])
+        subRef <- Ref[F].of(Option.empty[TickerSubscription[F]])
         stepperRef <- FixedStep.makeRef[F]
       } yield new Slide[F] {
         private val tickerCallback: F[Unit] =
-          FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap {
-            case (steps, progress) => onTick(steps, progress)
+          FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap { case (steps, progress) =>
+            onTick(steps, progress)
           }
 
         override def content: F[Option[ScreenAdjusted]] = F.pure(None)
@@ -196,13 +202,17 @@ object TickedSlide {
 
     /** Build a slide with FixedStep and a GlideLayer.
       *
-      * The `onTick` callback receives `(steps: Int, glide: GlideLayer.Overlay[F])`.
-      * The GlideLayer is automatically cleared on `stopShow`.
+      * The `onTick` callback receives `(steps: Int, glide: GlideLayer.Overlay[F])`. The GlideLayer is automatically
+      * cleared on `stopShow`.
       *
-      * @param onTick  called every ticker tick with `(steps, glideLayer)`
-      * @param onInput called on user input
-      * @param onStart called when the slide starts (reset custom state here)
-      * @param onStop  optional extra cleanup (GlideLayer.clear is automatic)
+      * @param onTick
+      *   called every ticker tick with `(steps, glideLayer)`
+      * @param onInput
+      *   called on user input
+      * @param onStart
+      *   called when the slide starts (reset custom state here)
+      * @param onStop
+      *   optional extra cleanup (GlideLayer.clear is automatic)
       */
     def buildWithGlide(
         onTick: (Int, GlideLayer.Overlay[F]) => F[Unit],
@@ -213,13 +223,13 @@ object TickedSlide {
       val gc = glideConfig.getOrElse(GlideConfig())
       val glideStep = gc.step.getOrElse(animationSettings.step)
       for {
-        subRef     <- Ref[F].of(Option.empty[TickerSubscription[F]])
+        subRef <- Ref[F].of(Option.empty[TickerSubscription[F]])
         stepperRef <- FixedStep.makeRef[F]
-        glide      <- GlideLayer.make[F](console, glideStep, gc.wrapThreshold)
+        glide <- GlideLayer.make[F](console, glideStep, gc.wrapThreshold)
       } yield new Slide[F] {
         private val tickerCallback: F[Unit] =
-          FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap {
-            case (steps, _) => onTick(steps, glide)
+          FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap { case (steps, _) =>
+            onTick(steps, glide)
           }
 
         override def content: F[Option[ScreenAdjusted]] = F.pure(None)

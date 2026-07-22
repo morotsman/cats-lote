@@ -12,8 +12,8 @@ import scala.concurrent.duration._
   */
 class SweepRightTransitionHarnessSpec extends CatsEffectSuite {
 
-  /** Helper: create a SweepRightTransition using the harness's pre-wired builder.
-    * `TickedTransition.forTest(harness)` bundles console, ticker, and animationSettings.
+  /** Helper: create a SweepRightTransition using the harness's pre-wired builder. `TickedTransition.forTest(harness)`
+    * bundles console, ticker, and animationSettings.
     */
   private def createTransition(harness: SlideTestHarness[IO], columnsPerStep: Int = 2) = {
     implicit val clock: AnimationClock[IO] = harness.clockInstance

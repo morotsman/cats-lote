@@ -47,7 +47,18 @@ private[lote] final class TextSlideBuilder[
       slideOffset: Option[(Double, Double, Double)] = currentOffset,
       slideRotationOffset: Option[(Double, Double, Double)] = currentRotationOffset
   ): TextSlideBuilder[F, NextState] =
-    new TextSlideBuilder[F, NextState](alignment, content, steps, separator, hint, out, slideTitle, slidePosition, slideOffset, slideRotationOffset)
+    new TextSlideBuilder[F, NextState](
+      alignment,
+      content,
+      steps,
+      separator,
+      hint,
+      out,
+      slideTitle,
+      slidePosition,
+      slideOffset,
+      slideRotationOffset
+    )
 
   override protected def withTransition(
       transition: Transition[F]
@@ -69,21 +80,24 @@ private[lote] final class TextSlideBuilder[
     )
 
   override protected def withPosition(position: SlidePosition): TextSlideBuilder[F, State] =
-    this.copy[State](slidePosition = currentPosition match {
-      case Some(existing) => Some(mergePositions(existing, position))
-      case None => Some(position)
-    }, slideOffset = None)
+    this.copy[State](
+      slidePosition = currentPosition match {
+        case Some(existing) => Some(mergePositions(existing, position))
+        case None           => Some(position)
+      },
+      slideOffset = None
+    )
 
   override protected def withPositionMerge(position: SlidePosition): TextSlideBuilder[F, State] =
     this.copy[State](slidePosition = currentPosition match {
       case Some(existing) => Some(mergePositions(existing, position))
-      case None => Some(position)
+      case None           => Some(position)
     })
 
   override protected def withOffset(dx: Double, dy: Double, dz: Double): TextSlideBuilder[F, State] = {
     val newOffset = currentOffset match {
       case Some((ox, oy, oz)) => Some((ox + dx, oy + dy, oz + dz))
-      case None => Some((dx, dy, dz))
+      case None               => Some((dx, dy, dz))
     }
     this.copy[State](slideOffset = newOffset)
   }
@@ -91,7 +105,7 @@ private[lote] final class TextSlideBuilder[
   override protected def withRotationOffset(drx: Double, dry: Double, drz: Double): TextSlideBuilder[F, State] = {
     val newRotOffset = currentRotationOffset match {
       case Some((rx, ry, rz)) => Some((rx + drx, ry + dry, rz + drz))
-      case None => Some((drx, dry, drz))
+      case None               => Some((drx, dry, drz))
     }
     this.copy[State](slideRotationOffset = newRotOffset)
   }
@@ -151,11 +165,11 @@ private[lote] final class TextSlideBuilder[
     val builderWithPosition = currentPosition.fold(builderWithTitle)(builderWithTitle.position)
     val builderWithOffset = currentOffset match {
       case Some((dx, dy, dz)) => builderWithPosition.offset(dx, dy, dz)
-      case None => builderWithPosition
+      case None               => builderWithPosition
     }
     val builderWithRotOffset = currentRotationOffset match {
       case Some((rx, ry, rz)) => builderWithOffset.rotateX(rx).rotateY(ry).rotateZ(rz)
-      case None => builderWithOffset
+      case None               => builderWithOffset
     }
 
     builderWithRotOffset.build()

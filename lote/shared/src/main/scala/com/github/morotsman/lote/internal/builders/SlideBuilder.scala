@@ -52,21 +52,24 @@ private[lote] final class SlideBuilder[F[_], State <: BuildState] private (
     )
 
   override protected def withPosition(position: SlidePosition): SlideBuilder[F, State] =
-    this.copy[State](slidePosition = currentPosition match {
-      case Some(existing) => Some(mergePositions(existing, position))
-      case None => Some(position)
-    }, slideOffset = None)
+    this.copy[State](
+      slidePosition = currentPosition match {
+        case Some(existing) => Some(mergePositions(existing, position))
+        case None           => Some(position)
+      },
+      slideOffset = None
+    )
 
   override protected def withPositionMerge(position: SlidePosition): SlideBuilder[F, State] =
     this.copy[State](slidePosition = currentPosition match {
       case Some(existing) => Some(mergePositions(existing, position))
-      case None => Some(position)
+      case None           => Some(position)
     })
 
   override protected def withOffset(dx: Double, dy: Double, dz: Double): SlideBuilder[F, State] = {
     val newOffset = currentOffset match {
       case Some((ox, oy, oz)) => Some((ox + dx, oy + dy, oz + dz))
-      case None => Some((dx, dy, dz))
+      case None               => Some((dx, dy, dz))
     }
     this.copy[State](slideOffset = newOffset)
   }
@@ -74,7 +77,7 @@ private[lote] final class SlideBuilder[F[_], State <: BuildState] private (
   override protected def withRotationOffset(drx: Double, dry: Double, drz: Double): SlideBuilder[F, State] = {
     val newRotOffset = currentRotationOffset match {
       case Some((rx, ry, rz)) => Some((rx + drx, ry + dry, rz + drz))
-      case None => Some((drx, dry, drz))
+      case None               => Some((drx, dry, drz))
     }
     this.copy[State](slideRotationOffset = newRotOffset)
   }

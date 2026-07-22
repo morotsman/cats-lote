@@ -69,4 +69,3 @@ class SimpleEasedWipeEarlyExitSpec extends CatsEffectSuite {
     }
   }
 }
-

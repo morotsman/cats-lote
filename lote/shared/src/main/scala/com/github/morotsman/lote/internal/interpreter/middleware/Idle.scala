@@ -3,7 +3,7 @@ package com.github.morotsman.lote.internal.interpreter.middleware
 import cats.Monad
 import cats.effect.{Ref, Temporal}
 import cats.implicits._
-import com.github.morotsman.lote.api.{AnimationSettings, Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.api.{Screen, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.internal.algebra.IdleDetector
 import com.github.morotsman.lote.api.spi.{NConsole, Overlay}
 import com.github.morotsman.lote.api.support.{Clock => LoteClock, FixedStep, GlideLayer, SmoothChar}
@@ -194,8 +194,6 @@ private[lote] object Idle {
       stepperRef <- FixedStep.makeRef[F]
       glideLayer <- GlideLayer.make[F](console, IdleStep, wrapThreshold = 2)
     } yield new Idle[F] {
-
-
 
       /** Convert bugs to SmoothChars for overlay rendering. */
       private def bugsToSmoothChars(bugs: List[Bug]): Vector[SmoothChar] =

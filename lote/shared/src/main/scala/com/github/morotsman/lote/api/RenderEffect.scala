@@ -105,8 +105,8 @@ object RenderEffect {
     * Use this for game elements (like a worm/snake) that need smooth per-frame interpolation between discrete
     * simulation positions.
     *
-    * On terminal backends this renders each character at the nearest integer grid position (rounded from the
-    * fractional coordinates). The motion will appear quantized to cell boundaries but still functional.
+    * On terminal backends this renders each character at the nearest integer grid position (rounded from the fractional
+    * coordinates). The motion will appear quantized to cell boundaries but still functional.
     *
     * @param chars
     *   the characters to render at sub-pixel positions

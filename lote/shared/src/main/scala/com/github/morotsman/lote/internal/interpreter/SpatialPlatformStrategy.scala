@@ -40,7 +40,7 @@ private[lote] class SpatialPlatformStrategy[F[_]: Temporal: NConsole] private (
               transparentBackground = attrs.transparentBackground
             )
           case (None, Some(absolutePos)) => absolutePos
-          case (None, None) => lastPos
+          case (None, None)              => lastPos
         }
         // Apply relative rotation offset if set
         val rotated = spec.rotationOffset match {

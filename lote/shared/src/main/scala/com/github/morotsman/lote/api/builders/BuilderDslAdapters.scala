@@ -225,13 +225,17 @@ private[lote] object BuilderDslAdapters {
 
     override protected final def applyOffset(
         builder: InternalSlideBuilder[F, State],
-        dx: Double, dy: Double, dz: Double
+        dx: Double,
+        dy: Double,
+        dz: Double
     ): InternalSlideBuilder[F, State] =
       builder.offset(dx, dy, dz)
 
     override protected final def applyRotationOffset(
         builder: InternalSlideBuilder[F, State],
-        drx: Double, dry: Double, drz: Double
+        drx: Double,
+        dry: Double,
+        drz: Double
     ): InternalSlideBuilder[F, State] =
       builder.rotateX(drx).rotateY(dry).rotateZ(drz)
 
@@ -320,13 +324,17 @@ private[lote] object BuilderDslAdapters {
 
     override protected final def applyOffset(
         builder: InternalTextSlideBuilder[F, State],
-        dx: Double, dy: Double, dz: Double
+        dx: Double,
+        dy: Double,
+        dz: Double
     ): InternalTextSlideBuilder[F, State] =
       builder.offset(dx, dy, dz)
 
     override protected final def applyRotationOffset(
         builder: InternalTextSlideBuilder[F, State],
-        drx: Double, dry: Double, drz: Double
+        drx: Double,
+        dry: Double,
+        drz: Double
     ): InternalTextSlideBuilder[F, State] =
       builder.rotateX(drx).rotateY(dry).rotateZ(drz)
 

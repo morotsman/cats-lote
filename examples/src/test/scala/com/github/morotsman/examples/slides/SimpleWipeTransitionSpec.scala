@@ -10,8 +10,8 @@ import scala.concurrent.duration._
 
 /** Demonstrates testing a `TickedTransition`-based wipe transition.
   *
-  * Same pattern as `SimpleSweepTransitionSpec`: use `TickedTransition.forTest(harness)`
-  * and `harness.clockInstance` to wire the transition for testing.
+  * Same pattern as `SimpleSweepTransitionSpec`: use `TickedTransition.forTest(harness)` and `harness.clockInstance` to
+  * wire the transition for testing.
   */
 class SimpleWipeTransitionSpec extends CatsEffectSuite {
 

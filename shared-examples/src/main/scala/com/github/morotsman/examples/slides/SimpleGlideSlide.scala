@@ -10,40 +10,32 @@ import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker}
 
 /** A minimal interactive slide that demonstrates the `GlideLayer` overlay.
   *
-  * A single `@` character bounces around the screen. Press `w`/`a`/`s`/`d` to
-  * change its direction. On WebGL backends the character glides smoothly
-  * between integer cell positions at sub-pixel precision; on terminal backends
-  * it moves cell-by-cell (same logic, just no interpolation).
+  * A single `@` character bounces around the screen. Press `w`/`a`/`s`/`d` to change its direction. On WebGL backends
+  * the character glides smoothly between integer cell positions at sub-pixel precision; on terminal backends it moves
+  * cell-by-cell (same logic, just no interpolation).
   *
-  * This is the simplest possible example of using `GlideLayer` and
-  * `SmoothChar`. It adds two things on top of what `SimpleCounterSlide` showed:
+  * This is the simplest possible example of using `GlideLayer` and `SmoothChar`. It adds two things on top of what
+  * `SimpleCounterSlide` showed:
   *
-  *   - `GlideLayer` — an overlay that automatically interpolates character
-  *     positions between simulation steps, giving smooth motion on WebGL.
-  *   - `FixedStep` — turns wall-clock time into discrete simulation steps so
-  *     the ball moves at a consistent speed regardless of frame rate.
+  *   - `GlideLayer` — an overlay that automatically interpolates character positions between simulation steps, giving
+  *     smooth motion on WebGL.
+  *   - `FixedStep` — turns wall-clock time into discrete simulation steps so the ball moves at a consistent speed
+  *     regardless of frame rate.
   *
-  * == How it works ==
+  * ==How it works==
   *
-  *  1. On each tick, `FixedStep.consumeSteps` returns how many simulation
-  *     steps have elapsed. Each step moves the ball by one cell in its
-  *     current direction.
+  *   1. On each tick, `FixedStep.consumeSteps` returns how many simulation steps have elapsed. Each step moves the ball
+  *      by one cell in its current direction.
+  *   2. The ball's position is stored as integer grid coordinates in a `Ref`.
+  *   3. A background frame is rendered as a plain character grid (just a border and instructions). The ball itself is
+  *      ''not'' part of this grid — it is passed to `GlideLayer.renderOnto` as a `SmoothChar`.
+  *   4. `renderOnto` handles the platform difference:
+  *      - On WebGL: the `SmoothChar` is drawn on a floating overlay with sub-pixel interpolation; the background frame
+  *        is returned unchanged.
+  *      - On terminal: the `SmoothChar` is composited at integer positions directly onto the background frame.
+  *   5. The resulting frame is written to the console.
   *
-  *  2. The ball's position is stored as integer grid coordinates in a `Ref`.
-  *
-  *  3. A background frame is rendered as a plain character grid (just a
-  *     border and instructions). The ball itself is ''not'' part of this
-  *     grid — it is passed to `GlideLayer.renderOnto` as a `SmoothChar`.
-  *
-  *  4. `renderOnto` handles the platform difference:
-  *     - On WebGL: the `SmoothChar` is drawn on a floating overlay with
-  *       sub-pixel interpolation; the background frame is returned unchanged.
-  *     - On terminal: the `SmoothChar` is composited at integer positions
-  *       directly onto the background frame.
-  *
-  *  5. The resulting frame is written to the console.
-  *
-  * == Usage ==
+  * ==Usage==
   * {{{
   * SessionBuilder[F]()
   *   .addSlideF {
@@ -54,8 +46,8 @@ import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker}
   */
 object SimpleGlideSlide {
 
-  /** Wraps construction in a `ContextualF` so the slide receives the shared
-    * console, ticker, and animation settings from the presentation framework.
+  /** Wraps construction in a `ContextualF` so the slide receives the shared console, ticker, and animation settings
+    * from the presentation framework.
     */
   def contextual[F[_]: Temporal: Ref.Make](): ContextualF[F, Slide[F]] =
     TickedSlide.contextual[F] { builder =>
@@ -153,4 +145,3 @@ object SimpleGlideSlide {
     Ball(col2, row2, dCol2, dRow2)
   }
 }
-
