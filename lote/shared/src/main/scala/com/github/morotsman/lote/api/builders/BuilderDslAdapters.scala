@@ -2,7 +2,7 @@ package com.github.morotsman.lote.api.builders
 
 import cats.Functor
 import cats.effect.{Ref, Temporal}
-import com.github.morotsman.lote.api.{Alignment, SlidePosition}
+import com.github.morotsman.lote.api.{Alignment, SlidePosition, TransitionType}
 import com.github.morotsman.lote.api.spi.{Slide, Transition}
 import com.github.morotsman.lote.internal.builders.{
   SlideBuilder => InternalSlideBuilder,
@@ -56,6 +56,19 @@ private[lote] object BuilderDslAdapters {
 
     protected def applyPosition(builder: Builder, position: SlidePosition): Builder
 
+    protected def applyPositionMerge(builder: Builder, position: SlidePosition): Builder
+
+    protected def applyOffset(builder: Builder, dx: Double, dy: Double, dz: Double): Builder
+
+    protected def applyRotationOffset(builder: Builder, drx: Double, dry: Double, drz: Double): Builder
+
+    protected def applyWithFallback(builder: Builder, fallback: Transition[F]): Builder
+
+    protected def applyWithFallbackType(builder: Builder, fallback: TransitionType)(implicit
+        temporal: Temporal[F],
+        refMake: Ref.Make[F]
+    ): Builder
+
     override final def slideContext: SlideContext[F] = ctx
 
     protected final def update(next: Builder => Builder): Self =
@@ -65,13 +78,25 @@ private[lote] object BuilderDslAdapters {
       update(b => applyPosition(b, SlidePosition(x, y, z)))
 
     override final def rotatedBy(rx: Double, ry: Double, rz: Double): Self =
-      update(b => applyPosition(b, SlidePosition(rotX = rx, rotY = ry, rotZ = rz)))
+      update(b => applyPositionMerge(b, SlidePosition(rotX = rx, rotY = ry, rotZ = rz)))
 
     override final def position(pos: SlidePosition): Self =
       update(b => applyPosition(b, pos))
 
     override final def transparentBackground(): Self =
-      update(b => applyPosition(b, SlidePosition(transparentBackground = true)))
+      update(b => applyPositionMerge(b, SlidePosition(transparentBackground = true)))
+
+    override final def right(d: Double): Self = update(b => applyOffset(b, d, 0, 0))
+    override final def left(d: Double): Self = update(b => applyOffset(b, -d, 0, 0))
+    override final def down(d: Double): Self = update(b => applyOffset(b, 0, d, 0))
+    override final def up(d: Double): Self = update(b => applyOffset(b, 0, -d, 0))
+    override final def forward(d: Double): Self = update(b => applyOffset(b, 0, 0, d))
+    override final def back(d: Double): Self = update(b => applyOffset(b, 0, 0, -d))
+    override final def offset(dx: Double, dy: Double, dz: Double): Self = update(b => applyOffset(b, dx, dy, dz))
+
+    override final def rotateX(degrees: Double): Self = update(b => applyRotationOffset(b, degrees, 0, 0))
+    override final def rotateY(degrees: Double): Self = update(b => applyRotationOffset(b, 0, degrees, 0))
+    override final def rotateZ(degrees: Double): Self = update(b => applyRotationOffset(b, 0, 0, degrees))
 
     override final def transition(transition: Transition[F]): Self =
       update(b => applyTransition(b, transition))
@@ -102,6 +127,18 @@ private[lote] object BuilderDslAdapters {
 
     override final def title(title: String): Self =
       update(b => applyTitle(b, title))
+
+    override final def withFallback(fallback: Transition[F]): Self =
+      update(b => applyWithFallback(b, fallback))
+
+    override final def withFallback(fallback: Contextual[F, Transition[F]]): Self =
+      withFallback(fallback.run(ctx))
+
+    override final def withFallback(fallback: TransitionType)(implicit
+        temporal: Temporal[F],
+        refMake: Ref.Make[F]
+    ): Self =
+      update(b => applyWithFallbackType(b, fallback))
   }
 
   private trait SlideValueDslAdapter[F[_]] {
@@ -179,6 +216,40 @@ private[lote] object BuilderDslAdapters {
         position: SlidePosition
     ): InternalSlideBuilder[F, State] =
       builder.position(position)
+
+    override protected final def applyPositionMerge(
+        builder: InternalSlideBuilder[F, State],
+        position: SlidePosition
+    ): InternalSlideBuilder[F, State] =
+      builder.positionMerge(position)
+
+    override protected final def applyOffset(
+        builder: InternalSlideBuilder[F, State],
+        dx: Double,
+        dy: Double,
+        dz: Double
+    ): InternalSlideBuilder[F, State] =
+      builder.offset(dx, dy, dz)
+
+    override protected final def applyRotationOffset(
+        builder: InternalSlideBuilder[F, State],
+        drx: Double,
+        dry: Double,
+        drz: Double
+    ): InternalSlideBuilder[F, State] =
+      builder.rotateX(drx).rotateY(dry).rotateZ(drz)
+
+    override protected final def applyWithFallback(
+        builder: InternalSlideBuilder[F, State],
+        fallback: Transition[F]
+    ): InternalSlideBuilder[F, State] =
+      builder.withFallback(fallback)(ctx.console)
+
+    override protected final def applyWithFallbackType(
+        builder: InternalSlideBuilder[F, State],
+        fallback: TransitionType
+    )(implicit temporal: Temporal[F], refMake: Ref.Make[F]): InternalSlideBuilder[F, State] =
+      builder.withFallback(fallback)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
   }
 
   private trait TextMetadataAdapter[F[_], State <: TextSlideBuildState, Self]
@@ -233,7 +304,6 @@ private[lote] object BuilderDslAdapters {
     ): InternalTextSlideBuilder[F, State] =
       builder.dissolveTransition()(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
 
-
     override protected final def applyTitle(
         builder: InternalTextSlideBuilder[F, State],
         title: String
@@ -245,6 +315,40 @@ private[lote] object BuilderDslAdapters {
         position: SlidePosition
     ): InternalTextSlideBuilder[F, State] =
       builder.position(position)
+
+    override protected final def applyPositionMerge(
+        builder: InternalTextSlideBuilder[F, State],
+        position: SlidePosition
+    ): InternalTextSlideBuilder[F, State] =
+      builder.positionMerge(position)
+
+    override protected final def applyOffset(
+        builder: InternalTextSlideBuilder[F, State],
+        dx: Double,
+        dy: Double,
+        dz: Double
+    ): InternalTextSlideBuilder[F, State] =
+      builder.offset(dx, dy, dz)
+
+    override protected final def applyRotationOffset(
+        builder: InternalTextSlideBuilder[F, State],
+        drx: Double,
+        dry: Double,
+        drz: Double
+    ): InternalTextSlideBuilder[F, State] =
+      builder.rotateX(drx).rotateY(dry).rotateZ(drz)
+
+    override protected final def applyWithFallback(
+        builder: InternalTextSlideBuilder[F, State],
+        fallback: Transition[F]
+    ): InternalTextSlideBuilder[F, State] =
+      builder.withFallback(fallback)(ctx.console)
+
+    override protected final def applyWithFallbackType(
+        builder: InternalTextSlideBuilder[F, State],
+        fallback: TransitionType
+    )(implicit temporal: Temporal[F], refMake: Ref.Make[F]): InternalTextSlideBuilder[F, State] =
+      builder.withFallback(fallback)(temporal, refMake, ctx.console, ctx.ticker, ctx.animationSettings)
   }
 
   def slideStart[F[_]](

@@ -4,10 +4,9 @@ import scala.scalajs.js
 
 /** Provides access to the shared Three.js 3D scene for scene-aware slides.
   *
-  * Scene-aware slides (like `Landscape3DSlide`) can add their own 3D geometry
-  * to the shared presentation scene instead of creating a separate WebGL context.
-  * This enables smooth camera transitions into and out of 3D content, world continuity
-  * between slides, and avoids multi-context overhead.
+  * Scene-aware slides (like `Landscape3DSlide`) can add their own 3D geometry to the shared presentation scene instead
+  * of creating a separate WebGL context. This enables smooth camera transitions into and out of 3D content, world
+  * continuity between slides, and avoids multi-context overhead.
   *
   * Obtain this via `SlideContext.scene3DRef` (available only on WebGL backends in spatial mode).
   *
@@ -51,11 +50,14 @@ class Scene3DRef private[lote] (
   /** Remove a Three.js object from the shared scene. */
   def removeFromScene(obj: js.Any): Unit = threeScene.remove(obj)
 
-  /** Update the slide center coordinates (called internally when the active layer changes). */
+  /** Update the slide center coordinates (called internally when the active layer changes).
+    *
+    * Performance: direct var mutation is used here because this is called from within a Sync[F].delay block on every
+    * slide activation — Ref would add unnecessary allocation for a simple coordinate update on single-threaded JS.
+    */
   private[lote] def updateCenter(x: Double, y: Double, z: Double): Unit = {
     _centerX = x
     _centerY = y
     _centerZ = z
   }
 }
-

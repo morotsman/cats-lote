@@ -260,8 +260,10 @@ class SessionBuilderIntegrationSpec extends CatsEffectSuite {
       written <- harness.writtenFrames
     } yield {
       // Most recent frames should contain first slide again
-      assert(written.exists(_.contains("Slide 1")),
-        s"Expected first slide after navigating back, got: ${written.take(5)}")
+      assert(
+        written.exists(_.contains("Slide 1")),
+        s"Expected first slide after navigating back, got: ${written.take(5)}"
+      )
     }
   }
 

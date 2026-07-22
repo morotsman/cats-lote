@@ -4,7 +4,7 @@ import cats.effect.{Ref, Temporal}
 import cats.effect.implicits._
 import cats.implicits._
 import com.github.morotsman.lote.api.{AnimationSettings, Screen, ScreenAdjusted, UserInput}
-import com.github.morotsman.lote.api.support.Clock
+import com.github.morotsman.lote.api.support.AnimationClock
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker}
 
 import scala.concurrent.duration.FiniteDuration
@@ -62,8 +62,8 @@ final class SlideTestHarness[F[_]] private (
   /** The simulated clock used by this harness. Advancing it makes `FixedStep` produce simulation steps. */
   def clock: SimulatedClock[F] = ticker.clock
 
-  /** Implicit `Clock[F]` backed by the simulated clock — pass this to `FixedStep` methods. */
-  implicit def clockInstance: Clock[F] = clock
+  /** Implicit `AnimationClock[F]` backed by the simulated clock — pass this to `FixedStep` methods. */
+  implicit def clockInstance: AnimationClock[F] = clock
 
   /** The simulated screen dimensions. */
   def screen: Screen = console.screen
@@ -116,11 +116,29 @@ final class SlideTestHarness[F[_]] private (
     * } yield assert(frames.nonEmpty)
     * }}}
     */
-  def runWithTicking(task: F[Unit], ticks: Int = 10): F[Unit] = {
+  def runWithTicking(task: F[Unit], ticks: Int = 20): F[Unit] = {
     val pause = F.sleep(scala.concurrent.duration.DurationInt(1).millis)
+    // Wait until the task fiber has subscribed to the ticker before we start firing ticks.
+    // This eliminates the race between fiber setup and the first tick.
+    // Uses a bounded retry so transitions that complete without subscribing (e.g. identical slides)
+    // don't hang forever.
+    val awaitSubscriber: F[Boolean] = {
+      def loop(attempts: Int): F[Boolean] =
+        if (attempts <= 0) F.pure(false)
+        else
+          ticker.subscriberCount.flatMap { count =>
+            if (count > 0) F.pure(true)
+            else F.cede *> pause *> loop(attempts - 1)
+          }
+      loop(100) // wait up to ~100ms for a subscriber to appear
+    }
     for {
       fiber <- task.start
-      _ <- (1 to ticks).toList.traverse_(_ => pause *> ticker.tick(1))
+      subscribed <- awaitSubscriber
+      _ <- if (subscribed)
+        (1 to ticks).toList.traverse_(_ => pause *> ticker.tick(1))
+      else
+        F.unit // task completed (or will complete) without needing ticks
       _ <- fiber.joinWithNever
     } yield ()
   }

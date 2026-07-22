@@ -22,4 +22,3 @@ object TerminalPlatform {
   def jlineTerminal[F[_]: Sync](): cats.effect.Resource[F, TerminalAlgebra[F]] =
     JLineTerminal.resource[F]()
 }
-

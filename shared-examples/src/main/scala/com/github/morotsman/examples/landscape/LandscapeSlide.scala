@@ -5,7 +5,7 @@ import cats.effect.{Ref, Temporal}
 import cats.implicits._
 import com.github.morotsman.lote.api.{AnimationSettings, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.api.builders.ContextualF
-import com.github.morotsman.lote.api.support.{Clock, FixedStep}
+import com.github.morotsman.lote.api.support.{AnimationClock, FixedStep, GlideLayer, SmoothChar}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription}
 
 /** An interactive landscape slide with rolling hills, a castle, trees, and roaming figures.
@@ -99,7 +99,7 @@ private[landscape] object LandscapeAnimator {
       console: NConsole[F],
       ticker: Ticker[F],
       animationSettings: AnimationSettings
-  )(implicit clock: Clock[F]): F[LandscapeAnimator[F]] = {
+  )(implicit clock: AnimationClock[F]): F[LandscapeAnimator[F]] = {
 
     val rng = new scala.util.Random(123)
     val initialFigures = (0 until 12).map { i =>
@@ -117,9 +117,14 @@ private[landscape] object LandscapeAnimator {
       subRef <- Ref[F].of(Option.empty[TickerSubscription[F]])
       stepperRef <- FixedStep.makeRef[F]
       lastFrameRef <- Ref[F].of(ScreenAdjusted(""))
+      glideLayer <- GlideLayer.make[F](console, animationSettings.step, wrapThreshold = 20)
     } yield new LandscapeAnimator[F] {
 
-      private def renderWorld(state: LandscapeState, screenWidth: Int, screenHeight: Int): ScreenAdjusted = {
+      private def renderWorld(
+          state: LandscapeState,
+          screenWidth: Int,
+          screenHeight: Int
+      ): ScreenAdjusted = {
         if (screenWidth <= 0 || screenHeight <= 0) return ScreenAdjusted("")
 
         val camX = state.cameraX.toInt
@@ -239,27 +244,50 @@ private[landscape] object LandscapeAnimator {
           }
         }
 
-        // Draw figures
-        state.figures.foreach { fig =>
-          val screenX = ((fig.worldX.toInt - camX) % WorldWidth + WorldWidth) % WorldWidth
-          if (screenX >= 0 && screenX < w) {
-            val worldXi = ((fig.worldX.toInt) % WorldWidth + WorldWidth) % WorldWidth
-            val hv = hillHeight(worldXi)
-            val figRow = groundRow - hv - 5
-            safeSet(buf, figRow, screenX, fig.symbol, w, h)
-          }
-        }
-
-        // Info bar at bottom
-        val info = s" [A/D] scroll  |  Camera: ${state.cameraX.toInt}  |  Tick: ${state.tick} "
+        // Clear the bottom row for the info bar (rendered via GlideLayer overlay)
         if (h > 0) {
-          val infoChars = info.toCharArray
-          for (i <- infoChars.indices if i < w) {
-            buf(h - 1)(i) = infoChars(i)
+          for (i <- 0 until w) {
+            buf(h - 1)(i) = ' '
           }
         }
 
         ScreenAdjusted(buf.map(row => new String(row)).mkString("\n"))
+      }
+
+      /** Convert figures to SmoothChars for GlideLayer rendering. */
+      private def figuresToSmoothChars(
+          state: LandscapeState,
+          camX: Int,
+          screenWidth: Int,
+          screenHeight: Int
+      ): Vector[SmoothChar] = {
+        val groundRow = screenHeight - 6
+        state.figures.zipWithIndex.flatMap { case (fig, idx) =>
+          val screenX = ((fig.worldX.toInt - camX) % WorldWidth + WorldWidth) % WorldWidth
+          if (screenX >= 0 && screenX < screenWidth) {
+            val worldXi = ((fig.worldX.toInt) % WorldWidth + WorldWidth) % WorldWidth
+            val hv = hillHeight(worldXi)
+            val figRow = groundRow - hv - 5
+            if (figRow >= 0 && figRow < screenHeight)
+              Some(SmoothChar(fig.symbol, screenX, figRow, "#ffffff", key = idx))
+            else None
+          } else None
+        }
+      }
+
+      /** Convert info bar text to SmoothChars for GlideLayer rendering. */
+      private def infoBarToSmoothChars(
+          state: LandscapeState,
+          screenWidth: Int,
+          screenHeight: Int
+      ): Vector[SmoothChar] = {
+        if (screenHeight <= 0) return Vector.empty
+        val info = s" [A/D] scroll  |  Camera: ${state.cameraX.toInt}  |  Tick: ${state.tick} "
+        val row = screenHeight - 1
+        info.zipWithIndex.collect {
+          case (ch, col) if col < screenWidth && ch != ' ' =>
+            SmoothChar(ch, col, row, "#ffffff", key = 1000 + col)
+        }.toVector
       }
 
       private def advanceState(state: LandscapeState, cameraSpeed: Double): LandscapeState = {
@@ -275,26 +303,47 @@ private[landscape] object LandscapeAnimator {
         )
       }
 
-      private def onTick(nrOfSteps: Int): F[Unit] =
-        if (nrOfSteps <= 0) Monad[F].unit
-        else
-          for {
-            maybeState <- stateRef.get
-            _ <- maybeState.traverse_ { s =>
-              for {
-                screen <- console.context
-                camSpeed <- cameraSpeedRef.get
-                updated = (0 until nrOfSteps).foldLeft(s)((st, _) => advanceState(st, camSpeed))
-                _ <- stateRef.set(Some(updated))
-                frame = renderWorld(updated, screen.screenWidth, screen.screenHeight)
-                _ <- lastFrameRef.set(frame)
-                _ <- console.writeString(frame)
-              } yield ()
-            }
-          } yield ()
+      private def onTick(nrOfSteps: Int, progress: Double): F[Unit] =
+        for {
+          maybeState <- stateRef.get
+          _ <- maybeState.traverse_ { s =>
+            for {
+              screen <- console.context
+              camSpeed <- cameraSpeedRef.get
+              updated = (0 until nrOfSteps).foldLeft(s)((st, _) => advanceState(st, camSpeed))
+              _ <- stateRef.set(Some(updated))
+              // Interpolate camera position for smooth scene scrolling.
+              interpCameraX = (updated.cameraX + camSpeed * progress + WorldWidth) % WorldWidth
+              intCameraX = Math.floor(interpCameraX).toInt
+              fracOffset = interpCameraX - intCameraX
+              gridState = updated.copy(cameraX = intCameraX.toDouble)
+              frame = renderWorld(
+                gridState,
+                screen.screenWidth,
+                screen.screenHeight
+              )
+              _ <- lastFrameRef.set(frame)
+              // GlideLayer.renderOntoScrolled handles:
+              //  - sub-pixel grid offset for smooth landscape scrolling (WebGL)
+              //  - fixed rows so the info bar doesn't scroll with the landscape
+              //  - smooth figure overlay (WebGL) / integer compositing (terminal)
+              //  - writing the frame to the console
+              figureChars = figuresToSmoothChars(updated, intCameraX, screen.screenWidth, screen.screenHeight)
+              infoChars = infoBarToSmoothChars(updated, screen.screenWidth, screen.screenHeight)
+              _ <- glideLayer.renderOntoScrolled(
+                frame,
+                figureChars ++ infoChars,
+                scrollX = -fracOffset,
+                fixedRows = Set(screen.screenHeight - 1, screen.screenHeight - 2)
+              )
+            } yield ()
+          }
+        } yield ()
 
       private val tickerCallback: F[Unit] =
-        FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap(onTick)
+        FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap { case (steps, progress) =>
+          onTick(steps, progress)
+        }
 
       override def start(): F[Unit] = for {
         _ <- stateRef.set(
@@ -318,6 +367,7 @@ private[landscape] object LandscapeAnimator {
         _ <- maybeSub.traverse_(_.cancel)
         _ <- subRef.set(None)
         _ <- stateRef.set(None)
+        _ <- glideLayer.clear()
       } yield ()
 
       override def handleInput(input: UserInput): F[Unit] = input match {

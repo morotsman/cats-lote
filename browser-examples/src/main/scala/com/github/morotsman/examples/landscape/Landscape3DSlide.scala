@@ -3,14 +3,9 @@ package com.github.morotsman.examples.landscape
 import cats.Monad
 import cats.effect.{Async, Ref, Sync}
 import cats.implicits._
-import com.github.morotsman.lote.api.{
-  AnimationSettings,
-  Scene3DRef,
-  ScreenAdjusted,
-  UserInput
-}
+import com.github.morotsman.lote.api.{AnimationSettings, Scene3DRef, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.api.builders.ContextualF
-import com.github.morotsman.lote.api.support.{Clock, FixedStep}
+import com.github.morotsman.lote.api.support.{AnimationClock, FixedStep}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription}
 import org.scalajs.dom
 import org.scalajs.dom.HTMLElement
@@ -49,8 +44,9 @@ object Landscape3DSlide {
 // ---- 3D Animator ----
 
 private[landscape] trait Landscape3DAnimator[F[_]] {
-  /** Ensure the landscape geometry exists in the scene (idempotent).
-    * Called from `content` so geometry is visible before the slide is active.
+
+  /** Ensure the landscape geometry exists in the scene (idempotent). Called from `content` so geometry is visible
+    * before the slide is active.
     */
   def ensureGeometry(): F[Unit]
   def start(): F[Unit]
@@ -64,7 +60,7 @@ private[landscape] object Landscape3DAnimator {
       console: NConsole[F],
       ticker: Ticker[F],
       animationSettings: AnimationSettings
-  )(implicit clock: Clock[F]): F[Landscape3DAnimator[F]] = {
+  )(implicit clock: AnimationClock[F]): F[Landscape3DAnimator[F]] = {
 
     for {
       sceneRef <- Ref[F].of(Option.empty[js.Dynamic])
@@ -80,8 +76,8 @@ private[landscape] object Landscape3DAnimator {
       private def resolveScene3DRef(): Option[Scene3DRef] =
         console.scene3DRef.map(_.asInstanceOf[Scene3DRef])
 
-      /** Build all landscape geometry and add it to the scene. Does NOT touch the camera
-        * or start animation — that happens in `start()`.
+      /** Build all landscape geometry and add it to the scene. Does NOT touch the camera or start animation — that
+        * happens in `start()`.
         */
       private def buildGeometry(): F[js.Dynamic] = Sync[F].delay {
         val THREE = g.THREE
@@ -109,7 +105,9 @@ private[landscape] object Landscape3DAnimator {
             (js.undefined.asInstanceOf[js.Any], ref.threeScene, cam, js.undefined.asInstanceOf[js.Any])
           case None =>
             // Isolated mode DISABLED for debugging — throw to verify shared mode is used
-            throw new RuntimeException("[Landscape3D] ERROR: Isolated mode triggered! scene3DRef is None — shared mode should be active.")
+            throw new RuntimeException(
+              "[Landscape3D] ERROR: Isolated mode triggered! scene3DRef is None — shared mode should be active."
+            )
         }
 
         // The target for all add() calls
@@ -321,21 +319,21 @@ private[landscape] object Landscape3DAnimator {
           // (x, y, z, rotationY) — windows on -X, +X, -Z, +Z faces
           val windowSpecs = List(
             // -X face
-            (castleX - 2.01, terrainY + 4.0, castleZ,       Math.PI / 2),
-            (castleX - 2.01, terrainY + 2.5, castleZ + 1,   Math.PI / 2),
-            (castleX - 2.01, terrainY + 2.5, castleZ - 1,   Math.PI / 2),
+            (castleX - 2.01, terrainY + 4.0, castleZ, Math.PI / 2),
+            (castleX - 2.01, terrainY + 2.5, castleZ + 1, Math.PI / 2),
+            (castleX - 2.01, terrainY + 2.5, castleZ - 1, Math.PI / 2),
             // +X face
-            (castleX + 2.01, terrainY + 4.0, castleZ,       Math.PI / 2),
-            (castleX + 2.01, terrainY + 2.5, castleZ + 1,   Math.PI / 2),
-            (castleX + 2.01, terrainY + 2.5, castleZ - 1,   Math.PI / 2),
+            (castleX + 2.01, terrainY + 4.0, castleZ, Math.PI / 2),
+            (castleX + 2.01, terrainY + 2.5, castleZ + 1, Math.PI / 2),
+            (castleX + 2.01, terrainY + 2.5, castleZ - 1, Math.PI / 2),
             // -Z face
-            (castleX,       terrainY + 4.0, castleZ - 2.01, 0.0),
-            (castleX + 1,   terrainY + 2.5, castleZ - 2.01, 0.0),
-            (castleX - 1,   terrainY + 2.5, castleZ - 2.01, 0.0),
+            (castleX, terrainY + 4.0, castleZ - 2.01, 0.0),
+            (castleX + 1, terrainY + 2.5, castleZ - 2.01, 0.0),
+            (castleX - 1, terrainY + 2.5, castleZ - 2.01, 0.0),
             // +Z face
-            (castleX,       terrainY + 4.0, castleZ + 2.01, 0.0),
-            (castleX + 1,   terrainY + 2.5, castleZ + 2.01, 0.0),
-            (castleX - 1,   terrainY + 2.5, castleZ + 2.01, 0.0)
+            (castleX, terrainY + 4.0, castleZ + 2.01, 0.0),
+            (castleX + 1, terrainY + 2.5, castleZ + 2.01, 0.0),
+            (castleX - 1, terrainY + 2.5, castleZ + 2.01, 0.0)
           )
           windowSpecs.foreach { case (wx, wy, wz, ry) =>
             val win = js.Dynamic.newInstance(THREE.Mesh)(windowGeo, windowMat)
@@ -554,7 +552,7 @@ private[landscape] object Landscape3DAnimator {
       private val lerpFactor = 0.03 // smooth interpolation per step (exponential ease-out)
 
       private val tickerCallback: F[Unit] = for {
-        nrOfSteps <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
+        (nrOfSteps, _) <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
         _ <-
           if (nrOfSteps <= 0) Monad[F].unit
           else
@@ -610,12 +608,14 @@ private[landscape] object Landscape3DAnimator {
         // Derive initial angle/distance from the current camera position
         // so there's no abrupt jump when the ticker takes over.
         _ <- maybeState.traverse_ { state =>
-          Sync[F].delay {
-            val (angle, dist) = computeCameraOrbit(state)
-            (angle, dist)
-          }.flatMap { case (angle, dist) =>
-            cameraAngleRef.set(angle) >> cameraDistRef.set(dist)
-          }
+          Sync[F]
+            .delay {
+              val (angle, dist) = computeCameraOrbit(state)
+              (angle, dist)
+            }
+            .flatMap { case (angle, dist) =>
+              cameraAngleRef.set(angle) >> cameraDistRef.set(dist)
+            }
         }
         _ <- rotSpeedRef.set(0.003) // Gentle auto-rotate
         _ <- zoomSpeedRef.set(0.0)

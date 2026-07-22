@@ -6,50 +6,86 @@ import org.scalajs.dom.{CanvasRenderingContext2D, HTMLCanvasElement}
 
 /** Handles all `RenderEffect` rendering for the Three.js terminal backend.
   *
-  * Each effect type (flip, rotate, dissolve, smoke particles, glow, fade) is implemented
-  * as a method that manipulates the Three.js scene owned by the `WebGLScene`.
+  * Each effect type (dissolve, smoke particles, glow, fade) is implemented as a method that manipulates the active
+  * layer mesh in the Three.js scene.
   *
   * New effects can be added here without touching `ThreeJsTerminal` or any other file.
+  *
+  * ==Performance note==
+  * Mutable `var` fields are used for particle lists and effect state rather than `cats.effect.Ref` because the `smoke`
+  * and `dissolve` methods are called at up to 60 fps during effect animations. Direct field mutation avoids allocating
+  * `IO` thunks and case-class copies on every frame. This is safe on single-threaded JS.
+  *
+  * '''Particle spawning''' (`spawnSmokeParticles` / `spawnDissolveParticles`) is intentionally expensive: it creates a
+  * `Canvas`, `CanvasTexture`, `PlaneGeometry`, and `Mesh` per visible character. This runs once when an effect starts
+  * (not per frame), so the up-front cost is acceptable for the visual result. However, slides with very dense text
+  * (e.g. full 80×25 grids) will allocate thousands of GPU objects — keep this in mind for low-end devices.
   */
 private[nconsole] class WebGLEffectRenderer(
     glScene: WebGLScene,
     activeOffscreen: () => HTMLCanvasElement,
     activeFrame: () => Vector[String],
     cameraAnimator: CameraAnimator,
-    activeLayerMesh: () => Option[scalajs.js.Dynamic]
+    activeLayerMesh: () => Option[ThreeMesh]
 ) {
 
-  private val meshDyn = glScene.plane.asInstanceOf[scalajs.js.Dynamic]
-  private val matDyn  = glScene.planeMat.asInstanceOf[scalajs.js.Dynamic]
-
   // ---- Smoke particle state ----
-  private var smokeParticles: List[scalajs.js.Dynamic] = Nil
+  private var smokeParticles: List[ThreeMesh] = Nil
   private var smokeActive: Boolean = false
-  private var hiddenLayerMesh: Option[scalajs.js.Dynamic] = None
+  private var hiddenLayerMesh: Option[ThreeMesh] = None
+
+  // ---- Dissolve particle state ----
+  private var dissolveParticles: List[ThreeMesh] = Nil
+  private var dissolveActive: Boolean = false
+  private var dissolveHiddenLayerMesh: Option[ThreeMesh] = None
 
   /** Apply a render effect. Called synchronously from `Sync[F].delay`. */
   def apply(effect: RenderEffect): Unit = effect match {
-    case RenderEffect.Dissolve(progress)         => dissolve(progress)
-    case RenderEffect.Smoke(progress)            => smoke(progress)
-    case RenderEffect.Glow(color, intensity)     => glow(color, intensity)
-    case RenderEffect.Fade(opacity)              => fade(opacity)
-    case RenderEffect.MoveCameraTo(target)       => cameraAnimator.moveTo(target)
-    case RenderEffect.ClearEffects               => clearEffects()
-    case _                                       => // InitSpatialLayout and ActivateLayer handled by ThreeJsTerminal
+    case RenderEffect.Dissolve(progress)     => dissolve(progress)
+    case RenderEffect.Smoke(progress)        => smoke(progress)
+    case RenderEffect.Glow(color, intensity) => glow(color, intensity)
+    case RenderEffect.Fade(opacity)          => fade(opacity)
+    case RenderEffect.MoveCameraTo(target)   => cameraAnimator.moveTo(target)
+    case RenderEffect.JumpCameraTo(target)   => cameraAnimator.jumpTo(target)
+    case RenderEffect.ClearEffects           => clearEffects()
+    case _                                   => // InitSpatialLayout and ActivateLayer handled by ThreeJsTerminal
   }
 
   /** Clean up any active particle effects and dispose their resources. */
-  def cleanup(): Unit = cleanupSmokeParticles()
+  def cleanup(): Unit = {
+    cleanupSmokeParticles()
+    cleanupDissolveParticles()
+  }
 
   // ---- Effect implementations ----
 
+  /** Helper to get the active layer's mesh and material as typed references. */
+  private def withActiveMesh(f: (ThreeMesh, ThreeMeshBasicMaterial) => Unit): Unit = {
+    activeLayerMesh().foreach { mesh =>
+      f(mesh, mesh.material)
+    }
+  }
 
   private def dissolve(progress: Double): Unit = {
-    val opacity = Math.max(0.0, 1.0 - progress)
-    matDyn.opacity = opacity
-    matDyn.needsUpdate = true
-    val scale = 1.0 - progress * 0.05
-    meshDyn.scale.set(scale, scale, 1.0)
+    if (!dissolveActive) {
+      dissolveActive = true
+      spawnDissolveParticles()
+      // Hide the source mesh (slide layer)
+      activeLayerMesh().foreach { layerMesh =>
+        dissolveHiddenLayerMesh = Some(layerMesh)
+        layerMesh.material.opacity = 0.0
+        layerMesh.material.needsUpdate = true
+      }
+    }
+
+    dissolveParticles.foreach { p =>
+      val ud = p.userData.asInstanceOf[DissolveParticleData]
+      // Each character starts fading at a different time (fadeDelay)
+      // and fades out at its own speed
+      val t = Math.max(0.0, (progress - ud.fadeDelay) / (1.0 - ud.fadeDelay))
+      val opacity = Math.max(0.0, 1.0 - t * ud.fadeSpeed)
+      p.material.opacity = opacity
+    }
     glScene.render()
   }
 
@@ -57,36 +93,29 @@ private[nconsole] class WebGLEffectRenderer(
     if (!smokeActive) {
       smokeActive = true
       spawnSmokeParticles()
-      // Hide the source mesh (slide layer in spatial mode, main plane otherwise)
-      activeLayerMesh() match {
-        case Some(layerMesh) =>
-          hiddenLayerMesh = Some(layerMesh)
-          layerMesh.material.opacity = 0.0
-          layerMesh.material.needsUpdate = true
-        case None =>
-          matDyn.opacity = 0.0
-          matDyn.needsUpdate = true
+      // Hide the source mesh (slide layer)
+      activeLayerMesh().foreach { layerMesh =>
+        hiddenLayerMesh = Some(layerMesh)
+        layerMesh.material.opacity = 0.0
+        layerMesh.material.needsUpdate = true
       }
     }
 
+    // Per-frame iteration over all particles — the list is traversed linearly on every
+    // requestAnimationFrame tick. For typical slide content (a few hundred particles) this
+    // is fast enough. The particles are stored as a List (prepend-only) which avoids
+    // array-copy overhead during spawning at the cost of sequential traversal here.
     smokeParticles.foreach { p =>
-      val ud        = p.userData
-      val startX    = ud.startX.asInstanceOf[Double]
-      val startY    = ud.startY.asInstanceOf[Double]
-      val driftX    = ud.driftX.asInstanceOf[Double]
-      val driftY    = ud.driftY.asInstanceOf[Double]
-      val rotSpeed  = ud.rotSpeed.asInstanceOf[Double]
-      val fadeDelay = ud.fadeDelay.asInstanceOf[Double]
-      val shrinkRate = ud.shrinkRate.asInstanceOf[Double]
+      val ud = p.userData.asInstanceOf[SmokeParticleData]
 
-      val t     = Math.max(0.0, (progress - fadeDelay) / (1.0 - fadeDelay))
+      val t = Math.max(0.0, (progress - ud.fadeDelay) / (1.0 - ud.fadeDelay))
       val eased = 1.0 - Math.pow(1.0 - t, 2.0)
 
-      p.position.x = startX + driftX * eased
-      p.position.y = startY + driftY * eased
-      p.rotation.z = rotSpeed * eased
+      p.position.x = ud.startX + ud.driftX * eased
+      p.position.y = ud.startY + ud.driftY * eased
+      p.rotation.z = ud.rotSpeed * eased
       p.material.opacity = Math.max(0.0, 1.0 - t * 1.3)
-      val s = Math.max(0.0, 1.0 - t * shrinkRate)
+      val s = Math.max(0.0, 1.0 - t * ud.shrinkRate)
       p.scale.set(s, s, 1.0)
     }
     glScene.render()
@@ -104,20 +133,21 @@ private[nconsole] class WebGLEffectRenderer(
   }
 
   private def fade(opacity: Double): Unit = {
-    matDyn.opacity = Math.max(0.0, Math.min(1.0, opacity))
-    matDyn.needsUpdate = true
+    withActiveMesh { (_, mat) =>
+      mat.opacity = Math.max(0.0, Math.min(1.0, opacity))
+      mat.needsUpdate = true
+    }
     glScene.render()
   }
 
   private def clearEffects(): Unit = {
     cleanupSmokeParticles()
-    meshDyn.rotation.x = 0.0
-    meshDyn.rotation.y = 0.0
-    meshDyn.rotation.z = 0.0
-    meshDyn.scale.set(1.0, 1.0, 1.0)
-    meshDyn.position.set(glScene.centerX, glScene.centerY, 0)
-    matDyn.opacity = 1.0
-    matDyn.needsUpdate = true
+    cleanupDissolveParticles()
+    withActiveMesh { (mesh, mat) =>
+      mesh.scale.set(1.0, 1.0, 1.0)
+      mat.opacity = 1.0
+      mat.needsUpdate = true
+    }
     glScene.scene.background = new ThreeColor("#000000")
     glScene.render()
   }
@@ -126,9 +156,9 @@ private[nconsole] class WebGLEffectRenderer(
 
   private def cleanupSmokeParticles(): Unit = {
     smokeParticles.foreach { p =>
-      glScene.scene.remove(p.asInstanceOf[scalajs.js.Any])
+      glScene.scene.remove(p)
       p.geometry.dispose()
-      p.material.map.dispose()
+      p.material.map.asInstanceOf[ThreeCanvasTexture].dispose()
       p.material.dispose()
     }
     smokeParticles = Nil
@@ -146,16 +176,13 @@ private[nconsole] class WebGLEffectRenderer(
     val cw = glScene.cellWidth
     val ch = glScene.cellHeight
 
-    // Determine world-space offset for particles (needed in spatial mode)
+    // Determine world-space offset for particles
     val (offsetX, offsetY, offsetZ) = activeLayerMesh() match {
       case Some(layerMesh) =>
         val pos = layerMesh.position
-        // Mesh center is at (worldX + w/2, worldY + h/2, worldZ)
-        // Particle coords are relative to bottom-left of the viewport area
-        // so offset = meshCenter - (viewportWidth/2, viewportHeight/2, 0)
-        val ox = pos.x.asInstanceOf[Double] - glScene.viewportWidth / 2.0
-        val oy = pos.y.asInstanceOf[Double] - glScene.viewportHeight / 2.0
-        val oz = pos.z.asInstanceOf[Double] + 0.1
+        val ox = pos.x - glScene.viewportWidth / 2.0
+        val oy = pos.y - glScene.viewportHeight / 2.0
+        val oz = pos.z + 0.1
         (ox, oy, oz)
       case None =>
         (0.0, 0.0, 0.1)
@@ -165,17 +192,29 @@ private[nconsole] class WebGLEffectRenderer(
       val styledChars = AnsiParser.parseLine(line)
       styledChars.zipWithIndex.foreach { case (sc, col) =>
         if (sc.char != ' ' && sc.char != '\n') {
+          val dpr = dom.window.devicePixelRatio.max(1.0)
           val charCanvas = dom.document.createElement("canvas").asInstanceOf[HTMLCanvasElement]
-          charCanvas.width = cw
-          charCanvas.height = ch
+          charCanvas.width = (cw * dpr).toInt
+          charCanvas.height = (ch * dpr).toInt
           val charCtx = charCanvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-          charCtx.drawImage(activeOffscreen(), col * cw, row * ch, cw, ch, 0, 0, cw, ch)
+          charCtx.drawImage(
+            activeOffscreen(),
+            (col * cw * dpr).toInt,
+            (row * ch * dpr).toInt,
+            (cw * dpr).toInt,
+            (ch * dpr).toInt,
+            0,
+            0,
+            (cw * dpr).toInt,
+            (ch * dpr).toInt
+          )
 
           val charTex = new ThreeCanvasTexture(charCanvas)
           charTex.minFilter = ThreeLinearFilter
           charTex.magFilter = ThreeLinearFilter
-          val charMatOpts = scalajs.js.Dynamic.literal(map = charTex, transparent = true, opacity = 1.0)
-          val charMat = new ThreeMeshBasicMaterial(charMatOpts.asInstanceOf[scalajs.js.UndefOr[scalajs.js.Object]])
+          val charMat = new ThreeMeshBasicMaterial(
+            ThreeMaterialOptions(map = charTex, transparent = true, opacity = 1.0)
+          )
           val charGeo = new ThreePlaneGeometry(cw, ch)
           val charMesh = new ThreeMesh(charGeo, charMat)
 
@@ -186,8 +225,7 @@ private[nconsole] class WebGLEffectRenderer(
           val sceneY = localY + offsetY
           charMesh.position.set(sceneX, sceneY, offsetZ)
 
-          val p = charMesh.asInstanceOf[scalajs.js.Dynamic]
-          p.userData = scalajs.js.Dynamic.literal(
+          charMesh.userData = SmokeParticleData(
             startX = sceneX,
             startY = sceneY,
             driftX = (Math.random() - 0.5) * 120.0,
@@ -198,7 +236,89 @@ private[nconsole] class WebGLEffectRenderer(
           )
 
           glScene.scene.add(charMesh)
-          smokeParticles = p :: smokeParticles
+          smokeParticles = charMesh :: smokeParticles
+        }
+      }
+    }
+  }
+
+  // ---- Dissolve particle management ----
+
+  private def cleanupDissolveParticles(): Unit = {
+    dissolveParticles.foreach { p =>
+      glScene.scene.remove(p)
+      p.geometry.dispose()
+      p.material.map.asInstanceOf[ThreeCanvasTexture].dispose()
+      p.material.dispose()
+    }
+    dissolveParticles = Nil
+    dissolveActive = false
+    dissolveHiddenLayerMesh.foreach { lm =>
+      lm.material.opacity = 1.0
+      lm.material.needsUpdate = true
+    }
+    dissolveHiddenLayerMesh = None
+  }
+
+  private def spawnDissolveParticles(): Unit = {
+    val h = glScene.viewportHeight
+    val cw = glScene.cellWidth
+    val ch = glScene.cellHeight
+
+    val (offsetX, offsetY, offsetZ) = activeLayerMesh() match {
+      case Some(layerMesh) =>
+        val pos = layerMesh.position
+        val ox = pos.x - glScene.viewportWidth / 2.0
+        val oy = pos.y - glScene.viewportHeight / 2.0
+        val oz = pos.z + 0.1
+        (ox, oy, oz)
+      case None =>
+        (0.0, 0.0, 0.1)
+    }
+
+    activeFrame().zipWithIndex.foreach { case (line, row) =>
+      val styledChars = AnsiParser.parseLine(line)
+      styledChars.zipWithIndex.foreach { case (sc, col) =>
+        if (sc.char != ' ' && sc.char != '\n') {
+          val dpr = dom.window.devicePixelRatio.max(1.0)
+          val charCanvas = dom.document.createElement("canvas").asInstanceOf[HTMLCanvasElement]
+          charCanvas.width = (cw * dpr).toInt
+          charCanvas.height = (ch * dpr).toInt
+          val charCtx = charCanvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
+          charCtx.drawImage(
+            activeOffscreen(),
+            (col * cw * dpr).toInt,
+            (row * ch * dpr).toInt,
+            (cw * dpr).toInt,
+            (ch * dpr).toInt,
+            0,
+            0,
+            (cw * dpr).toInt,
+            (ch * dpr).toInt
+          )
+
+          val charTex = new ThreeCanvasTexture(charCanvas)
+          charTex.minFilter = ThreeLinearFilter
+          charTex.magFilter = ThreeLinearFilter
+          val charMat = new ThreeMeshBasicMaterial(
+            ThreeMaterialOptions(map = charTex, transparent = true, opacity = 1.0)
+          )
+          val charGeo = new ThreePlaneGeometry(cw, ch)
+          val charMesh = new ThreeMesh(charGeo, charMat)
+
+          val localX = col * cw + cw / 2.0
+          val localY = h - (row * ch + ch / 2.0)
+          val sceneX = localX + offsetX
+          val sceneY = localY + offsetY
+          charMesh.position.set(sceneX, sceneY, offsetZ)
+
+          charMesh.userData = DissolveParticleData(
+            fadeDelay = Math.random() * 0.6,
+            fadeSpeed = 1.2 + Math.random() * 0.8
+          )
+
+          glScene.scene.add(charMesh)
+          dissolveParticles = charMesh :: dissolveParticles
         }
       }
     }

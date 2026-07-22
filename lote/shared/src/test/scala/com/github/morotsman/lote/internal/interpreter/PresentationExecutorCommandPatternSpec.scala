@@ -5,6 +5,7 @@ import com.github.morotsman.lote.api._
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Transition}
 import com.github.morotsman.lote.internal.TextSlide
 import com.github.morotsman.lote.internal.model.{Presentation, SlideSpecification}
+import com.github.morotsman.lote.internal.algebra.PlatformStrategy
 import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
@@ -156,9 +157,9 @@ class PresentationExecutorCommandPatternSpec extends CatsEffectSuite {
       _ <- harness.runWithTicking(executor.start(), ticks = 20)
       changes <- slideChanges.get
     } yield {
-      // Should visit slide 0 twice (initial + after left bounces back)
+      // Should visit slide 0 once (initial); left at boundary is a no-op
       assert(changes.forall(_ == 0), s"Should only visit slide 0, got: $changes")
-      assert(changes.length >= 2, s"Expected at least 2 visits to slide 0, got: $changes")
+      assert(changes.length >= 1, s"Expected at least 1 visit to slide 0, got: $changes")
     }
   }
 
@@ -532,8 +533,8 @@ class PresentationExecutorCommandPatternSpec extends CatsEffectSuite {
       _ <- harness.runWithTicking(executor.start(), ticks = 20)
       clears <- harness.clearCount
     } yield {
-      // At least: 1 (start) + 1 (right nav) + 1 (esc exit) = 3
-      assert(clears >= 3, s"Expected at least 3 clears, got $clears")
+      // At least: 1 (start) + 1 (esc exit) = 2 (navigation no longer clears in spatial mode)
+      assert(clears >= 2, s"Expected at least 2 clears, got $clears")
     }
   }
 
@@ -546,7 +547,7 @@ class PresentationExecutorCommandPatternSpec extends CatsEffectSuite {
         screen = defaultScreen,
         inputs = List(
           Key(SpecialKey.Right), // no-op at boundary
-          Key(SpecialKey.Left),  // no-op at boundary
+          Key(SpecialKey.Left), // no-op at boundary
           Key(SpecialKey.Esc)
         ),
         readDelay = 1.millis
@@ -633,7 +634,333 @@ class PresentationExecutorCommandPatternSpec extends CatsEffectSuite {
       assertEquals(changes, List(0, 1, 0, 1, 2))
     }
   }
+
+  // --- PlatformStrategy delegation ---
+
+  /** A recording PlatformStrategy that logs every call for test assertions. */
+  private sealed trait StrategyCall
+  private case object SetupPlatformCall extends StrategyCall
+  private case class ActivateSlideCall(index: Int) extends StrategyCall
+  private case class NavigateToSlideCall(index: Int) extends StrategyCall
+
+  private def recordingStrategy(log: Ref[IO, List[StrategyCall]]): PlatformStrategy[IO] =
+    new PlatformStrategy[IO] {
+      override def setupPlatform(): IO[Unit] =
+        log.update(_ :+ SetupPlatformCall)
+      override def activateSlide(index: Int): IO[Unit] =
+        log.update(_ :+ ActivateSlideCall(index))
+      override def navigateToSlide(index: Int): IO[Unit] =
+        log.update(_ :+ NavigateToSlideCall(index))
+    }
+
+  test("setupPlatform is called once on start") {
+    for {
+      strategyLog <- IO.ref(List.empty[StrategyCall])
+      harness <- SlideTestHarness.make[IO](
+        screen = defaultScreen,
+        inputs = List(Key(SpecialKey.Esc)),
+        readDelay = 1.millis
+      )
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(slide = textSlide("A"), out = None),
+          SlideSpecification(slide = textSlide("B"), out = None)
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](
+        presentation,
+        platformStrategy = Some(recordingStrategy(strategyLog))
+      )
+      _ <- harness.runWithTicking(executor.start(), ticks = 10)
+      log <- strategyLog.get
+    } yield {
+      val setupCalls = log.count(_ == SetupPlatformCall)
+      assertEquals(setupCalls, 1, s"setupPlatform should be called exactly once, got log: $log")
+      // setupPlatform should be the very first strategy call
+      assertEquals(log.head, SetupPlatformCall, s"setupPlatform should be the first call, got log: $log")
+    }
+  }
+
+  test("activateSlide is called for the initial slide on start") {
+    for {
+      strategyLog <- IO.ref(List.empty[StrategyCall])
+      harness <- SlideTestHarness.make[IO](
+        screen = defaultScreen,
+        inputs = List(Key(SpecialKey.Esc)),
+        readDelay = 1.millis
+      )
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(slide = textSlide("A"), out = None),
+          SlideSpecification(slide = textSlide("B"), out = None)
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](
+        presentation,
+        platformStrategy = Some(recordingStrategy(strategyLog))
+      )
+      _ <- harness.runWithTicking(executor.start(), ticks = 10)
+      log <- strategyLog.get
+    } yield {
+      assert(
+        log.contains(ActivateSlideCall(0)),
+        s"activateSlide(0) should be called for the initial slide, got log: $log"
+      )
+    }
+  }
+
+  test("navigateToSlide is called for the initial slide on start") {
+    for {
+      strategyLog <- IO.ref(List.empty[StrategyCall])
+      harness <- SlideTestHarness.make[IO](
+        screen = defaultScreen,
+        inputs = List(Key(SpecialKey.Esc)),
+        readDelay = 1.millis
+      )
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(slide = textSlide("A"), out = None)
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](
+        presentation,
+        platformStrategy = Some(recordingStrategy(strategyLog))
+      )
+      _ <- harness.runWithTicking(executor.start(), ticks = 10)
+      log <- strategyLog.get
+    } yield {
+      assert(
+        log.contains(NavigateToSlideCall(0)),
+        s"navigateToSlide(0) should be called for the initial slide, got log: $log"
+      )
+    }
+  }
+
+  test("activateSlide and navigateToSlide are called for each slide when navigating right") {
+    for {
+      strategyLog <- IO.ref(List.empty[StrategyCall])
+      harness <- SlideTestHarness.make[IO](
+        screen = defaultScreen,
+        inputs = List(
+          Key(SpecialKey.Right),
+          Key(SpecialKey.Right),
+          Key(SpecialKey.Esc)
+        ),
+        readDelay = 1.millis
+      )
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(slide = textSlide("A"), out = None),
+          SlideSpecification(slide = textSlide("B"), out = None),
+          SlideSpecification(slide = textSlide("C"), out = None)
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](
+        presentation,
+        platformStrategy = Some(recordingStrategy(strategyLog))
+      )
+      _ <- harness.runWithTicking(executor.start(), ticks = 30)
+      log <- strategyLog.get
+    } yield {
+      // Each slide switch triggers activateSlide then navigateToSlide
+      assert(log.contains(ActivateSlideCall(0)), s"activateSlide(0) expected, got: $log")
+      assert(log.contains(NavigateToSlideCall(0)), s"navigateToSlide(0) expected, got: $log")
+      assert(log.contains(ActivateSlideCall(1)), s"activateSlide(1) expected, got: $log")
+      assert(log.contains(NavigateToSlideCall(1)), s"navigateToSlide(1) expected, got: $log")
+      assert(log.contains(ActivateSlideCall(2)), s"activateSlide(2) expected, got: $log")
+      assert(log.contains(NavigateToSlideCall(2)), s"navigateToSlide(2) expected, got: $log")
+    }
+  }
+
+  test("activateSlide and navigateToSlide are called when navigating left") {
+    for {
+      strategyLog <- IO.ref(List.empty[StrategyCall])
+      harness <- SlideTestHarness.make[IO](
+        screen = defaultScreen,
+        inputs = List(
+          Key(SpecialKey.Right),
+          Key(SpecialKey.Left),
+          Key(SpecialKey.Esc)
+        ),
+        readDelay = 1.millis
+      )
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(slide = textSlide("A"), out = None),
+          SlideSpecification(slide = textSlide("B"), out = None)
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](
+        presentation,
+        platformStrategy = Some(recordingStrategy(strategyLog))
+      )
+      _ <- harness.runWithTicking(executor.start(), ticks = 30)
+      log <- strategyLog.get
+    } yield {
+      // Path: slide 0 → slide 1 → slide 0
+      // After navigating left back to 0, the executionLoop should activate and navigate to slide 0 again
+      val activateZeroCalls = log.count(_ == ActivateSlideCall(0))
+      val navigateZeroCalls = log.count(_ == NavigateToSlideCall(0))
+      assert(
+        activateZeroCalls >= 2,
+        s"activateSlide(0) should be called at least twice (initial + left), got $activateZeroCalls in log: $log"
+      )
+      assert(
+        navigateZeroCalls >= 2,
+        s"navigateToSlide(0) should be called at least twice (initial + left), got $navigateZeroCalls in log: $log"
+      )
+    }
+  }
+
+  test("activateSlide is called for departing slide before out-transition") {
+    for {
+      strategyLog <- IO.ref(List.empty[StrategyCall])
+      transitionPlayed <- IO.ref(false)
+      harness <- SlideTestHarness.make[IO](
+        screen = defaultScreen,
+        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Esc)),
+        readDelay = 1.millis
+      )
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      transition = new Transition[IO] {
+        override def transition(from: Slide[IO], to: Slide[IO]): IO[Unit] =
+          transitionPlayed.set(true)
+        override def userInput(input: UserInput): IO[Unit] = IO.unit
+      }
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(slide = textSlide("From"), out = Some(transition)),
+          SlideSpecification(slide = textSlide("To"), out = None)
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](
+        presentation,
+        platformStrategy = Some(recordingStrategy(strategyLog))
+      )
+      _ <- harness.runWithTicking(executor.start(), ticks = 20)
+      log <- strategyLog.get
+      played <- transitionPlayed.get
+    } yield {
+      assert(played, "Transition should have been played")
+      // activateSlide(0) should appear at least twice:
+      //   1. from the executionLoop switchSlide branch (initial render)
+      //   2. from handleNavigateRight before the transition
+      val activateZeroCalls = log.count(_ == ActivateSlideCall(0))
+      assert(
+        activateZeroCalls >= 2,
+        s"activateSlide(0) should be called at least twice (initial + pre-transition), got $activateZeroCalls in log: $log"
+      )
+    }
+  }
+
+  test("no extra activateSlide for departing slide when navigating right without transition") {
+    for {
+      strategyLog <- IO.ref(List.empty[StrategyCall])
+      harness <- SlideTestHarness.make[IO](
+        screen = defaultScreen,
+        inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Esc)),
+        readDelay = 1.millis
+      )
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(slide = textSlide("From"), out = None),
+          SlideSpecification(slide = textSlide("To"), out = None)
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](
+        presentation,
+        platformStrategy = Some(recordingStrategy(strategyLog))
+      )
+      _ <- harness.runWithTicking(executor.start(), ticks = 20)
+      log <- strategyLog.get
+    } yield {
+      // Without a transition, activateSlide(0) should only be called once (initial render)
+      val activateZeroCalls = log.count(_ == ActivateSlideCall(0))
+      assertEquals(
+        activateZeroCalls,
+        1,
+        s"activateSlide(0) should be called exactly once (no transition), got $activateZeroCalls in log: $log"
+      )
+    }
+  }
+
+  test("strategy calls follow correct order: setup → activate → navigate per slide") {
+    for {
+      strategyLog <- IO.ref(List.empty[StrategyCall])
+      harness <- SlideTestHarness.make[IO](
+        screen = defaultScreen,
+        inputs = List(
+          Key(SpecialKey.Right),
+          Key(SpecialKey.Esc)
+        ),
+        readDelay = 1.millis
+      )
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(slide = textSlide("A"), out = None),
+          SlideSpecification(slide = textSlide("B"), out = None)
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](
+        presentation,
+        platformStrategy = Some(recordingStrategy(strategyLog))
+      )
+      _ <- harness.runWithTicking(executor.start(), ticks = 20)
+      log <- strategyLog.get
+    } yield {
+      // Expected order: SetupPlatform → Activate(0) → Navigate(0) → Activate(1) → Navigate(1)
+      assertEquals(log(0), SetupPlatformCall, s"First call should be setupPlatform, got: $log")
+      assertEquals(log(1), ActivateSlideCall(0), s"Second call should be activateSlide(0), got: $log")
+      assertEquals(log(2), NavigateToSlideCall(0), s"Third call should be navigateToSlide(0), got: $log")
+      assertEquals(log(3), ActivateSlideCall(1), s"Fourth call should be activateSlide(1), got: $log")
+      assertEquals(log(4), NavigateToSlideCall(1), s"Fifth call should be navigateToSlide(1), got: $log")
+    }
+  }
+
+  test("setSlide triggers activateSlide and navigateToSlide for the target slide") {
+    for {
+      strategyLog <- IO.ref(List.empty[StrategyCall])
+      harness <- SlideTestHarness.make[IO](
+        screen = defaultScreen,
+        inputs = List(
+          Key(SpecialKey.Space), // triggers userInput → setSlide(2)
+          Key(SpecialKey.Esc)
+        ),
+        readDelay = 1.millis
+      )
+      implicit0(nc: NConsole[IO]) = harness.console: NConsole[IO]
+      executorRef <- IO.ref(Option.empty[com.github.morotsman.lote.internal.algebra.PresentationExecutor[IO]])
+      jumpSlide = new Slide[IO] {
+        override def content: IO[Option[ScreenAdjusted]] = IO.pure(Some(ScreenAdjusted("Jump")))
+        override def startShow: IO[Unit] = IO.unit
+        override def stopShow: IO[Unit] = IO.unit
+        override def userInput(input: UserInput): IO[Unit] =
+          executorRef.get.flatMap(_.fold(IO.unit)(_.setSlide(2)))
+      }
+      presentation = Presentation[IO](
+        slideSpecifications = List(
+          SlideSpecification(slide = jumpSlide, out = None),
+          SlideSpecification(slide = textSlide("Slide 1"), out = None),
+          SlideSpecification(slide = textSlide("Slide 2"), out = None)
+        )
+      )
+      executor <- PresentationExecutorInterpreter.make[IO](
+        presentation,
+        platformStrategy = Some(recordingStrategy(strategyLog))
+      )
+      _ <- executorRef.set(Some(executor))
+      _ <- harness.runWithTicking(executor.start(), ticks = 20)
+      log <- strategyLog.get
+    } yield {
+      assert(log.contains(ActivateSlideCall(2)), s"activateSlide(2) should be called after setSlide(2), got: $log")
+      assert(log.contains(NavigateToSlideCall(2)), s"navigateToSlide(2) should be called after setSlide(2), got: $log")
+    }
+  }
 }
-
-
-

@@ -2,7 +2,7 @@ package com.github.morotsman.lote.testkit
 
 import cats.effect.{Ref, Temporal}
 import cats.implicits._
-import com.github.morotsman.lote.api.support.Clock
+import com.github.morotsman.lote.api.support.AnimationClock
 
 import scala.concurrent.duration.{FiniteDuration, NANOSECONDS}
 
@@ -24,7 +24,7 @@ import scala.concurrent.duration.{FiniteDuration, NANOSECONDS}
 final class SimulatedClock[F[_]] private (
     private val timeRef: Ref[F, FiniteDuration]
 )(implicit F: Temporal[F])
-    extends Clock[F] {
+    extends AnimationClock[F] {
 
   override def monotonic: F[FiniteDuration] = timeRef.get
 

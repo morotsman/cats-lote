@@ -30,7 +30,9 @@ private[lote] final class TextSlideBuilder[
     private val currentHint: Option[String],
     private val currentOut: Option[Transition[F]],
     private val currentTitle: Option[String],
-    private val currentPosition: Option[SlidePosition]
+    private val currentPosition: Option[SlidePosition],
+    private val currentOffset: Option[(Double, Double, Double)],
+    private val currentRotationOffset: Option[(Double, Double, Double)]
 ) extends SlideMetadataBuilderOps[F, TextSlideBuilder[F, State]] {
 
   private def copy[NextState <: BuildState](
@@ -41,29 +43,72 @@ private[lote] final class TextSlideBuilder[
       hint: Option[String] = currentHint,
       out: Option[Transition[F]] = currentOut,
       slideTitle: Option[String] = currentTitle,
-      slidePosition: Option[SlidePosition] = currentPosition
+      slidePosition: Option[SlidePosition] = currentPosition,
+      slideOffset: Option[(Double, Double, Double)] = currentOffset,
+      slideRotationOffset: Option[(Double, Double, Double)] = currentRotationOffset
   ): TextSlideBuilder[F, NextState] =
-    new TextSlideBuilder[F, NextState](alignment, content, steps, separator, hint, out, slideTitle, slidePosition)
+    new TextSlideBuilder[F, NextState](
+      alignment,
+      content,
+      steps,
+      separator,
+      hint,
+      out,
+      slideTitle,
+      slidePosition,
+      slideOffset,
+      slideRotationOffset
+    )
 
   override protected def withTransition(
       transition: Transition[F]
   ): TextSlideBuilder[F, State] =
     this.copy[State](out = Some(transition))
 
+  override protected def currentTransitionOpt: Option[Transition[F]] =
+    currentOut
+
+  private def mergePositions(existing: SlidePosition, incoming: SlidePosition): SlidePosition =
+    SlidePosition(
+      x = if (incoming.x != 0.0 || existing.x == 0.0) incoming.x else existing.x,
+      y = if (incoming.y != 0.0 || existing.y == 0.0) incoming.y else existing.y,
+      z = if (incoming.z != 0.0 || existing.z == 0.0) incoming.z else existing.z,
+      rotX = if (incoming.rotX != 0.0 || existing.rotX == 0.0) incoming.rotX else existing.rotX,
+      rotY = if (incoming.rotY != 0.0 || existing.rotY == 0.0) incoming.rotY else existing.rotY,
+      rotZ = if (incoming.rotZ != 0.0 || existing.rotZ == 0.0) incoming.rotZ else existing.rotZ,
+      transparentBackground = incoming.transparentBackground || existing.transparentBackground
+    )
+
   override protected def withPosition(position: SlidePosition): TextSlideBuilder[F, State] =
+    this.copy[State](
+      slidePosition = currentPosition match {
+        case Some(existing) => Some(mergePositions(existing, position))
+        case None           => Some(position)
+      },
+      slideOffset = None
+    )
+
+  override protected def withPositionMerge(position: SlidePosition): TextSlideBuilder[F, State] =
     this.copy[State](slidePosition = currentPosition match {
-      case Some(existing) =>
-        Some(SlidePosition(
-          x = if (position.x != 0.0 || existing.x == 0.0) position.x else existing.x,
-          y = if (position.y != 0.0 || existing.y == 0.0) position.y else existing.y,
-          z = if (position.z != 0.0 || existing.z == 0.0) position.z else existing.z,
-          rotX = if (position.rotX != 0.0 || existing.rotX == 0.0) position.rotX else existing.rotX,
-          rotY = if (position.rotY != 0.0 || existing.rotY == 0.0) position.rotY else existing.rotY,
-          rotZ = if (position.rotZ != 0.0 || existing.rotZ == 0.0) position.rotZ else existing.rotZ,
-          transparentBackground = position.transparentBackground || existing.transparentBackground
-        ))
-      case None => Some(position)
+      case Some(existing) => Some(mergePositions(existing, position))
+      case None           => Some(position)
     })
+
+  override protected def withOffset(dx: Double, dy: Double, dz: Double): TextSlideBuilder[F, State] = {
+    val newOffset = currentOffset match {
+      case Some((ox, oy, oz)) => Some((ox + dx, oy + dy, oz + dz))
+      case None               => Some((dx, dy, dz))
+    }
+    this.copy[State](slideOffset = newOffset)
+  }
+
+  override protected def withRotationOffset(drx: Double, dry: Double, drz: Double): TextSlideBuilder[F, State] = {
+    val newRotOffset = currentRotationOffset match {
+      case Some((rx, ry, rz)) => Some((rx + drx, ry + dry, rz + drz))
+      case None               => Some((drx, dry, drz))
+    }
+    this.copy[State](slideRotationOffset = newRotOffset)
+  }
 
   def content(content: String): TextSlideBuilder[F, State with ContentAdded] =
     this.copy[State with ContentAdded](content = Some(content))
@@ -83,11 +128,6 @@ private[lote] final class TextSlideBuilder[
   override protected def withTitle(title: String): TextSlideBuilder[F, State] =
     this.copy[State](slideTitle = Some(title))
 
-  /** Finalizes the slide specification.
-    *
-    * This method is only available after `content(...)` has been called, enforced by the `State <:< ContentAdded`
-    * evidence parameter.
-    */
   private[lote] def build()(implicit ev: State <:< ContentAdded): SlideSpecification[F] = {
     val _ = ev
     val resolvedAlignment = currentAlignment.getOrElse(
@@ -123,8 +163,16 @@ private[lote] final class TextSlideBuilder[
     val builderWithTransition = currentOut.fold(builderWithSlide)(builderWithSlide.transition)
     val builderWithTitle = currentTitle.fold(builderWithTransition)(builderWithTransition.title)
     val builderWithPosition = currentPosition.fold(builderWithTitle)(builderWithTitle.position)
+    val builderWithOffset = currentOffset match {
+      case Some((dx, dy, dz)) => builderWithPosition.offset(dx, dy, dz)
+      case None               => builderWithPosition
+    }
+    val builderWithRotOffset = currentRotationOffset match {
+      case Some((rx, ry, rz)) => builderWithOffset.rotateX(rx).rotateY(ry).rotateZ(rz)
+      case None               => builderWithOffset
+    }
 
-    builderWithPosition.build()
+    builderWithRotOffset.build()
   }
 
 }
@@ -136,7 +184,7 @@ private[lote] object TextSlideBuilder {
   def apply[F[_]: Temporal]()(implicit
       console: NConsole[F]
   ): TextSlideBuilder[F, WithoutContent] =
-    new TextSlideBuilder(None, None, Vector.empty, TextSlide.DefaultStepSeparator, None, None, None, None)
+    new TextSlideBuilder(None, None, Vector.empty, TextSlide.DefaultStepSeparator, None, None, None, None, None, None)
 
   sealed trait BuildState
 

@@ -6,6 +6,7 @@ import com.github.morotsman.lote.api.{Key, Screen, ScreenAdjusted, SpecialKey}
 import com.github.morotsman.lote.internal.algebra.IdleDetector
 import com.github.morotsman.lote.internal.interpreter.{IdleDetectorConfig, IdleDetectorInterpreter}
 import com.github.morotsman.lote.internal.util.Colors
+import com.github.morotsman.lote.testkit.TestConsole
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
@@ -30,7 +31,8 @@ class IdleSpec extends CatsEffectSuite {
       detector <- IdleDetectorInterpreter.make[IO](
         IdleDetectorConfig(idleTimeout = timeout)
       )
-      idle <- Idle.make[IO](detector, overlayConfig)
+      console <- TestConsole.make[IO](screen = Screen(20, 5))
+      idle <- Idle.make[IO](detector, console, overlayConfig)
     } yield (detector, idle)
 
   private def withTimeControl[A](io: IO[A]): IO[A] =

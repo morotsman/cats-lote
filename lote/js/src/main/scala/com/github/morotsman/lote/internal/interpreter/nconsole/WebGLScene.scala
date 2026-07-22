@@ -1,90 +1,59 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
+import com.github.morotsman.lote.api.WebGLConfig
 import org.scalajs.dom
-import org.scalajs.dom.{CanvasRenderingContext2D, HTMLCanvasElement, HTMLElement}
+import org.scalajs.dom.HTMLElement
 
-/** Manages the Three.js scene, camera, renderer, and the textured plane that displays terminal content.
+/** Manages the Three.js scene, renderer, and shared state for the WebGL terminal.
   *
-  * All mutable Three.js state lives here. Other components receive a `WebGLScene` reference
-  * to render frames and apply transforms.
+  * Provides the scene graph and renderer that spatial-mode components (SlideLayer, CameraAnimator) attach to. The
+  * perspective camera is set up by CameraAnimator when spatial mode initializes.
   */
-private[nconsole] class WebGLScene(container: HTMLElement, val cellWidth: Int, val cellHeight: Int) {
+private[nconsole] class WebGLScene(
+    container: HTMLElement,
+    val cellWidth: Int,
+    val cellHeight: Int,
+    config: WebGLConfig = WebGLConfig()
+) {
 
-  private val containerWidth: Int  = container.clientWidth.max(100)
+  private val containerWidth: Int = container.clientWidth.max(100)
   private val containerHeight: Int = container.clientHeight.max(100)
 
+  // Performance: cols/rows are mutable vars updated by the resize listener below. They are read
+  // synchronously inside Sync[F].delay by ThreeJsTerminal.size. On single-threaded JS this is
+  // safe and avoids the overhead of wrapping two ints in a Ref.
   var cols: Int = containerWidth / cellWidth
   var rows: Int = containerHeight / cellHeight
 
-  // ---- Offscreen canvas for text rendering ----
-  val offscreen: HTMLCanvasElement =
-    dom.document.createElement("canvas").asInstanceOf[HTMLCanvasElement]
-  offscreen.width = cols * cellWidth
-  offscreen.height = rows * cellHeight
-
-  val ctx: CanvasRenderingContext2D =
-    offscreen.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-
   // ---- Three.js scene ----
-  val scene    = new ThreeScene()
-  scene.background = new ThreeColor("#000000")
+  ThreeJsFacade.checkVersion()
+  val scene = new ThreeScene()
+  scene.background = new ThreeColor(config.backgroundColor)
 
-  val camera = new ThreeOrthographicCamera(
-    0, containerWidth, containerHeight, 0,
-    0.1, 10000
-  )
-  camera.position.set(0, 0, 5000)
+  /** The camera currently used for rendering. Set by `CameraAnimator.initSpatialMode`. */
+  var activeCamera: scalajs.js.Any = _
 
-  /** The camera currently used for rendering. Defaults to the orthographic camera;
-    * switched to a perspective camera in spatial mode by `CameraAnimator`.
-    */
-  var activeCamera: scalajs.js.Any = camera
-
-  private val rendererOpts = scalajs.js.Dynamic.literal(antialias = true, alpha = true)
+  private val rendererOpts = ThreeRendererOptions(antialias = config.antialias, alpha = true)
   val renderer = new ThreeWebGLRenderer(rendererOpts.asInstanceOf[scalajs.js.UndefOr[scalajs.js.Object]])
   renderer.setSize(containerWidth, containerHeight)
-  renderer.setPixelRatio(dom.window.devicePixelRatio)
+  renderer.setPixelRatio(config.devicePixelRatio.getOrElse(dom.window.devicePixelRatio))
   container.appendChild(renderer.domElement)
 
   renderer.domElement.style.display = "block"
   renderer.domElement.style.width = "100%"
   renderer.domElement.style.height = "100%"
 
-  // ---- Textured plane ----
-  val texture = new ThreeCanvasTexture(offscreen)
-  texture.minFilter = ThreeLinearFilter
-  texture.magFilter = ThreeLinearFilter
-
-  val planeGeo = new ThreePlaneGeometry(containerWidth, containerHeight)
-  val planeMat = new ThreeMeshBasicMaterial(
-    scalajs.js.Dynamic.literal(map = texture, transparent = true, side = 2)
-      .asInstanceOf[scalajs.js.UndefOr[scalajs.js.Object]]
-  )
-  val plane = new ThreeMesh(planeGeo, planeMat)
-  plane.position.set(containerWidth / 2.0, containerHeight / 2.0, 0)
-  scene.add(plane)
-
-  // Initial render
-  renderer.render(scene, camera)
-
   // ---- Resize handling ----
-  dom.window.addEventListener("resize", { (_: dom.Event) =>
-    val w = container.clientWidth.max(100)
-    val h = container.clientHeight.max(100)
-    cols = w / cellWidth
-    rows = h / cellHeight
-
-    offscreen.width = cols * cellWidth
-    offscreen.height = rows * cellHeight
-
-    renderer.setSize(w, h)
-    camera.right = w
-    camera.top = h
-    camera.updateProjectionMatrix()
-
-    plane.position.set(w / 2.0, h / 2.0, 0)
-    renderer.render(scene, camera)
-  })
+  dom.window.addEventListener(
+    "resize",
+    { (_: dom.Event) =>
+      val w = container.clientWidth.max(100)
+      val h = container.clientHeight.max(100)
+      cols = w / cellWidth
+      rows = h / cellHeight
+      renderer.setSize(w, h)
+    }
+  )
 
   // ---- Convenience accessors ----
 
@@ -93,17 +62,14 @@ private[nconsole] class WebGLScene(container: HTMLElement, val cellWidth: Int, v
   def viewportWidth: Int = container.clientWidth
   def viewportHeight: Int = container.clientHeight
 
-  def render(): Unit = renderer.render(scene, activeCamera)
+  def render(): Unit =
+    if (activeCamera != null) renderer.render(scene, activeCamera)
 
   /** Dispose all Three.js resources. */
   def dispose(): Unit = {
-    texture.dispose()
-    planeMat.dispose()
-    planeGeo.dispose()
     renderer.dispose()
     if (container.contains(renderer.domElement)) {
       container.removeChild(renderer.domElement)
     }
   }
 }
-

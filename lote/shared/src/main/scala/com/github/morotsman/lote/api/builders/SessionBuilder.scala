@@ -3,7 +3,7 @@ package com.github.morotsman.lote.api.builders
 import cats.Monad
 import cats.effect.{Async, Ref}
 import cats.implicits._
-import com.github.morotsman.lote.api.{AnimationSettings, Milestone, PlatformCapability}
+import com.github.morotsman.lote.api.{AnimationSettings, Layout, Milestone, PlatformCapability, SlidePosition}
 import com.github.morotsman.lote.api.spi.{NConsole, Overlay, Terminal => TerminalAlgebra, Ticker}
 import com.github.morotsman.lote.internal.builders.{
   SlideBuilder => InternalSlideBuilder,
@@ -13,8 +13,7 @@ import com.github.morotsman.lote.internal.algebra.{Feature, IdleDetector, Presen
 import com.github.morotsman.lote.internal.interpreter.{
   IdleDetectorConfig,
   IdleDetectorInterpreter,
-  PresentationExecutorInterpreter,
-  SpatialPresentationExecutorInterpreter
+  PresentationExecutorInterpreter
 }
 import com.github.morotsman.lote.internal.interpreter.middleware.{
   Idle,
@@ -45,8 +44,8 @@ class SlideContext[F[_]](
 
   /** The platform capabilities of the underlying terminal backend.
     *
-    * Use this to check whether the platform supports effects, sub-pixel rendering, or 3D transforms,
-    * and choose transitions accordingly.
+    * Use this to check whether the platform supports effects, sub-pixel rendering, or 3D transforms, and choose
+    * transitions accordingly.
     */
   def capabilities: Set[PlatformCapability] = console.capabilities
 
@@ -55,8 +54,8 @@ class SlideContext[F[_]](
 
   /** Returns a reference to the shared 3D scene, if the backend supports spatial mode.
     *
-    * On WebGL backends in spatial mode, returns `Some(Scene3DRef)`. Cast to
-    * `com.github.morotsman.lote.api.Scene3DRef` in JS code to access the shared Three.js scene.
+    * On WebGL backends in spatial mode, returns `Some(Scene3DRef)`. Cast to `com.github.morotsman.lote.api.Scene3DRef`
+    * in JS code to access the shared Three.js scene.
     */
   def scene3DRef: Option[Any] = console.scene3DRef
 }
@@ -101,7 +100,8 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     private val idleDetectorConfig: IdleDetectorConfig,
     private val onSlideChange: Option[Int => F[Unit]],
     private val tickerInterval: FiniteDuration,
-    private val animationStep: FiniteDuration
+    private val animationStep: FiniteDuration,
+    private val customTickerFactory: Option[F[Ticker[F]]] = None
 ) {
 
   // -- Slide building --
@@ -169,6 +169,32 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
     }))
 
   // -- Feature registration --
+
+  /** Adds a group of slides whose positions are computed automatically by the given layout.
+    *
+    * Slides added inside the section receive positions from the layout. If a slide explicitly calls `.at()`, that
+    * overrides the layout-computed position.
+    *
+    * {{{
+    * .addLayoutSection(Layout.grid(cols = 3, spacingX = 1800, spacingY = 1200, origin = SlidePosition(0, 3600, 0))) { section =>
+    *   section
+    *     .addTextSlide { _.content("Slide 1") }
+    *     .addTextSlide { _.content("Slide 2") }
+    *     .addTextSlide { _.content("Slide 3") }
+    * }
+    * }}}
+    */
+  def addLayoutSection(layout: Layout)(
+      sectionBuilder: LayoutSectionBuilder[F] => LayoutSectionBuilder[F]
+  ): SessionBuilder[F] = {
+    val section = sectionBuilder(new LayoutSectionBuilder[F](Nil))
+    val sectionSteps = section.steps
+    val positions = layout.positions(sectionSteps.size)
+    val wrappedSteps = sectionSteps.zip(positions).map { case (step, pos) =>
+      SessionBuilder.wrapWithPosition(step, pos)
+    }
+    this.copy(slideSteps = slideSteps ++ wrappedSteps)
+  }
 
   /** Adds a countdown timer overlay showing remaining presentation time. */
   def withTimer(allocatedTime: FiniteDuration): SessionBuilder[F] =
@@ -251,6 +277,28 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
   def withFrameRate(frameRate: Double): SessionBuilder[F] =
     this.copy(tickerInterval = SessionBuilder.fpsToDuration(frameRate))
 
+  /** Replaces the default sleep-based ticker with a custom ticker factory.
+    *
+    * This is primarily useful for WebGL/browser backends where a `requestAnimationFrame`-based ticker provides
+    * vsync-aligned rendering at the display's native refresh rate (~60 fps). When a custom ticker is set, the
+    * `tickerInterval` / `frameRate` settings are ignored — the custom ticker controls the cadence.
+    *
+    * Simulation speed is unaffected: `AnimationSettings.step` (configurable via `withAnimationStep`) still controls how
+    * fast animations advance, via the `FixedStep` accumulator.
+    *
+    * Example (Scala.js / WebGL):
+    * {{{
+    * import com.github.morotsman.lote.internal.interpreter.ticker.RafTickerInterpreter
+    *
+    * SessionBuilder[IO]()
+    *   .withCustomTicker(RafTickerInterpreter.make[IO])
+    *   .addSlide(...)
+    *   .run()
+    * }}}
+    */
+  def withCustomTicker(factory: F[Ticker[F]]): SessionBuilder[F] =
+    this.copy(customTickerFactory = Some(factory))
+
   /** Configures how quickly built-in animations advance.
     *
     * This is independent of `withTickerInterval`: a lower animation step makes transitions move faster, while a higher
@@ -294,7 +342,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
 
     NConsoleInterpreter.resource[F](terminal).use { rawConsole =>
       for {
-        ticker <- TickerInterpreter.make[F](tickerInterval)
+        ticker <- customTickerFactory.getOrElse(TickerInterpreter.make[F](tickerInterval))
         idleDetector <- IdleDetectorInterpreter.make[F](idleDetectorConfig)
         baseConsole =
           if (idleEnabled) IdleAwareNConsole.wrap[F](rawConsole, idleDetector)
@@ -351,7 +399,7 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
       // Create idle feature if enabled (special: needs IdleDetector from run())
       idleFeature <-
         if (idleEnabled && idleDetector.isDefined)
-          Idle.make[F](idleDetector.get).map { idle =>
+          Idle.make[F](idleDetector.get, baseConsole).map { idle =>
             Some(new Feature[F] {
               val overlay: Overlay[F] = idle
               def onSlideChange(index: Int): F[Unit] = idleDetector.get.notifyActivity()
@@ -372,23 +420,13 @@ case class SessionBuilder[F[_]: Async: Ref.Make] private (
       // Create executor with composed slide-change callbacks
       executor <- {
         implicit val mc: NConsole[F] = consoleWithMiddleware
-        val isSpatial = presentation.slideSpecifications.exists(_.position.isDefined)
-        if (isSpatial)
-          SpatialPresentationExecutorInterpreter.make[F](
-            presentation,
-            { index =>
-              allFeatures.traverse_(_.onSlideChange(index)) *>
-                onSlideChange.fold(Monad[F].unit)(_(index))
-            }
-          )
-        else
-          PresentationExecutorInterpreter.make[F](
-            presentation,
-            { index =>
-              allFeatures.traverse_(_.onSlideChange(index)) *>
-                onSlideChange.fold(Monad[F].unit)(_(index))
-            }
-          )
+        PresentationExecutorInterpreter.make[F](
+          presentation,
+          { index =>
+            allFeatures.traverse_(_.onSlideChange(index)) *>
+              onSlideChange.fold(Monad[F].unit)(_(index))
+          }
+        )
       }
 
       // Notify features that executor is ready (e.g., QuickNavigation subscribes here)
@@ -454,7 +492,8 @@ object SessionBuilder {
       idleDetectorConfig = IdleDetectorConfig(),
       onSlideChange = None,
       tickerInterval = 40.millis,
-      animationStep = AnimationSettings.DefaultStep
+      animationStep = AnimationSettings.DefaultStep,
+      customTickerFactory = None
     )
 
   // Internal ADT for storing slide configurations
@@ -471,4 +510,68 @@ object SessionBuilder {
   private[builders] case class EffectfulSlide[F[_]](
       f: BuiltEffectfulSlideStep[F]
   ) extends SlideStep[F]
+
+  /** Wraps a slide step to pre-apply a layout position. The position is set on the builder before the user's lambda
+    * runs, so explicit `.at()` calls inside the lambda override the layout position.
+    */
+  private[builders] def wrapWithPosition[F[_]](step: SlideStep[F], pos: SlidePosition): SlideStep[F] =
+    step match {
+      case TextSlideStep(f) =>
+        TextSlideStep(new BuiltTextSlideStep[F] {
+          override def build(builder: TextSlideBuilderStart[F])(implicit
+              ctx: SlideContext[F]
+          ): TextSlideBuilderReady[F] =
+            f.build(builder.at(pos.x, pos.y, pos.z))
+        })
+      case CustomSlide(f) =>
+        CustomSlide(new BuiltCustomSlideStep[F] {
+          override def build(builder: SlideBuilderStart[F])(implicit ctx: SlideContext[F]): SlideBuilderReady[F] =
+            f.build(builder.at(pos.x, pos.y, pos.z))
+        })
+      case EffectfulSlide(f) =>
+        EffectfulSlide(new BuiltEffectfulSlideStep[F] {
+          override def build(builder: SlideBuilderStart[F])(implicit ctx: SlideContext[F]): F[SlideBuilderReady[F]] =
+            f.build(builder.at(pos.x, pos.y, pos.z))
+        })
+    }
+}
+
+/** A builder for collecting slides inside a layout section.
+  *
+  * Slides added here will have their positions computed automatically by the layout. Use with
+  * `SessionBuilder.addLayoutSection`.
+  */
+class LayoutSectionBuilder[F[_]: Async: Ref.Make] private[builders] (
+    private[builders] val steps: List[SessionBuilder.SlideStep[F]]
+) {
+
+  def addTextSlide(
+      textSlideBuilder: TextSlideBuilderStart[F] => TextSlideBuilderReady[F]
+  ): LayoutSectionBuilder[F] =
+    new LayoutSectionBuilder(steps :+ SessionBuilder.TextSlideStep(new SessionBuilder.BuiltTextSlideStep[F] {
+      override def build(builder: TextSlideBuilderStart[F])(implicit ctx: SlideContext[F]): TextSlideBuilderReady[F] = {
+        val _ = ctx
+        textSlideBuilder(builder)
+      }
+    }))
+
+  def addSlide(
+      slideBuilder: SlideBuilderStart[F] => SlideBuilderReady[F]
+  ): LayoutSectionBuilder[F] =
+    new LayoutSectionBuilder(steps :+ SessionBuilder.CustomSlide(new SessionBuilder.BuiltCustomSlideStep[F] {
+      override def build(builder: SlideBuilderStart[F])(implicit ctx: SlideContext[F]): SlideBuilderReady[F] = {
+        val _ = ctx
+        slideBuilder(builder)
+      }
+    }))
+
+  def addSlideF(
+      slideBuilder: SlideBuilderStart[F] => F[SlideBuilderReady[F]]
+  ): LayoutSectionBuilder[F] =
+    new LayoutSectionBuilder(steps :+ SessionBuilder.EffectfulSlide(new SessionBuilder.BuiltEffectfulSlideStep[F] {
+      override def build(builder: SlideBuilderStart[F])(implicit ctx: SlideContext[F]): F[SlideBuilderReady[F]] = {
+        val _ = ctx
+        slideBuilder(builder)
+      }
+    }))
 }

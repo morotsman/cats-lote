@@ -3,6 +3,7 @@ package com.github.morotsman.lote.internal.interpreter.transition
 import cats.Monad
 import cats.effect.{Ref, Temporal}
 import com.github.morotsman.lote.api.{AnimationSettings, Screen, UserInput}
+import com.github.morotsman.lote.api.support.AnimationClock
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, Transition}
 
 private[lote] object MorphTransition {
@@ -16,7 +17,7 @@ private[lote] object MorphTransition {
       console: NConsole[F],
       ticker: Ticker[F],
       animationSettings: AnimationSettings
-  ): Transition[F] =
+  )(implicit clock: AnimationClock[F]): Transition[F] =
     new Transition[F] {
 
       def setupPosition(
@@ -55,10 +56,8 @@ private[lote] object MorphTransition {
             animationSettings = animationSettings
           )
           .transition(from, to)
-
       }
 
       override def userInput(input: UserInput): F[Unit] = Monad[F].unit
-
     }
 }

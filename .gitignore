@@ -9,3 +9,5 @@
 lote/js/target/
 lote/jvm/target
 browser-examples/target
+shared-examples/.js/target
+shared-examples/.jvm/target

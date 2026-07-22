@@ -118,4 +118,3 @@ class AnsiParserSpec extends FunSuite {
     assertEquals(AnsiColor.toCss(Rgb(255, 0, 128), isForeground = true), "#ff0080")
   }
 }
-

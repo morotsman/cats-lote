@@ -1,12 +1,11 @@
 package com.github.morotsman.lote.internal.interpreter.transition
 
 import cats.Monad
-import cats.effect.{Deferred, Ref, Temporal}
-import cats.effect.implicits._
+import cats.effect.{Ref, Temporal}
 import cats.implicits._
-import com.github.morotsman.lote.api.{AnimationSettings, ScreenAdjusted, UserInput}
-import com.github.morotsman.lote.api.support.FixedStep
-import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, Transition}
+import com.github.morotsman.lote.api.{AnimationSettings, ScreenAdjusted}
+import com.github.morotsman.lote.api.support.{AnimationClock, GlideLayer, SmoothChar, TickedTransition}
+import com.github.morotsman.lote.api.spi.{NConsole, Ticker, Transition}
 
 import scala.util.Random
 
@@ -120,10 +119,18 @@ private[lote] object GrabTransition {
   case class DragOut(step: Int, totalSteps: Int, grabberRow: Int, startCol: Int) extends GrabPhase
   case object Done extends GrabPhase
 
+  private case class SnakeRenderInfo(
+      snakeArt: Vector[String],
+      snakeRow: Int,
+      snakeCol: Int,
+      dragOffset: Int
+  )
+
   private case class GrabStepResult(
       renderedFrame: Option[ScreenAdjusted],
       nextPhase: GrabPhase,
-      completed: Boolean = false
+      completed: Boolean = false,
+      snakeInfo: Option[SnakeRenderInfo] = None
   )
 
   def apply[F[_]: Temporal: Ref.Make: NConsole: Ticker](
@@ -136,150 +143,34 @@ private[lote] object GrabTransition {
       console: NConsole[F],
       ticker: Ticker[F],
       animationSettings: AnimationSettings
-  ): Transition[F] = new Transition[F] {
+  )(implicit clock: AnimationClock[F]): Transition[F] = {
 
-    override def transition(from: Slide[F], to: Slide[F]): F[Unit] = {
-      for {
-        screen <- console.context
-        slide1 <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-        slide2 <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-        lines1 = slide1.content.split("\n", -1).toVector
-        maxSpawnRow = Math.max(
-          1,
-          Math.min(lines1.length, screen.screenHeight) - snakeHeight
-        )
-        spawnRow = Random.nextInt(maxSpawnRow)
-        longestLineEnd = findLongestLineEnd(lines1)
-        (targetRow, targetCol) = longestLineEnd
-        snakeTargetRow = Math.max(0, targetRow - snakeHeight / 2)
-        startCol = screen.screenWidth
-        horizontalDistance = startCol - targetCol
-        crawlTotalSteps = Math.max(1, horizontalDistance / stepSize)
-        initialPhase: GrabPhase = CrawlIn(
-          0,
-          crawlTotalSteps,
-          spawnRow,
-          snakeTargetRow,
-          targetCol
-        )
-        phaseRef <- Ref[F].of(initialPhase)
-        stepperRef <- FixedStep.makeRef[F]
-        done <- Deferred[F, Unit]
-        holdFrames = Vector(4, 5, 3)
-        cumulativeBiteFrames = holdFrames.scanLeft(0)(_ + _).tail
-        totalBiteFrames = cumulativeBiteFrames.last
-        dragOutTotalSteps =
-          Math.max(1, (screen.screenWidth + snakeWidth) / stepSize)
-        advancePhase = { (phase: GrabPhase) =>
-          phase match {
-            case CrawlIn(step, totalSteps, spawnRow, tRow, tCol) =>
-              val crawlFrames = Vector(snakeCrawlLeft1, snakeCrawlLeft2)
-              val frameIndex = step % crawlFrames.length
-              val snakeArt = crawlFrames(frameIndex)
-              val col = startCol - (step * stepSize)
-              val progress = step.toDouble / totalSteps.toDouble
-              val row = (spawnRow + ((tRow - spawnRow) * progress)).toInt
-              val content = renderScene(
-                lines1,
-                screen.screenWidth,
-                screen.screenHeight,
-                row,
-                col,
-                snakeArt
-              )
-
-              GrabStepResult(
-                renderedFrame = Some(ScreenAdjusted(content)),
-                nextPhase =
-                  if (step >= totalSteps) Bite(0)
-                  else CrawlIn(step + 1, totalSteps, spawnRow, tRow, tCol)
-              )
-            case Bite(frame) =>
-              val scenes =
-                Vector(snakeMouthOpenArt, snakeMouthWideArt, snakeBiteArt)
-
-              if (frame >= totalBiteFrames) {
-                GrabStepResult(
-                  renderedFrame = None,
-                  nextPhase = DragOut(0, dragOutTotalSteps, snakeTargetRow, targetCol)
-                )
-              } else {
-                val sceneIdx = cumulativeBiteFrames.indexWhere(_ > frame)
-                val snakeArt = scenes(sceneIdx)
-                val content = renderScene(
-                  lines1,
-                  screen.screenWidth,
-                  screen.screenHeight,
-                  snakeTargetRow,
-                  targetCol,
-                  snakeArt
-                )
-                GrabStepResult(
-                  renderedFrame = Some(ScreenAdjusted(content)),
-                  nextPhase = Bite(frame + 1)
-                )
-              }
-            case DragOut(step, totalSteps, grabberRow, sCol) =>
-              val crawlFrames = Vector(snakeCrawlRight1, snakeCrawlRight2)
-              val frameIndex = step % crawlFrames.length
-              val snakeArt = crawlFrames(frameIndex)
-              val snakeCol = sCol + (step * stepSize)
-              val dragOffset = step * stepSize
-              val content = renderScene(
-                lines1,
-                screen.screenWidth,
-                screen.screenHeight,
-                grabberRow,
-                snakeCol,
-                snakeArt,
-                dragOffset
-              )
-              GrabStepResult(
-                renderedFrame = Some(ScreenAdjusted(content)),
-                nextPhase = if (step >= totalSteps) Done else DragOut(step + 1, totalSteps, grabberRow, sCol),
-                completed = step >= totalSteps
-              )
-            case Done =>
-              GrabStepResult(renderedFrame = None, nextPhase = Done, completed = true)
-          }
+    def snakeToSmoothChars(info: SnakeRenderInfo): Vector[SmoothChar] =
+      info.snakeArt.zipWithIndex.flatMap { case (line, rowOffset) =>
+        val trimmed = line.stripTrailing()
+        val row = info.snakeRow + rowOffset
+        trimmed.zipWithIndex.collect {
+          case (ch, colOffset) if ch != ' ' =>
+            SmoothChar(ch, info.snakeCol + colOffset, row)
         }
-        onTick = { (nrOfSteps: Int) =>
-          if (nrOfSteps <= 0) Monad[F].unit
-          else {
-            for {
-              phase <- phaseRef.get
-              result =
-                (0 until nrOfSteps).foldLeft(
-                  (phase, Option.empty[ScreenAdjusted], false)
-                ) { case ((currentPhase, renderedFrame, completed), _) =>
-                  if (completed) {
-                    (currentPhase, renderedFrame, true)
-                  } else {
-                    val stepResult = advancePhase(currentPhase)
-                    (
-                      stepResult.nextPhase,
-                      stepResult.renderedFrame.orElse(renderedFrame),
-                      stepResult.completed
-                    )
-                  }
-                }
-              (nextPhase, renderedFrame, completed) = result
-              _ <- phaseRef.set(nextPhase)
-              _ <- renderedFrame.traverse_(frame => console.clear() *> console.writeString(frame))
-              _ <- if (completed) done.complete(()).attempt.void else Monad[F].unit
-            } yield ()
-          }
-        }
-        tickerCallback = FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap(onTick)
-        sub <- ticker.subscribe(tickerCallback)
-        _ <- ticker.start
-        _ <- done.get.guarantee(sub.cancel)
-        _ <- console.clear()
-        _ <- console.writeString(slide2)
-      } yield ()
+      }
+
+    def renderWithOverlay(
+        info: SnakeRenderInfo,
+        lines: Vector[String],
+        screenWidth: Int,
+        screenHeight: Int,
+        gridLayer: GlideLayer.Overlay[F],
+        scrollFrac: Double = 0.0
+    ): F[Unit] = {
+      val overlayChars = snakeToSmoothChars(info)
+      val bgContent = renderScene(lines, screenWidth, screenHeight, 0, 0, Vector.empty, info.dragOffset)
+      val bgFrame = ScreenAdjusted(bgContent)
+      val scrollX = if (info.dragOffset > 0) scrollFrac else 0.0
+      console.clear() *> gridLayer.renderOntoScrolled(bgFrame, overlayChars, scrollX = scrollX)
     }
 
-    private def findLongestLineEnd(lines: Vector[String]): (Int, Int) = {
+    def findLongestLineEnd(lines: Vector[String]): (Int, Int) = {
       var maxRow = 0
       var maxCol = 0
       lines.zipWithIndex.foreach { case (line, row) =>
@@ -292,7 +183,7 @@ private[lote] object GrabTransition {
       (maxRow, maxCol + 1)
     }
 
-    private def renderScene(
+    def renderScene(
         lines: Vector[String],
         screenWidth: Int,
         screenHeight: Int,
@@ -309,9 +200,7 @@ private[lote] object GrabTransition {
             else line.take(screenWidth)
 
           val shifted = if (dragOffset > 0) {
-            (" " * Math.min(dragOffset, screenWidth) + paddedLine).take(
-              screenWidth
-            )
+            (" " * Math.min(dragOffset, screenWidth) + paddedLine).take(screenWidth)
           } else {
             paddedLine
           }
@@ -340,6 +229,129 @@ private[lote] object GrabTransition {
         .mkString("\n")
     }
 
-    override def userInput(input: UserInput): F[Unit] = Monad[F].unit
+    TickedTransition(console, ticker, animationSettings)
+      .buildWithSetup { (slide1Content, _slide2Content, complete) =>
+        for {
+          gridLayer <- GlideLayer.make[F](console, animationSettings.step, wrapThreshold = stepSize)
+          screen <- console.context
+          lines1 = slide1Content.content.split("\n", -1).toVector
+          maxSpawnRow = Math.max(1, Math.min(lines1.length, screen.screenHeight) - snakeHeight)
+          spawnRow = Random.nextInt(maxSpawnRow)
+          longestLineEnd = findLongestLineEnd(lines1)
+          (targetRow, targetCol) = longestLineEnd
+          snakeTargetRow = Math.max(0, targetRow - snakeHeight / 2)
+          startCol = screen.screenWidth
+          horizontalDistance = startCol - targetCol
+          crawlTotalSteps = Math.max(1, horizontalDistance / stepSize)
+          initialPhase: GrabPhase = CrawlIn(0, crawlTotalSteps, spawnRow, snakeTargetRow, targetCol)
+          phaseRef <- Ref[F].of(initialPhase)
+          snakeInfoRef <- Ref[F].of(Option.empty[SnakeRenderInfo])
+          holdFrames = Vector(4, 5, 3)
+          cumulativeBiteFrames = holdFrames.scanLeft(0)(_ + _).tail
+          totalBiteFrames = cumulativeBiteFrames.last
+          dragOutTotalSteps = Math.max(1, (screen.screenWidth + snakeWidth) / stepSize)
+          advancePhase = { (phase: GrabPhase) =>
+            phase match {
+              case CrawlIn(step, totalSteps, spawnRow, tRow, tCol) =>
+                val crawlFrames = Vector(snakeCrawlLeft1, snakeCrawlLeft2)
+                val frameIndex = step % crawlFrames.length
+                val snakeArt = crawlFrames(frameIndex)
+                val col = startCol - (step * stepSize)
+                val progress = step.toDouble / totalSteps.toDouble
+                val row = (spawnRow + ((tRow - spawnRow) * progress)).toInt
+                val content = renderScene(lines1, screen.screenWidth, screen.screenHeight, row, col, snakeArt)
+                GrabStepResult(
+                  renderedFrame = Some(ScreenAdjusted(content)),
+                  nextPhase = if (step >= totalSteps) Bite(0) else CrawlIn(step + 1, totalSteps, spawnRow, tRow, tCol),
+                  snakeInfo = Some(SnakeRenderInfo(snakeArt, row, col, 0))
+                )
+              case Bite(frame) =>
+                val scenes = Vector(snakeMouthOpenArt, snakeMouthWideArt, snakeBiteArt)
+                if (frame >= totalBiteFrames) {
+                  GrabStepResult(
+                    renderedFrame = None,
+                    nextPhase = DragOut(0, dragOutTotalSteps, snakeTargetRow, targetCol),
+                    snakeInfo = Some(SnakeRenderInfo(snakeBiteArt, snakeTargetRow, targetCol, 0))
+                  )
+                } else {
+                  val sceneIdx = cumulativeBiteFrames.indexWhere(_ > frame)
+                  val snakeArt = scenes(sceneIdx)
+                  val content =
+                    renderScene(lines1, screen.screenWidth, screen.screenHeight, snakeTargetRow, targetCol, snakeArt)
+                  GrabStepResult(
+                    renderedFrame = Some(ScreenAdjusted(content)),
+                    nextPhase = Bite(frame + 1),
+                    snakeInfo = Some(SnakeRenderInfo(snakeArt, snakeTargetRow, targetCol, 0))
+                  )
+                }
+              case DragOut(step, totalSteps, grabberRow, sCol) =>
+                val crawlFrames = Vector(snakeCrawlRight1, snakeCrawlRight2)
+                val frameIndex = step % crawlFrames.length
+                val snakeArt = crawlFrames(frameIndex)
+                val snakeCol = sCol + (step * stepSize)
+                val dragOffset = step * stepSize
+                val content = renderScene(
+                  lines1,
+                  screen.screenWidth,
+                  screen.screenHeight,
+                  grabberRow,
+                  snakeCol,
+                  snakeArt,
+                  dragOffset
+                )
+                GrabStepResult(
+                  renderedFrame = Some(ScreenAdjusted(content)),
+                  nextPhase = if (step >= totalSteps) Done else DragOut(step + 1, totalSteps, grabberRow, sCol),
+                  completed = step >= totalSteps,
+                  snakeInfo = Some(SnakeRenderInfo(snakeArt, grabberRow, snakeCol, dragOffset))
+                )
+              case Done =>
+                GrabStepResult(renderedFrame = None, nextPhase = Done, completed = true)
+            }
+          }
+        } yield TickedTransition.TickHandler(
+          onTick = (nrOfSteps: Int, progress: Double) => {
+            val scrollFrac = progress * stepSize
+            if (nrOfSteps <= 0) {
+              snakeInfoRef.get.flatMap {
+                case Some(info) =>
+                  renderWithOverlay(info, lines1, screen.screenWidth, screen.screenHeight, gridLayer, scrollFrac)
+                case None => Monad[F].unit
+              }
+            } else {
+              for {
+                phase <- phaseRef.get
+                result =
+                  (0 until nrOfSteps).foldLeft(
+                    (phase, Option.empty[ScreenAdjusted], false, Option.empty[SnakeRenderInfo])
+                  ) { case ((currentPhase, renderedFrame, completed, _snakeInfo), _) =>
+                    if (completed) {
+                      (currentPhase, renderedFrame, true, _snakeInfo)
+                    } else {
+                      val stepResult = advancePhase(currentPhase)
+                      (
+                        stepResult.nextPhase,
+                        stepResult.renderedFrame.orElse(renderedFrame),
+                        stepResult.completed,
+                        stepResult.snakeInfo.orElse(_snakeInfo)
+                      )
+                    }
+                  }
+                (nextPhase, renderedFrame, completed, latestSnakeInfo) = result
+                _ <- phaseRef.set(nextPhase)
+                _ <- latestSnakeInfo.traverse_(info => snakeInfoRef.set(Some(info)))
+                _ <- latestSnakeInfo match {
+                  case Some(info) =>
+                    renderWithOverlay(info, lines1, screen.screenWidth, screen.screenHeight, gridLayer, scrollFrac)
+                  case None =>
+                    renderedFrame.traverse_(frame => console.clear() *> console.writeString(frame))
+                }
+                _ <- if (completed) complete else Monad[F].unit
+              } yield ()
+            }
+          },
+          cleanup = gridLayer.clear()
+        )
+      }
   }
 }
