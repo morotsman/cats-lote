@@ -4,7 +4,7 @@ import cats.effect.{Ref, Temporal}
 import cats.effect.implicits._
 import cats.implicits._
 import com.github.morotsman.lote.api.{AnimationSettings, Screen, ScreenAdjusted, UserInput}
-import com.github.morotsman.lote.api.support.Clock
+import com.github.morotsman.lote.api.support.AnimationClock
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker}
 
 import scala.concurrent.duration.FiniteDuration
@@ -62,8 +62,8 @@ final class SlideTestHarness[F[_]] private (
   /** The simulated clock used by this harness. Advancing it makes `FixedStep` produce simulation steps. */
   def clock: SimulatedClock[F] = ticker.clock
 
-  /** Implicit `Clock[F]` backed by the simulated clock — pass this to `FixedStep` methods. */
-  implicit def clockInstance: Clock[F] = clock
+  /** Implicit `AnimationClock[F]` backed by the simulated clock — pass this to `FixedStep` methods. */
+  implicit def clockInstance: AnimationClock[F] = clock
 
   /** The simulated screen dimensions. */
   def screen: Screen = console.screen

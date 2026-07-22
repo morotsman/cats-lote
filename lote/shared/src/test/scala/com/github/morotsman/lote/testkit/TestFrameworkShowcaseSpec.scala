@@ -4,7 +4,7 @@ import cats.Applicative
 import cats.effect.{IO, Ref}
 import cats.implicits._
 import com.github.morotsman.lote.api._
-import com.github.morotsman.lote.api.support.{Clock, FixedStep}
+import com.github.morotsman.lote.api.support.{AnimationClock, FixedStep}
 import com.github.morotsman.lote.api.spi.{NConsole, Overlay, Slide, Ticker, TickerSubscription}
 import munit.CatsEffectSuite
 
@@ -123,7 +123,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
   // ──────────────────────────────────────────────────────────────────────────
   //  Section 2: SimulatedClock — time that only moves when you tell it to
   //
-  //  In production, Clock[F] reads the real system clock. SimulatedClock
+  //  In production, AnimationClock[F] reads the real system clock. SimulatedClock
   //  starts at zero and only advances when you call advance(). This makes
   //  animation timing fully deterministic.
   // ──────────────────────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
   //  Section 3: FixedStep + SimulatedClock — deterministic animation steps
   //
   //  FixedStep converts elapsed time into a discrete step count. It needs
-  //  a Clock[F] to read the current time. Combined with SimulatedClock,
+  //  an AnimationClock[F] to read the current time. Combined with SimulatedClock,
   //  you control exactly how many steps are produced — no flaky timing.
   //
   //  FixedStep.makeRef creates a Ref that tracks the last-read time and
@@ -167,7 +167,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
 
   test("FixedStep — standalone with explicit clock wiring") {
     // When using FixedStep outside of a harness, you wire the clock yourself.
-    // FixedStep.makeRef and consumeSteps both take an implicit Clock[F].
+    // FixedStep.makeRef and consumeSteps both take an implicit AnimationClock[F].
     //
     // You also choose the step size — how much simulated time equals one
     // animation step. The library default is AnimationSettings.DefaultStep
@@ -177,7 +177,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
       clock <- SimulatedClock.make[IO]()
       stepperRef <- {
         // The implicit clock tells FixedStep where to read time from.
-        implicit val c: Clock[IO] = clock
+        implicit val c: AnimationClock[IO] = clock
         FixedStep.makeRef[IO]
       }
       // At this point the clock is at 0ms and the stepper's "last read" is also 0ms.
@@ -186,8 +186,8 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
       // consumeSteps checks how much time has passed since the last call.
       // 48ms / 16ms per step = 3 full steps.
       steps <- {
-        implicit val c: Clock[IO] = clock
-        FixedStep.consumeSteps(stepperRef, stepSize)
+        implicit val c: AnimationClock[IO] = clock
+        FixedStep.consumeSteps(stepperRef, stepSize).map(_._1)
       }
     } yield assertEquals(steps, 3)
   }
@@ -206,7 +206,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
         // animationStep defaults to tickStep (16ms) when not overridden
       )
       stepper <- {
-        implicit val c: Clock[IO] = harness.clockInstance
+        implicit val c: AnimationClock[IO] = harness.clockInstance
         FixedStep.makeRef[IO]
       }
       // 3 ticks × 16ms = 48ms of simulated time on the shared clock.
@@ -214,9 +214,9 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
       steps <- {
         // Use the overload that reads the step size from AnimationSettings.
         // No need to pass 16.millis explicitly — it comes from the harness.
-        implicit val c: Clock[IO] = harness.clockInstance
+        implicit val c: AnimationClock[IO] = harness.clockInstance
         implicit val as: AnimationSettings = harness.animationSettings
-        FixedStep.consumeSteps(stepper)
+        FixedStep.consumeSteps(stepper).map(_._1)
       }
     } yield assertEquals(steps, 3) // 48ms / 16ms = 3 steps
   }
@@ -225,20 +225,20 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
     for {
       clock <- SimulatedClock.make[IO]()
       stepper <- {
-        implicit val c: Clock[IO] = clock
+        implicit val c: AnimationClock[IO] = clock
         FixedStep.makeRef[IO]
       }
       // Advance 10ms with a 16ms step → not enough for a full step yet.
       _ <- clock.advance(10.millis)
       steps1 <- {
-        implicit val c: Clock[IO] = clock
-        FixedStep.consumeSteps(stepper, 16.millis)
+        implicit val c: AnimationClock[IO] = clock
+        FixedStep.consumeSteps(stepper, 16.millis).map(_._1)
       }
       // Advance another 10ms → total accumulated = 20ms → 1 step, 4ms remainder.
       _ <- clock.advance(10.millis)
       steps2 <- {
-        implicit val c: Clock[IO] = clock
-        FixedStep.consumeSteps(stepper, 16.millis)
+        implicit val c: AnimationClock[IO] = clock
+        FixedStep.consumeSteps(stepper, 16.millis).map(_._1)
       }
     } yield {
       assertEquals(steps1, 0) // 10ms < 16ms, no step yet
@@ -439,13 +439,13 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
   private def blockingTransition(
       console: NConsole[IO],
       ticker: Ticker[IO]
-  )(implicit clock: Clock[IO]): IO[Unit] = {
+  )(implicit clock: AnimationClock[IO]): IO[Unit] = {
     import cats.effect.Deferred
     for {
       done <- Deferred[IO, Unit]
       stepperRef <- FixedStep.makeRef[IO]
       sub <- ticker.subscribe {
-        FixedStep.consumeSteps(stepperRef, 10.millis).flatMap { steps =>
+        FixedStep.consumeSteps(stepperRef, 10.millis).flatMap { case (steps, _) =>
           if (steps > 0)
             console.writeString(ScreenAdjusted(s"step $steps")) *>
               done.complete(()).attempt.void
@@ -467,7 +467,7 @@ class TestFrameworkShowcaseSpec extends CatsEffectSuite {
       // blockingTransition blocks on Deferred.get. Without runWithTicking,
       // the test would hang because no ticks would ever fire.
       _ <- harness.runWithTicking {
-        implicit val c: Clock[IO] = harness.clockInstance
+        implicit val c: AnimationClock[IO] = harness.clockInstance
         blockingTransition(harness.console, harness.ticker)
       }
       frames <- harness.writtenFrames

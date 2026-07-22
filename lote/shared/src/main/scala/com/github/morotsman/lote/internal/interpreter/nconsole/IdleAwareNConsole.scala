@@ -2,7 +2,16 @@ package com.github.morotsman.lote.internal.interpreter.nconsole
 
 import cats.Monad
 import cats.implicits._
-import com.github.morotsman.lote.api.{Alignment, MouseClick, MouseMove, PlatformCapability, RenderEffect, Screen, ScreenAdjusted, UserInput}
+import com.github.morotsman.lote.api.{
+  Alignment,
+  MouseClick,
+  MouseMove,
+  PlatformCapability,
+  RenderEffect,
+  Screen,
+  ScreenAdjusted,
+  UserInput
+}
 import com.github.morotsman.lote.internal.algebra.IdleDetector
 import com.github.morotsman.lote.api.spi.NConsole
 

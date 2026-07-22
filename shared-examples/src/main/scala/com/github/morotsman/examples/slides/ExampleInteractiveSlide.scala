@@ -4,14 +4,9 @@ import cats.Monad
 import cats.effect.{Ref, Temporal}
 import cats.effect.std.Queue
 import cats.implicits._
-import com.github.morotsman.lote.api.{
-  AnimationSettings,
-  Character,
-  ScreenAdjusted,
-  UserInput
-}
+import com.github.morotsman.lote.api.{AnimationSettings, Character, ScreenAdjusted, UserInput}
 import com.github.morotsman.lote.api.builders.ContextualF
-import com.github.morotsman.lote.api.support.{Clock, FixedStep}
+import com.github.morotsman.lote.api.support.{AnimationClock, FixedStep, GlideLayer, SmoothChar}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, TickerSubscription}
 
 import scala.util.Random
@@ -92,13 +87,14 @@ object Animator {
       console: NConsole[F],
       ticker: Ticker[F],
       animationSettings: AnimationSettings
-  )(implicit clock: Clock[F]): F[Animator[F]] = {
+  )(implicit clock: AnimationClock[F]): F[Animator[F]] = {
 
     for {
       queue <- Queue.unbounded[F, Direction]
       stateRef <- Ref[F].of(Option.empty[AnimatorState])
       subscriptionRef <- Ref[F].of(Option.empty[TickerSubscription[F]])
       stepperRef <- FixedStep.makeRef[F]
+      glideLayer <- GlideLayer.make[F](console, animationSettings.step)
     } yield new Animator[F] {
 
       // The animator owns the mutable game state, the queued input, and the ticker subscription.
@@ -243,14 +239,11 @@ object Animator {
         ScreenAdjusted(lines.take(screenHeight).mkString("\n"))
       }
 
-      private def renderScreen(
+      private def renderBackground(
           s: AnimatorState,
           screenWidth: Int
       ): ScreenAdjusted = {
-        val screenWithWorm = s.worm.segments.foldRight(s.emptyScreen) { case (WormSegment(index, _, sym), screen) =>
-          screen.updated(index, sym)
-        }
-        val finalScreen = s.heartIndexes.foldRight(screenWithWorm) { case (index, screen) =>
+        val finalScreen = s.heartIndexes.foldRight(s.emptyScreen) { case (index, screen) =>
           screen.updated(index, '?')
         }
         ScreenAdjusted(
@@ -258,57 +251,59 @@ object Animator {
         )
       }
 
-      // User input is consumed here (via tryTake) rather than applied immediately in changeDirection.
-      // This ensures direction changes are synchronized with the game loop, preventing race conditions
-      // with state and limiting direction changes to one per frame (avoiding 180° turns that would
-      // cause instant self-collision). The trade-off is up to ~40ms input latency, which is imperceptible.
+      /** Convert worm segments to SmoothChars for the overlay. */
+      private def wormToSmoothChars(worm: Worm, screenWidth: Int): Vector[SmoothChar] =
+        worm.segments.map { seg =>
+          SmoothChar(seg.symbol, seg.index % screenWidth, seg.index / screenWidth)
+        }
+
       private def onTick(nrOfSteps: Int): F[Unit] =
-        if (nrOfSteps <= 0) Monad[F].unit
-        else
-          for {
-            maybeState <- stateRef.get
-            _ <- maybeState.traverse_ { s =>
-              if (!s.running) Monad[F].unit
-              else if (hasSelfCollision(s.worm)) {
-                for {
-                  screen <- console.context
-                  _ <- console.writeString(renderDeathScreen(screen.screenWidth, screen.screenHeight))
-                  _ <- stateRef.update(_.map(_.copy(running = false)))
-                } yield ()
-              } else {
-                for {
-                  screen <- console.context
-                  updatedState <- (0 until nrOfSteps).toList.foldLeftM(s) {
-                    case (currentState, _) if !currentState.running =>
-                      Monad[F].pure(currentState)
-                    case (currentState, _) if hasSelfCollision(currentState.worm) =>
-                      Monad[F].pure(currentState.copy(running = false))
-                    case (currentState, _) =>
-                      queue.tryTake.map { maybeUserInput =>
-                        updateWormState(
-                          currentState,
-                          maybeUserInput,
-                          screen.screenWidth
-                        )
-                      }
-                  }
-                  _ <-
-                    if (updatedState.running)
-                      console.writeString(
-                        renderScreen(updatedState, screen.screenWidth)
-                      )
-                    else Monad[F].unit
-                  _ <- stateRef.set(Some(updatedState))
-                } yield ()
-              }
+        for {
+          maybeState <- stateRef.get
+          _ <- maybeState.traverse_ { s =>
+            if (!s.running) Monad[F].unit
+            else if (hasSelfCollision(s.worm)) {
+              for {
+                screen <- console.context
+                _ <- glideLayer.clear()
+                _ <- console.writeString(renderDeathScreen(screen.screenWidth, screen.screenHeight))
+                _ <- stateRef.update(_.map(_.copy(running = false)))
+              } yield ()
+            } else if (nrOfSteps <= 0) {
+              glideLayer.render(wormToSmoothChars(s.worm, s.screenWidth))
+            } else {
+              for {
+                screen <- console.context
+                updatedState <- (0 until nrOfSteps).toList.foldLeftM(s) {
+                  case (currentState, _) if !currentState.running =>
+                    Monad[F].pure(currentState)
+                  case (currentState, _) if hasSelfCollision(currentState.worm) =>
+                    Monad[F].pure(currentState.copy(running = false))
+                  case (currentState, _) =>
+                    queue.tryTake.map { maybeUserInput =>
+                      updateWormState(currentState, maybeUserInput, screen.screenWidth)
+                    }
+                }
+                _ <-
+                  if (updatedState.running) {
+                    // Render hearts on the grid; GlideLayer handles the worm
+                    // (smooth overlay on WebGL, composited onto grid on terminal).
+                    val bg = renderBackground(updatedState, screen.screenWidth)
+                    glideLayer
+                      .renderOnto(bg, wormToSmoothChars(updatedState.worm, screen.screenWidth))
+                      .flatMap(console.writeString)
+                  } else Monad[F].unit
+                _ <- stateRef.set(Some(updatedState))
+              } yield ()
             }
-          } yield ()
+          }
+        } yield ()
 
       // The ticker callback is the bridge between the shared session clock and the game loop.
-      // `FixedStep.consumeSteps(...)` turns wall-clock time into zero or more simulation steps,
-      // and `onTick` applies those steps to the current game state.
+      // `FixedStep.consumeSteps(...)` turns wall-clock time into zero or more simulation steps.
+      // Smooth sub-cell interpolation is handled internally by the overlay.
       private val tickerCallback: F[Unit] =
-        FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap(onTick)
+        FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap { case (steps, _) => onTick(steps) }
 
       override def animate(): F[Unit] = for {
         screen <- console.context
@@ -341,11 +336,10 @@ object Animator {
 
       override def stop(): F[Unit] = for {
         maybeSub <- subscriptionRef.get
-        // Leaving the slide cancels future updates and drops the in-memory state so the next visit
-        // starts from a clean slate.
         _ <- maybeSub.traverse_(_.cancel)
         _ <- subscriptionRef.set(None)
         _ <- stateRef.set(None)
+        _ <- glideLayer.clear()
       } yield ()
 
       override def changeDirection(input: Direction): F[Unit] =

@@ -100,6 +100,18 @@ private[lote] object Middleware {
           _ <- state.update(_.copy(lastContent = Some(s)))
           _ <- ensureSubscribed()
           withOverlay <- applyMiddleware(s)
+          // On WebGL backends, tell the renderer which rows are overlay content
+          // (timer, progress bar) so they are not affected by canvas scroll offset.
+          _ <-
+            if (capabilities.contains(PlatformCapability.Effects)) {
+              val originalRows = s.content.split("\n", -1)
+              val overlayRows = withOverlay.content.split("\n", -1)
+              val fixedIndices = (0 until Math.max(originalRows.length, overlayRows.length))
+                .filter(i => originalRows.lift(i) != overlayRows.lift(i))
+                .toSet
+              if (fixedIndices.nonEmpty) console.applyEffect(RenderEffect.SetFixedRows(fixedIndices))
+              else Monad[F].unit
+            } else Monad[F].unit
           _ <- console.writeString(withOverlay)
           _ <- state.update(_.copy(lastRendered = Some(withOverlay.content)))
         } yield ()

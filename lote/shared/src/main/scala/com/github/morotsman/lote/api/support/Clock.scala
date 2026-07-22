@@ -10,26 +10,32 @@ import scala.concurrent.duration.FiniteDuration
   * In production, this delegates to `Temporal[F].monotonic` (wall-clock monotonic time). In tests, you can replace it
   * with a `SimulatedClock` that advances only when you tell it to, making animation tests instantaneous and
   * deterministic.
+  *
+  * Named `AnimationClock` (rather than just `Clock`) to avoid confusion with `cats.effect.Clock`,
+  * which is a different abstraction from the Cats Effect library.
   */
-@implicitNotFound("No implicit Clock[${F}] found. A Clock instance is derived automatically from Temporal[${F}], or you can provide a SimulatedClock in tests via SlideTestHarness.")
-trait Clock[F[_]] {
+@implicitNotFound(
+  "No implicit AnimationClock[${F}] found. An AnimationClock instance is derived automatically from Temporal[${F}], or you can provide a SimulatedClock in tests via SlideTestHarness."
+)
+trait AnimationClock[F[_]] {
 
   /** Returns the current monotonic time. */
   def monotonic: F[FiniteDuration]
 }
 
-object Clock extends ClockLowPriority {
-  @inline def apply[F[_]](implicit instance: Clock[F]): Clock[F] = instance
+object AnimationClock extends AnimationClockLowPriority {
+  @inline def apply[F[_]](implicit instance: AnimationClock[F]): AnimationClock[F] = instance
 }
 
-/** Low-priority implicit derivation so that an explicit `Clock[F]` instance (e.g., `SimulatedClock`) takes priority
-  * over this derived one.
+/** Low-priority implicit derivation so that an explicit `AnimationClock[F]` instance (e.g., `SimulatedClock`) takes
+  * priority over this derived one.
   */
-trait ClockLowPriority {
+trait AnimationClockLowPriority {
 
-  /** Derives a `Clock[F]` from `Temporal[F].monotonic` (real wall-clock time). */
-  implicit def fromTemporal[F[_]: Temporal]: Clock[F] =
-    new Clock[F] {
+  /** Derives an `AnimationClock[F]` from `Temporal[F].monotonic` (real wall-clock time). */
+  implicit def fromTemporal[F[_]: Temporal]: AnimationClock[F] =
+    new AnimationClock[F] {
       override def monotonic: F[FiniteDuration] = Temporal[F].monotonic
     }
 }
+

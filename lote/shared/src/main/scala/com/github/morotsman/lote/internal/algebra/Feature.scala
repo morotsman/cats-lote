@@ -7,8 +7,8 @@ import com.github.morotsman.lote.internal.model.Presentation
 /** A registered feature that bundles an overlay with lifecycle hooks.
   *
   * Instead of manually wiring each overlay's slide-change callback, title setup, and executor subscription in
-  * `runSession`, each feature self-registers all its concerns through this trait. The session loop then processes
-  * all features uniformly.
+  * `runSession`, each feature self-registers all its concerns through this trait. The session loop then processes all
+  * features uniformly.
   */
 private[lote] trait Feature[F[_]] {
 
@@ -35,4 +35,3 @@ private[lote] object Feature {
     def onExecutorReady(executor: PresentationExecutor[F]): F[Unit] = Monad[F].unit
   }
 }
-

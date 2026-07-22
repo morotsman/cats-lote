@@ -53,8 +53,26 @@ lazy val lote = crossProject(JVMPlatform, JSPlatform)
 lazy val loteJVM = lote.jvm
 lazy val loteJS  = lote.js
 
+lazy val sharedExamples = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("shared-examples"))
+  .settings(commonSettings)
+  .settings(
+    scalacOptions ++= Seq(
+      "-Ymacro-annotations"
+    )
+  )
+  .jvmSettings()
+  .jsSettings(
+    scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) }
+  )
+  .dependsOn(lote)
+
+lazy val sharedExamplesJVM = sharedExamples.jvm
+lazy val sharedExamplesJS  = sharedExamples.js
+
 lazy val examples = (project in file("examples"))
-  .dependsOn(loteJVM % "test->test;compile->compile")
+  .dependsOn(loteJVM % "test->test;compile->compile", sharedExamplesJVM)
   .settings(commonSettings)
   .settings(
     testFrameworks += new TestFramework("munit.Framework"),
@@ -65,12 +83,12 @@ lazy val examples = (project in file("examples"))
 
 lazy val browserExamples = (project in file("browser-examples"))
   .enablePlugins(ScalaJSPlugin)
-  .dependsOn(loteJS % "test->test;compile->compile")
+  .dependsOn(loteJS % "test->test;compile->compile", sharedExamplesJS)
   .settings(commonSettings)
   .settings(
     scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.ESModule) },
     scalaJSUseMainModuleInitializer := true,
-    Compile / mainClass := Some("com.github.morotsman.examples.AdvancedWebGLExample"),
+    Compile / mainClass := Some("com.github.morotsman.examples.SpatialLayoutExample"),
     testFrameworks += new TestFramework("munit.Framework"),
     scalacOptions ++= Seq(
       "-Ymacro-annotations"
@@ -78,7 +96,7 @@ lazy val browserExamples = (project in file("browser-examples"))
   )
 
 lazy val root = (project in file("."))
-  .aggregate(loteJVM, loteJS, examples, browserExamples)
+  .aggregate(loteJVM, loteJS, sharedExamplesJVM, sharedExamplesJS, examples, browserExamples)
   .settings(
     name := "cats-lote"
   )

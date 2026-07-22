@@ -13,7 +13,9 @@
 <body>
   <div id="terminal"></div>
 
-  <!-- Three.js via CDN -->
+  <!-- Three.js r160 loaded via CDN as a global (window.THREE).
+       This version must stay in sync with the facades in ThreeJsFacade.scala.
+       Do NOT change without verifying facade compatibility. -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
   <!-- Scala.js output (ESModule) -->

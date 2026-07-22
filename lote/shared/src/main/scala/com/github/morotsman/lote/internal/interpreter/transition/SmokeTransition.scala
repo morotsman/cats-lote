@@ -1,17 +1,16 @@
 package com.github.morotsman.lote.internal.interpreter.transition
 
 import cats.Monad
-import cats.effect.{Deferred, Ref, Temporal}
-import cats.effect.implicits._
+import cats.effect.{Ref, Temporal}
 import cats.implicits._
-import com.github.morotsman.lote.api.{AnimationSettings, PlatformCapability, RenderEffect, ScreenAdjusted, UserInput}
-import com.github.morotsman.lote.api.support.FixedStep
+import com.github.morotsman.lote.api.{AnimationSettings, PlatformCapability, RenderEffect, UserInput}
+import com.github.morotsman.lote.api.support.{AnimationClock, TickedTransition}
 import com.github.morotsman.lote.api.spi.{NConsole, Slide, Ticker, Transition}
 
 /** A transition that dissolves the current slide with a smoke/dissolve effect on WebGL.
   *
-  * On platforms that support `Effects`, characters fade out and drift upward
-  * (smoke) or simply dissolve (dissolve) before the next slide appears.
+  * On platforms that support `Effects`, characters fade out and drift upward (smoke) or simply dissolve (dissolve)
+  * before the next slide appears.
   *
   * On terminal-only platforms, falls back to the built-in FallingCharactersTransition.
   */
@@ -36,7 +35,7 @@ private[lote] object SmokeTransition {
       console: NConsole[F],
       ticker: Ticker[F],
       animationSettings: AnimationSettings
-  ): Transition[F] = new Transition[F] {
+  )(implicit clock: AnimationClock[F]): Transition[F] = new Transition[F] {
 
     private val supportsEffects: Boolean =
       console.capabilities.contains(PlatformCapability.Effects)
@@ -50,43 +49,38 @@ private[lote] object SmokeTransition {
 
     /** GPU-accelerated smoke/dissolve transition. */
     private def effectfulTransition(from: Slide[F], to: Slide[F]): F[Unit] = {
-      for {
-        slide1 <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-        slide2 <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-        stepperRef <- FixedStep.makeRef[F]
-        done <- Deferred[F, Unit]
-        progressRef <- Ref[F].of(0.0)
-        _ <- console.writeString(slide1)
+      val totalSteps = 30
+      val stepIncrement = 1.0 / totalSteps
 
-        totalSteps = 30
-        stepIncrement = 1.0 / totalSteps
-
-        onTick = { (nrOfSteps: Int) =>
+      TickedTransition(console, ticker, animationSettings)
+        .buildWithSetup { (slide1, _slide2, complete) =>
           for {
-            progress <- progressRef.get
-            newProgress = Math.min(1.0, progress + stepIncrement * nrOfSteps)
-            _ <- progressRef.set(newProgress)
-            _ <-
-              if (newProgress >= 1.0) {
-                console.applyEffect(RenderEffect.ClearEffects) *>
-                  console.clear() *>
-                  done.complete(()).attempt.void
-              } else {
-                val effect = style match {
-                  case Smoke    => RenderEffect.Smoke(newProgress)
-                  case Dissolve => RenderEffect.Dissolve(newProgress)
-                }
-                console.applyEffect(effect)
-              }
-          } yield ()
+            progressRef <- Ref[F].of(0.0)
+            _           <- console.writeString(slide1)
+          } yield TickedTransition.TickHandler(
+            onTick = (nrOfSteps: Int, _progress: Double) => {
+              for {
+                progress <- progressRef.get
+                newProgress = Math.min(1.0, progress + stepIncrement * nrOfSteps)
+                _ <- progressRef.set(newProgress)
+                _ <-
+                  if (newProgress >= 1.0) {
+                    console.applyEffect(RenderEffect.ClearEffects) *>
+                      console.clear() *>
+                      complete
+                  } else {
+                    val effect = style match {
+                      case Smoke    => RenderEffect.Smoke(newProgress)
+                      case Dissolve => RenderEffect.Dissolve(newProgress)
+                    }
+                    console.applyEffect(effect)
+                  }
+              } yield ()
+            },
+            cleanup = console.applyEffect(RenderEffect.ClearEffects)
+          )
         }
-
-        tickerCallback = FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap(onTick)
-        sub <- ticker.subscribe(tickerCallback)
-        _ <- ticker.start
-        _ <- done.get.guarantee(sub.cancel *> console.applyEffect(RenderEffect.ClearEffects))
-        _ <- console.writeString(slide2)
-      } yield ()
+        .transition(from, to)
     }
 
     /** Fallback: use falling characters on terminal platforms. */
@@ -103,5 +97,3 @@ private[lote] object SmokeTransition {
     override def userInput(input: UserInput): F[Unit] = Monad[F].unit
   }
 }
-
-

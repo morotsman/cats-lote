@@ -15,7 +15,9 @@ import scala.annotation.implicitNotFound
   *
   * The built-in JLine implementation is available via `JLineTerminal.resource[F]()`.
   */
-@implicitNotFound("No implicit Terminal[${F}] found. Use JLineTerminal.resource() for a JLine-backed terminal, or provide your own Terminal[${F}] implementation for alternative backends (e.g., web-based).")
+@implicitNotFound(
+  "No implicit Terminal[${F}] found. Use JLineTerminal.resource() for a JLine-backed terminal, or provide your own Terminal[${F}] implementation for alternative backends (e.g., web-based)."
+)
 trait Terminal[F[_]] {
 
   /** Read a single character code from the terminal.
@@ -33,6 +35,16 @@ trait Terminal[F[_]] {
   /** Write a raw string to the terminal output. */
   def write(s: String): F[Unit]
 
+  /** Write a raw ANSI escape string directly to the terminal output,
+    * bypassing any frame-diffing or buffering logic.
+    *
+    * The default implementation delegates to `write`, which is correct for
+    * backends that do not perform differential rendering. Backends that use
+    * frame-diffing (e.g. JLineTerminal) should override this to write
+    * directly to the underlying output stream.
+    */
+  def writeRaw(s: String): F[Unit] = write(s)
+
   /** Flush the terminal output buffer. */
   def flush(): F[Unit]
 
@@ -41,16 +53,16 @@ trait Terminal[F[_]] {
 
   /** Advertises what this terminal backend can render.
     *
-    * Override in backends that support richer rendering (sub-pixel positioning, effects, 3D transforms).
-    * The default is `CharacterGrid` only, which is appropriate for JLine and xterm.js terminals.
+    * Override in backends that support richer rendering (sub-pixel positioning, effects, 3D transforms). The default is
+    * `CharacterGrid` only, which is appropriate for JLine and xterm.js terminals.
     */
   def capabilities: Set[PlatformCapability] = Set(PlatformCapability.CharacterGrid)
 
   /** Returns a reference to the shared 3D scene, if the backend supports spatial mode.
     *
-    * On WebGL backends in spatial mode, this returns `Some(Scene3DRef)` which can be cast
-    * to `com.github.morotsman.lote.api.Scene3DRef` for adding 3D geometry to the shared scene.
-    * On terminal backends this returns `None`.
+    * On WebGL backends in spatial mode, this returns `Some(Scene3DRef)` which can be cast to
+    * `com.github.morotsman.lote.api.Scene3DRef` for adding 3D geometry to the shared scene. On terminal backends this
+    * returns `None`.
     */
   def scene3DRef: Option[Any] = None
 }

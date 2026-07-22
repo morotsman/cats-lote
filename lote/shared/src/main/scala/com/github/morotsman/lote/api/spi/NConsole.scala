@@ -4,7 +4,9 @@ import com.github.morotsman.lote.api.{Alignment, PlatformCapability, RenderEffec
 
 import scala.annotation.implicitNotFound
 
-@implicitNotFound("No implicit NConsole[${F}] found. An NConsole instance is provided by SlideContext inside slide/transition/overlay builders, or by SlideTestHarness in tests.")
+@implicitNotFound(
+  "No implicit NConsole[${F}] found. An NConsole instance is provided by SlideContext inside slide/transition/overlay builders, or by SlideTestHarness in tests."
+)
 trait NConsole[F[_]] {
   def read(timeoutInMillis: Long): F[UserInput]
 
@@ -30,16 +32,16 @@ trait NConsole[F[_]] {
 
   /** Apply a visual effect to the current rendering.
     *
-    * On capable backends (WebGL), this triggers GPU-accelerated effects like 3D flips, dissolve, smoke, etc.
-    * On terminal-only backends (JLine, xterm.js), this is a no-op.
+    * On capable backends (WebGL), this triggers GPU-accelerated effects like 3D flips, dissolve, smoke, etc. On
+    * terminal-only backends (JLine, xterm.js), this is a no-op.
     */
   def applyEffect(effect: RenderEffect): F[Unit]
 
   /** Returns a reference to the shared 3D scene, if the backend supports spatial mode.
     *
-    * On WebGL backends in spatial mode, this returns `Some(Scene3DRef)` which can be cast
-    * to `com.github.morotsman.lote.api.Scene3DRef` for adding 3D geometry to the shared scene.
-    * On terminal backends this returns `None`.
+    * On WebGL backends in spatial mode, this returns `Some(Scene3DRef)` which can be cast to
+    * `com.github.morotsman.lote.api.Scene3DRef` for adding 3D geometry to the shared scene. On terminal backends this
+    * returns `None`.
     */
   def scene3DRef: Option[Any] = None
 }

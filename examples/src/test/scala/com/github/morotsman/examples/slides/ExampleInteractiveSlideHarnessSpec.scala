@@ -2,7 +2,6 @@ package com.github.morotsman.examples.slides
 
 import cats.effect.{IO, Ref}
 import com.github.morotsman.lote.api.{Character, Key, Screen, SpecialKey}
-import com.github.morotsman.lote.api.support.Clock
 import com.github.morotsman.lote.testkit.{SlideTestHarness, TestConsole}
 import munit.CatsEffectSuite
 
@@ -109,7 +108,7 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
         tickStep = 1.millis
       )
       animator <- {
-        implicit val clock: Clock[IO] = harness.clockInstance
+        import harness.clockInstance
         Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
       slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)
@@ -129,7 +128,7 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
         tickStep = 1.millis
       )
       animator <- {
-        implicit val clock: Clock[IO] = harness.clockInstance
+        import harness.clockInstance
         Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
       slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)
@@ -155,7 +154,7 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
         tickStep = 1.millis
       )
       animator <- {
-        implicit val clock: Clock[IO] = harness.clockInstance
+        import harness.clockInstance
         Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
       slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)
@@ -214,7 +213,7 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
       )
       _ = Random.setSeed(seed)
       animator <- {
-        implicit val clock: Clock[IO] = harness.clockInstance
+        import harness.clockInstance
         Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
       slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)
@@ -266,7 +265,7 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
       )
       _ = Random.setSeed(seed)
       animator <- {
-        implicit val clock: Clock[IO] = harness.clockInstance
+        import harness.clockInstance
         Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
       slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)

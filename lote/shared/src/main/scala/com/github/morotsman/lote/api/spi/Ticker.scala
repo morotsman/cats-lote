@@ -5,7 +5,9 @@ import scala.annotation.implicitNotFound
 /** A centralized tick source that drives render loops. Components subscribe to receive periodic tick notifications
   * instead of each maintaining their own sleep-based loop.
   */
-@implicitNotFound("No implicit Ticker[${F}] found. A Ticker instance is provided by SlideContext inside slide/transition/overlay builders, or by SlideTestHarness in tests.")
+@implicitNotFound(
+  "No implicit Ticker[${F}] found. A Ticker instance is provided by SlideContext inside slide/transition/overlay builders, or by SlideTestHarness in tests."
+)
 trait Ticker[F[_]] {
 
   /** Subscribe a callback to be invoked on each tick. Returns an unsubscribe token.

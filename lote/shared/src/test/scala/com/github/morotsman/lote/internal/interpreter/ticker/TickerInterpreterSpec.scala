@@ -86,7 +86,10 @@ class TickerInterpreterSpec extends CatsEffectSuite {
         c2Final <- counter2.get
       } yield {
         // After cancel, counter1 should not increase (allow +1 for a tick that was in-flight during cancel)
-        assert(c1Final - c1AtCancel <= 1, s"Expected counter1 to stop after cancel, got before=$c1AtCancel after=$c1Final")
+        assert(
+          c1Final - c1AtCancel <= 1,
+          s"Expected counter1 to stop after cancel, got before=$c1AtCancel after=$c1Final"
+        )
         assert(
           c2Final > c1Final,
           s"Expected counter2 ($c2Final) > counter1 ($c1Final)"

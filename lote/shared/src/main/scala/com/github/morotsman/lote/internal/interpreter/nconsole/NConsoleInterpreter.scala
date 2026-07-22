@@ -70,6 +70,10 @@ private[lote] object NConsoleInterpreter {
               result <- input match {
                 case Key(k) if k == SpecialKey.Timeout =>
                   Monad[F].pure(Either.left(()))
+                case _: MouseMove =>
+                  Monad[F].pure(Either.left(()))
+                case _: MouseClick =>
+                  Monad[F].pure(Either.left(()))
                 case _ =>
                   Monad[F].pure(Either.right(input))
               }
@@ -114,7 +118,25 @@ private[lote] object NConsoleInterpreter {
         override def applyEffect(effect: RenderEffect): F[Unit] =
           terminal match {
             case et: EffectfulTerminal[F @unchecked] => et.applyEffect(effect)
-            case _ => Sync[F].unit
+            case _ =>
+              effect match {
+                case RenderEffect.RenderFloatingChars(chars) if chars.nonEmpty =>
+                  // Fallback for terminal backends: render floating chars at
+                  // the nearest discrete grid position using ANSI cursor movement.
+                  val commands = chars.flatMap { fc =>
+                    val col = math.round(fc.cellX).toInt
+                    val row = math.round(fc.cellY).toInt
+                    if (col >= 0 && col < width && row >= 0 && row < height)
+                      Some(s"\u001b[${row + 1};${col + 1}H${fc.char}")
+                    else
+                      None
+                  }
+                  if (commands.nonEmpty)
+                    terminal.writeRaw(commands.mkString)
+                  else
+                    Sync[F].unit
+                case _ => Sync[F].unit
+              }
           }
       }
     }
@@ -150,7 +172,6 @@ private[lote] object NConsoleInterpreter {
       }
     }
   }
-
 
   /** Creates an NConsole as a Resource backed by the given Terminal. Terminal cleanup (close) is called on release. */
   private[lote] def resource[F[_]: Sync](terminal: TerminalAlgebra[F]): Resource[F, NConsole[F]] =

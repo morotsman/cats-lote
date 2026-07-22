@@ -2,7 +2,7 @@ package com.github.morotsman.examples.slides
 
 import cats.effect.IO
 import com.github.morotsman.lote.api.{Key, Screen, SpecialKey}
-import com.github.morotsman.lote.api.support.Clock
+import com.github.morotsman.lote.api.support.{AnimationClock, TickedTransition}
 import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
@@ -12,6 +12,14 @@ import scala.concurrent.duration._
   */
 class SweepRightTransitionHarnessSpec extends CatsEffectSuite {
 
+  /** Helper: create a SweepRightTransition using the harness's pre-wired builder.
+    * `TickedTransition.forTest(harness)` bundles console, ticker, and animationSettings.
+    */
+  private def createTransition(harness: SlideTestHarness[IO], columnsPerStep: Int = 2) = {
+    implicit val clock: AnimationClock[IO] = harness.clockInstance
+    SweepRightTransition.create[IO](columnsPerStep, TickedTransition.forTest(harness))
+  }
+
   test("sweep completes and shows target slide content") {
     for {
       harness <- SlideTestHarness.make[IO](
@@ -20,15 +28,7 @@ class SweepRightTransitionHarnessSpec extends CatsEffectSuite {
       )
       from = SlideTestHarness.fixedSlide[IO]("AAAA")
       to = SlideTestHarness.fixedSlide[IO]("BBBB")
-      transition = {
-        implicit val clock: Clock[IO] = harness.clockInstance
-        SweepRightTransition.create[IO](
-          columnsPerStep = 2,
-          harness.console,
-          harness.ticker,
-          harness.animationSettings
-        )
-      }
+      transition = createTransition(harness)
       _ <- harness.runWithTicking(transition.transition(from, to))
       written <- harness.writtenFrames
     } yield {
@@ -45,15 +45,7 @@ class SweepRightTransitionHarnessSpec extends CatsEffectSuite {
       )
       from = SlideTestHarness.fixedSlide[IO]("AAAA")
       to = SlideTestHarness.fixedSlide[IO]("BBBB")
-      transition = {
-        implicit val clock: Clock[IO] = harness.clockInstance
-        SweepRightTransition.create[IO](
-          columnsPerStep = 2,
-          harness.console,
-          harness.ticker,
-          harness.animationSettings
-        )
-      }
+      transition = createTransition(harness)
       _ <- harness.runWithTicking(transition.transition(from, to))
       written <- harness.writtenFrames
     } yield {
@@ -73,15 +65,7 @@ class SweepRightTransitionHarnessSpec extends CatsEffectSuite {
       )
       from = SlideTestHarness.fixedSlide[IO]("AAAA")
       to = SlideTestHarness.fixedSlide[IO]("BBBB")
-      transition = {
-        implicit val clock: Clock[IO] = harness.clockInstance
-        SweepRightTransition.create[IO](
-          columnsPerStep = 2,
-          harness.console,
-          harness.ticker,
-          harness.animationSettings
-        )
-      }
+      transition = createTransition(harness)
       _ <- harness.runWithTicking(transition.transition(from, to))
       cleared <- harness.clearCount
     } yield {
@@ -92,15 +76,7 @@ class SweepRightTransitionHarnessSpec extends CatsEffectSuite {
   test("userInput is a no-op") {
     for {
       harness <- SlideTestHarness.make[IO](screen = Screen(4, 1), tickStep = 5.millis)
-      transition = {
-        implicit val clock: Clock[IO] = harness.clockInstance
-        SweepRightTransition.create[IO](
-          columnsPerStep = 2,
-          harness.console,
-          harness.ticker,
-          harness.animationSettings
-        )
-      }
+      transition = createTransition(harness)
       _ <- transition.userInput(Key(SpecialKey.Right))
     } yield ()
   }
@@ -116,15 +92,7 @@ class SweepRightTransitionHarnessSpec extends CatsEffectSuite {
       )
       from = SlideTestHarness.fixedSlide[IO]("AAAA")
       to = SlideTestHarness.fixedSlide[IO]("BBBB")
-      transition = {
-        implicit val clock: Clock[IO] = harness.clockInstance
-        SweepRightTransition.create[IO](
-          columnsPerStep = 2,
-          harness.console,
-          harness.ticker,
-          harness.animationSettings
-        )
-      }
+      transition = createTransition(harness)
       _ <- harness.runWithTicking(transition.transition(from, to))
       written <- harness.writtenFrames
     } yield {
@@ -146,15 +114,7 @@ class SweepRightTransitionHarnessSpec extends CatsEffectSuite {
       // 'from' has lines of width 6, 'to' has lines of width 10
       from = SlideTestHarness.fixedSlide[IO]("AAAAAA\nAA\nAAAA")
       to = SlideTestHarness.fixedSlide[IO]("BBBBBBBBBB\nBB\nBBBB")
-      transition = {
-        implicit val clock: Clock[IO] = harness.clockInstance
-        SweepRightTransition.create[IO](
-          columnsPerStep = 2,
-          harness.console,
-          harness.ticker,
-          harness.animationSettings
-        )
-      }
+      transition = createTransition(harness)
       _ <- harness.runWithTicking(transition.transition(from, to))
       written <- harness.writtenFrames
     } yield {

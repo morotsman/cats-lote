@@ -97,6 +97,14 @@ private[lote] object JLineTerminal {
           }
         }
 
+      override def writeRaw(s: String): F[Unit] =
+        Sync[F].blocking {
+          renderLock.synchronized {
+            writer.print(s)
+            writer.flush()
+          }
+        }
+
       override def flush(): F[Unit] =
         Sync[F].blocking(jlineTerminal.flush())
 
