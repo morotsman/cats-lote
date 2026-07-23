@@ -8,6 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 4 : undefined, // undefined = use half of CPU cores
   reporter: process.env.CI ? 'github' : 'html',
   timeout: 60_000,
+  snapshotPathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
 
   use: {
     baseURL: 'http://localhost:8080',
