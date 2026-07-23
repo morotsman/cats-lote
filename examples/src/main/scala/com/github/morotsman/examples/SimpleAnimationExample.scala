@@ -1,7 +1,7 @@
 package com.github.morotsman.examples
 
-import cats.effect.{IO, IOApp}
-import com.github.morotsman.lote.api.TerminalPlatform
+import cats.effect._
+import com.github.morotsman.lote.api.LoteApp
 
 /** Terminal version of the SimpleAnimationExample.
   *
@@ -13,12 +13,7 @@ import com.github.morotsman.lote.api.TerminalPlatform
   * sbt "examples/runMain com.github.morotsman.examples.SimpleAnimationExample"
   * }}}
   */
-object SimpleAnimationExample extends IOApp.Simple {
+object SimpleAnimationExample extends LoteApp {
 
-  override def run: IO[Unit] =
-    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
-      SharedSimpleExamplesPresentation
-        .build[IO]()
-        .run()
-    }
+  def presentation = SharedSimpleExamplesPresentation.build[IO]()
 }

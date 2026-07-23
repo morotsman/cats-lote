@@ -1,9 +1,7 @@
 package com.github.morotsman.examples
 
 import cats.effect._
-import com.github.morotsman.lote.api.TerminalPlatform
-import com.github.morotsman.lote.internal.interpreter.ticker.RafTickerInterpreter
-import org.scalajs.dom
+import com.github.morotsman.lote.api.LoteApp
 
 /** A lightweight browser example that runs only the simple animation demos.
   *
@@ -24,18 +22,7 @@ import org.scalajs.dom
   *
   * Open http://127.0.0.1:8080/simple.html
   */
-object SimpleAnimationExample extends IOApp.Simple {
+object SimpleAnimationExample extends LoteApp {
 
-  override def run: IO[Unit] = {
-    val container = dom.document
-      .getElementById("terminal")
-      .asInstanceOf[dom.HTMLElement]
-
-    TerminalPlatform.threeJsTerminal[IO](container).use { implicit terminal =>
-      SharedSimpleExamplesPresentation
-        .build[IO]()
-        .withCustomTicker(RafTickerInterpreter.make[IO])
-        .run()
-    }
-  }
+  def presentation = SharedSimpleExamplesPresentation.build[IO]()
 }

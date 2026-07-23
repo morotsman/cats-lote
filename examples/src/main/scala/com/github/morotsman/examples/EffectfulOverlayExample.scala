@@ -1,16 +1,16 @@
 package com.github.morotsman.examples
 
-import cats.effect.{IO, IOApp}
+import cats.effect.IO
 import com.github.morotsman.examples.slides.InputStatusOverlay
-import com.github.morotsman.lote.api.TerminalPlatform
+import com.github.morotsman.lote.api.LoteApp
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
-object EffectfulOverlayExample extends IOApp.Simple {
+object EffectfulOverlayExample extends LoteApp {
 
   /** The session builder, exposed so tests can exercise the real configuration via `runWith` instead of duplicating the
     * setup.
     */
-  def session: SessionBuilder[IO] =
+  def presentation: SessionBuilder[IO] =
     SessionBuilder[IO]()
       .addOverlay(InputStatusOverlay.make[IO]())
       .addTextSlide {
@@ -68,9 +68,4 @@ object EffectfulOverlayExample extends IOApp.Simple {
             |that would feel dishonest to pretend was pure.""".stripMargin
         ).title("When To Choose It")
       }
-
-  override def run: IO[Unit] =
-    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
-      session.run()
-    }
 }

@@ -247,6 +247,56 @@ object TickedTransition {
     private def applyEasing(progress: Double): Double =
       easingFn.fold(progress)(_(progress))
 
+    // ── Core transition loop ─────────────────────────────────────
+
+    /** Shared lifecycle that all build variants delegate to.
+      *
+      * Owns the common machinery: content resolution from slides, FixedStep creation, Deferred-based completion
+      * signalling, skip-on-input race, ticker subscribe/cancel, and writing the final `to` frame.
+      *
+      * Each variant supplies a `setup` function that receives the resolved from/to content and a `complete` signal,
+      * performs any variant-specific initialization, and returns a [[TickHandler]] whose `onTick` receives the consumed
+      * `(steps, fractional)` pair each tick and whose `cleanup` runs in `guarantee` after the transition finishes.
+      */
+    private def makeTransition(
+        setup: (ScreenAdjusted, ScreenAdjusted, F[Unit]) => F[TickHandler[F]]
+    )(implicit F: Temporal[F], refMake: Ref.Make[F], clock: AnimationClock[F]): Transition[F] = {
+      val builder = this
+      val skipRef = new AtomicReference[Deferred[F, Unit]](null)
+
+      new Transition[F] {
+        override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
+          for {
+            fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
+            toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
+            stepperRef <- FixedStep.makeRef[F]
+            done <- Deferred[F, Unit]
+            skip <- Deferred[F, Unit]
+            _ = if (builder.skipOnInput) skipRef.set(skip)
+            handler <- setup(fromContent, toContent, done.complete(()).attempt.void)
+            tickCallback = for {
+              stepsAndProgress <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
+              (nrOfSteps, fractional) = stepsAndProgress
+              _ <- handler.onTick(nrOfSteps, fractional)
+            } yield ()
+            sub <- ticker.subscribe(tickCallback)
+            _ <- ticker.start
+            _ <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
+              .guarantee(sub.cancel *> handler.cleanup)
+            _ = skipRef.set(null)
+            _ <- console.clear() *> console.writeString(toContent)
+          } yield ()
+
+        override def userInput(input: UserInput): F[Unit] =
+          if (!builder.skipOnInput) Monad[F].unit
+          else {
+            val d = skipRef.get()
+            if (d != null) d.complete(()).attempt.void
+            else Monad[F].unit
+          }
+      }
+    }
+
     // ── Build: progress-based (simplest) ─────────────────────────
 
     /** Build a progress-based transition with a specified duration.
@@ -281,52 +331,30 @@ object TickedTransition {
         renderFrame: (ScreenAdjusted, ScreenAdjusted, ProgressContext) => ProgressResult
     )(implicit F: Temporal[F], refMake: Ref.Make[F], clock: AnimationClock[F]): Transition[F] = {
       val totalSteps = math.max(1, (duration / animationSettings.step).toInt)
-      val builder = this
-      val skipRef = new AtomicReference[Deferred[F, Unit]](null)
 
-      new Transition[F] {
-        override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
-          for {
-            fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-            toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-            screen <- console.context
-            stepRef <- Ref[F].of(0)
-            stepperRef <- FixedStep.makeRef[F]
-            done <- Deferred[F, Unit]
-            skip <- Deferred[F, Unit]
-            _ = if (builder.skipOnInput) skipRef.set(skip)
-            onTick = for {
-              stepsAndProgress <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
-              (nrOfSteps, fractional) = stepsAndProgress
+      makeTransition { (fromContent, toContent, completeSignal) =>
+        for {
+          screen <- console.context
+          stepRef <- Ref[F].of(0)
+        } yield TickHandler[F](
+          onTick = (nrOfSteps, fractional) =>
+            for {
               currentStep <- stepRef.modify { s =>
                 val next = math.min(totalSteps, s + nrOfSteps)
                 (next, next)
               }
               rawProgress = math.min(1.0, (currentStep.toDouble + fractional) / totalSteps.toDouble)
-              progress = builder.applyEasing(rawProgress)
+              progress = applyEasing(rawProgress)
               ctx = ProgressContext(progress, screen.screenWidth, screen.screenHeight)
               result = renderFrame(fromContent, toContent, ctx)
               _ <- console.clear()
               _ <- console.writeString(result.frame)
               _ <-
-                if (currentStep >= totalSteps || result.isDone) done.complete(()).attempt.void
+                if (currentStep >= totalSteps || result.isDone) completeSignal
                 else Monad[F].unit
-            } yield ()
-            sub <- ticker.subscribe(onTick)
-            _ <- ticker.start
-            _ <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
-              .guarantee(sub.cancel)
-            _ = skipRef.set(null)
-            _ <- console.clear() *> console.writeString(toContent)
-          } yield ()
-
-        override def userInput(input: UserInput): F[Unit] =
-          if (!builder.skipOnInput) Monad[F].unit
-          else {
-            val d = skipRef.get()
-            if (d != null) d.complete(()).attempt.void
-            else Monad[F].unit
-          }
+            } yield (),
+          cleanup = Monad[F].unit
+        )
       }
     }
 
@@ -344,51 +372,23 @@ object TickedTransition {
       */
     def buildStepped(
         onTick: (Int, Double, StepContext[F]) => F[Unit]
-    )(implicit F: Temporal[F], refMake: Ref.Make[F], clock: AnimationClock[F]): Transition[F] = {
-      val builder = this
-      val skipRef = new AtomicReference[Deferred[F, Unit]](null)
-
-      new Transition[F] {
-        override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
-          for {
-            fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-            toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-            screen <- console.context
-            done <- Deferred[F, Unit]
-            skip <- Deferred[F, Unit]
-            _ = if (builder.skipOnInput) skipRef.set(skip)
-            stepperRef <- FixedStep.makeRef[F]
-            ctx = new StepContext[F] {
-              val from: ScreenAdjusted = fromContent
-              val to: ScreenAdjusted = toContent
-              val screenWidth: Int = screen.screenWidth
-              val screenHeight: Int = screen.screenHeight
-              def render(frame: ScreenAdjusted): F[Unit] =
-                console.clear() *> console.writeString(frame)
-              def complete: F[Unit] = done.complete(()).attempt.void
-            }
-            tickCallback = for {
-              stepsAndProgress <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
-              (nrOfSteps, progress) = stepsAndProgress
-              _ <- onTick(nrOfSteps, progress, ctx)
-            } yield ()
-            sub <- ticker.subscribe(tickCallback)
-            _ <- ticker.start
-            _ <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
-              .guarantee(sub.cancel)
-            _ = skipRef.set(null)
-            _ <- console.clear() *> console.writeString(toContent)
-          } yield ()
-
-        override def userInput(input: UserInput): F[Unit] =
-          if (!builder.skipOnInput) Monad[F].unit
-          else {
-            val d = skipRef.get()
-            if (d != null) d.complete(()).attempt.void
-            else Monad[F].unit
+    )(implicit F: Temporal[F], refMake: Ref.Make[F], clock: AnimationClock[F]): Transition[F] =
+      makeTransition { (fromContent, toContent, completeSignal) =>
+        for {
+          screen <- console.context
+        } yield {
+          val ctx = new StepContext[F] {
+            val from: ScreenAdjusted = fromContent
+            val to: ScreenAdjusted = toContent
+            val screenWidth: Int = screen.screenWidth
+            val screenHeight: Int = screen.screenHeight
+            def render(frame: ScreenAdjusted): F[Unit] =
+              console.clear() *> console.writeString(frame)
+            def complete: F[Unit] = completeSignal
           }
+          TickHandler[F]((steps, progress) => onTick(steps, progress, ctx))
+        }
       }
-    }
 
     // ── Build: progress with GlideLayer ──────────────────────────
 
@@ -435,51 +435,29 @@ object TickedTransition {
         renderFrame: (ScreenAdjusted, ScreenAdjusted, Double, GlideLayer.Overlay[F]) => F[ScreenAdjusted]
     )(implicit F: Temporal[F], refMake: Ref.Make[F], clock: AnimationClock[F]): Transition[F] = {
       val gc = glideConfig.getOrElse(GlideConfig())
-      val builder = this
-      val skipRef = new AtomicReference[Deferred[F, Unit]](null)
 
-      new Transition[F] {
-        override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
-          for {
-            gridLayer <- GlideLayer.make[F](console, animationSettings.step, gc.wrapThreshold)
-            fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-            toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-            stepRef <- Ref[F].of(0)
-            stepperRef <- FixedStep.makeRef[F]
-            done <- Deferred[F, Unit]
-            skip <- Deferred[F, Unit]
-            _ = if (builder.skipOnInput) skipRef.set(skip)
-            onTick = for {
-              stepsAndProgress <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
-              (nrOfSteps, fractional) = stepsAndProgress
+      makeTransition { (fromContent, toContent, completeSignal) =>
+        for {
+          gridLayer <- GlideLayer.make[F](console, animationSettings.step, gc.wrapThreshold)
+          stepRef <- Ref[F].of(0)
+        } yield TickHandler[F](
+          onTick = (nrOfSteps, fractional) =>
+            for {
               currentStep <- stepRef.modify { s =>
                 val next = math.min(totalSteps, s + nrOfSteps)
                 (next, next)
               }
               rawProgress = math.min(1.0, (currentStep.toDouble + fractional) / totalSteps.toDouble)
-              progress = builder.applyEasing(rawProgress)
+              progress = applyEasing(rawProgress)
               frame <- renderFrame(fromContent, toContent, progress, gridLayer)
               _ <- console.clear()
               _ <- console.writeString(frame)
               _ <-
-                if (currentStep >= totalSteps) done.complete(()).attempt.void
+                if (currentStep >= totalSteps) completeSignal
                 else Monad[F].unit
-            } yield ()
-            sub <- ticker.subscribe(onTick)
-            _ <- ticker.start
-            _ <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
-              .guarantee(sub.cancel *> gridLayer.clear())
-            _ = skipRef.set(null)
-            _ <- console.clear() *> console.writeString(toContent)
-          } yield ()
-
-        override def userInput(input: UserInput): F[Unit] =
-          if (!builder.skipOnInput) Monad[F].unit
-          else {
-            val d = skipRef.get()
-            if (d != null) d.complete(()).attempt.void
-            else Monad[F].unit
-          }
+            } yield (),
+          cleanup = gridLayer.clear()
+        )
       }
     }
 
@@ -510,42 +488,8 @@ object TickedTransition {
       */
     def buildWithSetup(
         setup: (ScreenAdjusted, ScreenAdjusted, F[Unit]) => F[TickHandler[F]]
-    )(implicit F: Temporal[F], refMake: Ref.Make[F], clock: AnimationClock[F]): Transition[F] = {
-      val builder = this
-      val skipRef = new AtomicReference[Deferred[F, Unit]](null)
-
-      new Transition[F] {
-        override def transition(from: Slide[F], to: Slide[F]): F[Unit] =
-          for {
-            fromContent <- from.content.map(_.getOrElse(ScreenAdjusted("")))
-            toContent <- to.content.map(_.getOrElse(ScreenAdjusted("")))
-            stepperRef <- FixedStep.makeRef[F]
-            done <- Deferred[F, Unit]
-            skip <- Deferred[F, Unit]
-            _ = if (builder.skipOnInput) skipRef.set(skip)
-            handler <- setup(fromContent, toContent, done.complete(()).attempt.void)
-            tickCallback = for {
-              stepsAndProgress <- FixedStep.consumeSteps(stepperRef, animationSettings.step)
-              (nrOfSteps, progress) = stepsAndProgress
-              _ <- handler.onTick(nrOfSteps, progress)
-            } yield ()
-            sub <- ticker.subscribe(tickCallback)
-            _ <- ticker.start
-            _ <- (if (builder.skipOnInput) done.get.race(skip.get).void else done.get)
-              .guarantee(sub.cancel *> handler.cleanup)
-            _ = skipRef.set(null)
-            _ <- console.clear() *> console.writeString(toContent)
-          } yield ()
-
-        override def userInput(input: UserInput): F[Unit] =
-          if (!builder.skipOnInput) Monad[F].unit
-          else {
-            val d = skipRef.get()
-            if (d != null) d.complete(()).attempt.void
-            else Monad[F].unit
-          }
-      }
-    }
+    )(implicit F: Temporal[F], refMake: Ref.Make[F], clock: AnimationClock[F]): Transition[F] =
+      makeTransition(setup)
   }
 
   /** The tick handler and cleanup returned by `buildWithSetup`. */

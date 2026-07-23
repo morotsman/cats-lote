@@ -1,20 +1,16 @@
 package com.github.morotsman.examples
 
-import cats.effect.{IO, IOApp}
-import com.github.morotsman.lote.api.TerminalPlatform
+import cats.effect.IO
+import com.github.morotsman.lote.api.LoteApp
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
-object MinimalExample extends IOApp.Simple {
+object MinimalExample extends LoteApp {
 
-  override def run: IO[Unit] =
-    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
-      SessionBuilder[IO]()
-        .addTextSlide {
-          _.content("Hello, terminal. Please try to contain your excitement.")
-        }
-        .addTextSlide {
-          _.content("Goodbye. That was the full dramatic arc.")
-        }
-        .run()
+  def presentation = SessionBuilder[IO]()
+    .addTextSlide {
+      _.content("Hello, terminal. Please try to contain your excitement.")
+    }
+    .addTextSlide {
+      _.content("Goodbye. That was the full dramatic arc.")
     }
 }

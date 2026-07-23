@@ -135,10 +135,11 @@ final class SlideTestHarness[F[_]] private (
     for {
       fiber <- task.start
       subscribed <- awaitSubscriber
-      _ <- if (subscribed)
-        (1 to ticks).toList.traverse_(_ => pause *> ticker.tick(1))
-      else
-        F.unit // task completed (or will complete) without needing ticks
+      _ <-
+        if (subscribed)
+          (1 to ticks).toList.traverse_(_ => pause *> ticker.tick(1))
+        else
+          F.unit // task completed (or will complete) without needing ticks
       _ <- fiber.joinWithNever
     } yield ()
   }

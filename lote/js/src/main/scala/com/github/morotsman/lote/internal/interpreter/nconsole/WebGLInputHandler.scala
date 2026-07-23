@@ -85,29 +85,14 @@ private[nconsole] object WebGLInputHandler {
     keyListener
   }
 
-  /** Convert a DOM KeyboardEvent to character codes matching the encoding used by JLine/xterm.js. */
-  private def keyEventToChars(ev: KeyboardEvent): Seq[Int] =
-    ev.key match {
-      case "ArrowUp"    => ev.preventDefault(); Seq(27, 91, 65)
-      case "ArrowDown"  => ev.preventDefault(); Seq(27, 91, 66)
-      case "ArrowRight" => ev.preventDefault(); Seq(27, 91, 67)
-      case "ArrowLeft"  => ev.preventDefault(); Seq(27, 91, 68)
-      case "Enter"      => ev.preventDefault(); Seq(13)
-      case "Escape"     => Seq(27)
-      case "Backspace"  => ev.preventDefault(); Seq(127)
-      case "Tab"        => ev.preventDefault(); Seq(9)
-      case "Delete"     => ev.preventDefault(); Seq(27, 91, 51, 126)
-      case "Home"       => ev.preventDefault(); Seq(27, 91, 72)
-      case "End"        => ev.preventDefault(); Seq(27, 91, 70)
-      case "PageUp"     => ev.preventDefault(); Seq(27, 91, 53, 126)
-      case "PageDown"   => ev.preventDefault(); Seq(27, 91, 54, 126)
-      case k if k.length == 1 =>
-        if (ev.ctrlKey) {
-          val code = k.toUpperCase.charAt(0) - 64
-          if (code > 0 && code < 32) Seq(code) else Seq.empty
-        } else {
-          Seq(k.charAt(0).toInt)
-        }
-      case _ => Seq.empty
-    }
+  /** Convert a DOM KeyboardEvent to character codes matching the encoding used by JLine/xterm.js.
+    *
+    * Delegates to [[KeyMapper.keyNameToChars]] for the pure mapping logic, then calls `preventDefault()` on the event
+    * if any codes were produced (to suppress browser default actions for navigation keys).
+    */
+  private def keyEventToChars(ev: KeyboardEvent): Seq[Int] = {
+    val result = KeyMapper.keyNameToChars(ev.key, ev.ctrlKey)
+    if (result.nonEmpty) ev.preventDefault()
+    result
+  }
 }

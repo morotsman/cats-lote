@@ -136,9 +136,10 @@ The library has a dramatic complexity cliff between built-in text slides and cus
 | Custom overlay (stateless) | ~20 | `Overlay[F]` trait, `ScreenAdjusted` |
 | Custom overlay (stateful) | ~40 | Above + `Ref`, effectful construction |
 | Custom transition | ~40–150 | `Transition[F]` or `TickedTransition`, `FixedStep`, `Deferred`, fibers |
-| Custom interactive slide | 80–350 | `Slide[F]`, `Ref`, `Queue`, `TickerSubscription`, fiber lifecycle, `FixedStep`, `GlideLayer` |
+| Custom interactive slide (raw) | 80–350 | `Slide[F]`, `Ref`, `Queue`, `TickerSubscription`, fiber lifecycle, `FixedStep`, `GlideLayer` |
+| Custom interactive slide (TickedSlide) | ~20–30 | `TickedSlide` builder, `Ref` |
 
-The jump from "text slide user" to "custom slide author" requires understanding ~5 Cats Effect concepts simultaneously. This is the library's most significant usability gap.
+~~The jump from "text slide user" to "custom slide author" requires understanding ~5 Cats Effect concepts simultaneously. This is the library's most significant usability gap.~~ **Update:** `TickedSlide` significantly narrows this gap. Users still need `Ref` for state, but ticker subscription, FixedStep, GlideLayer lifecycle, and fiber management are fully handled. The jump is now mainly about understanding `Ref` and effectful callbacks.
 
 ### 3.2 TickedTransition — A Bright Spot
 
@@ -180,17 +181,28 @@ trait Slide[F[_]] {
 }
 ```
 
-However, the gap between this simple trait and a working interactive slide is enormous. The `ExampleInteractiveSlide` is 308+ lines. Users need:
-- A `Ref` for state
-- A ticker subscription for animation
-- `FixedStep` for frame-rate independence
-- Fiber management in `startShow`/`stopShow`
-- Input queuing or direct state mutation in `userInput`
+~~However, the gap between this simple trait and a working interactive slide is enormous.~~ **Update:** The `TickedSlide` helper (symmetric with `TickedTransition`) closes most of this gap. It eliminates boilerplate around ticker subscription, `FixedStep`, `GlideLayer` lifecycle, and fiber management, offering three progressive tiers:
 
-**Missing:** A mid-level abstraction like `AnimatedSlide[F, S]` that handles ticker subscription, state management, and render-loop boilerplate, letting users provide only:
-- Initial state `S`
-- `update(state: S, input: UserInput): S`
-- `render(state: S, screen: Screen): ScreenAdjusted`
+1. **`build`** — simple tick callback, no FixedStep or GlideLayer
+2. **`buildStepped`** — adds FixedStep (discrete simulation steps)
+3. **`buildWithGlide`** — adds FixedStep + GlideLayer (auto-cleared on stop)
+
+The `contextual` factory also auto-injects `NConsole`, `Ticker`, and `AnimationSettings` (addressing the repetitive implicit extraction noted in §3.3):
+
+```scala
+TickedSlide.contextual[F] { builder =>
+  for {
+    stateRef <- Ref[F].of(initialState)
+    slide    <- builder.build(
+      onTick  = renderLogic(stateRef),
+      onInput = inputHandler(stateRef),
+      onStart = stateRef.set(initialState)
+    )
+  } yield slide
+}
+```
+
+**Remaining gap:** Users still manage their own `Ref` and wire state manually in the callbacks. A higher-level `AnimatedSlide[F, S]` abstraction that accepts only `initialState`, `update(state, input) → state`, and `render(state) → ScreenAdjusted` would eliminate this last piece of boilerplate, but the current `TickedSlide` already reduces a 300-line custom slide to ~20–30 lines of user-supplied logic.
 
 ---
 
@@ -396,7 +408,7 @@ cats-lote occupies a unique niche (type-safe, terminal-native, FP-first) but lac
 
 ### P1 — Reduce the Complexity Cliff
 
-3. **Create an `AnimatedSlide[F, S]` abstraction** — state + update + render, no manual fiber/ticker management.
+3. **~~Create an `AnimatedSlide[F, S]` abstraction~~** — ✅ Largely addressed by `TickedSlide`. A further `AnimatedSlide[F, S]` (state + update + render, no manual `Ref`) would eliminate the last bit of boilerplate but is now a nice-to-have rather than essential.
 4. **Add ANSI color support to `TextSlideBuilder`** — e.g., `.content(styled"Hello ${bold("world")}!")` or a simple markup DSL.
 5. **Add pre-built `Alignment` constants** — `Alignment.topLeft`, `Alignment.center`, etc.
 

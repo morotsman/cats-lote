@@ -58,22 +58,20 @@ lazy val myPresentation = (project in file("my-presentation"))
 ### Hello, Terminal
 
 ```scala
-import cats.effect._
-import com.github.morotsman.lote.api.TerminalPlatform
+import cats.effect.IO
+import com.github.morotsman.lote.api.LoteApp
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
-object MyPresentation extends IOApp.Simple {
-  override def run: IO[Unit] =
-    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
-      SessionBuilder[IO]()
-        .addTextSlide(_.content("Hello, Terminal!"))
-        .addTextSlide(_.content("Goodbye!"))
-        .run()
-    }
+object MyPresentation extends LoteApp {
+  def presentation = SessionBuilder[IO]()
+    .addTextSlide(_.content("Hello, Terminal!"))
+    .addTextSlide(_.content("Goodbye!"))
 }
 ```
 
 If that feels almost offensively straightforward, good. That means the compiler has not yet had time to develop opinions about your presentation.
+
+`LoteApp` handles the IOApp, terminal resource, and (on JS) the `requestAnimationFrame` ticker automatically. If you need full control over the terminal setup, use `IOApp.Simple` with `TerminalPlatform` directly.
 
 ### Navigation
 
@@ -811,21 +809,16 @@ The trick: expose your `SessionBuilder` from the presentation object so tests ca
 
 ```scala
 // In your presentation object
-object EffectfulOverlayExample extends IOApp.Simple {
+object EffectfulOverlayExample extends LoteApp {
 
   /** The session configuration, exposed so tests can exercise it
     * without needing a real terminal or a willing audience.
     */
-  def session: SessionBuilder[IO] =
+  def presentation: SessionBuilder[IO] =
     SessionBuilder[IO]()
       .addOverlay(InputStatusOverlay.make[IO]())
       .addTextSlide(_.content("...").title("Slide One"))
       .addTextSlide(_.content("...").title("Slide Two"))
-
-  override def run: IO[Unit] =
-    TerminalPlatform.jlineTerminal[IO]().use { implicit terminal =>
-      session.run()
-    }
 }
 ```
 
@@ -844,7 +837,7 @@ class EffectfulOverlayExampleSpec extends CatsEffectSuite {
         inputs = List(Key(SpecialKey.Esc)),
         readDelay = readDelay
       )
-      _ <- EffectfulOverlayExample.session.runWith(harness.console, harness.ticker)
+      _ <- EffectfulOverlayExample.presentation.runWith(harness.console, harness.ticker)
       written <- harness.writtenFrames
     } yield assert(written.nonEmpty)
   }
@@ -856,7 +849,7 @@ class EffectfulOverlayExampleSpec extends CatsEffectSuite {
         inputs = List(Key(SpecialKey.Right), Key(SpecialKey.Esc)),
         readDelay = readDelay
       )
-      _ <- EffectfulOverlayExample.session.runWith(harness.console, harness.ticker)
+      _ <- EffectfulOverlayExample.presentation.runWith(harness.console, harness.ticker)
       written <- harness.writtenFrames
     } yield {
       val allContent = written.mkString("\n")
