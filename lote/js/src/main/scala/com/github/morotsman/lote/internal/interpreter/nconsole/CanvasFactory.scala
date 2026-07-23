@@ -37,4 +37,21 @@ private[nconsole] trait CanvasFactory {
     * Equivalent to `window.devicePixelRatio` in a browser context.
     */
   def devicePixelRatio: Double
+
+  /** Initializes a 2D context with DPR scaling and an initial background clear.
+    *
+    * In production, applies `ctx.scale(dpr, dpr)` and fills/clears the background. In test stubs, this is a no-op.
+    *
+    * @param ctx
+    *   the context reference returned by [[getContext2D]]
+    * @param dpr
+    *   device pixel ratio to scale by
+    * @param cssWidth
+    *   logical width in CSS pixels (cols * cellWidth)
+    * @param cssHeight
+    *   logical height in CSS pixels (rows * cellHeight)
+    * @param transparentBg
+    *   if true, clears to transparent; otherwise fills with black
+    */
+  def initContext(ctx: ContextRef, dpr: Double, cssWidth: Int, cssHeight: Int, transparentBg: Boolean): Unit
 }

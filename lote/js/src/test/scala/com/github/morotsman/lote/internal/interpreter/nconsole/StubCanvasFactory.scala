@@ -39,6 +39,8 @@ class StubCanvasFactory(_devicePixelRatio: Double = 1.0) extends CanvasFactory {
 
   override def devicePixelRatio: Double = _devicePixelRatio
 
+  override def initContext(ctx: Int, dpr: Double, cssWidth: Int, cssHeight: Int, transparentBg: Boolean): Unit = ()
+
   /** Clears the operation log. */
   def clearOps(): Unit = ops = Nil
 }

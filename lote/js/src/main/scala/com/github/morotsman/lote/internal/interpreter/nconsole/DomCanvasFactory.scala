@@ -23,4 +23,20 @@ private[nconsole] object DomCanvasFactory extends CanvasFactory {
 
   override def devicePixelRatio: Double =
     dom.window.devicePixelRatio.max(1.0)
+
+  override def initContext(
+      ctx: CanvasRenderingContext2D,
+      dpr: Double,
+      cssWidth: Int,
+      cssHeight: Int,
+      transparentBg: Boolean
+  ): Unit = {
+    ctx.scale(dpr, dpr)
+    if (transparentBg) {
+      ctx.clearRect(0, 0, cssWidth, cssHeight)
+    } else {
+      ctx.fillStyle = "#000000"
+      ctx.fillRect(0, 0, cssWidth, cssHeight)
+    }
+  }
 }

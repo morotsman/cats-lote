@@ -46,17 +46,8 @@ private[nconsole] class SlideLayer(
   /** The 2D rendering context reference. */
   private val _ctxRef: Any = {
     val c = canvasFactory.getContext2D(_offscreenRef.asInstanceOf[canvasFactory.CanvasRef])
-    // Apply DPR scaling so all drawing operations use CSS-pixel coordinates
-    // while rendering at the full physical resolution.
-    val ctx2d = c.asInstanceOf[org.scalajs.dom.CanvasRenderingContext2D]
-    ctx2d.scale(dpr, dpr)
-    // Initial clear — transparent or black background
-    if (transparentBg) {
-      ctx2d.clearRect(0, 0, cols * cellWidth, rows * cellHeight)
-    } else {
-      ctx2d.fillStyle = "#000000"
-      ctx2d.fillRect(0, 0, cols * cellWidth, rows * cellHeight)
-    }
+    // Apply DPR scaling and initial background via the factory abstraction
+    canvasFactory.initContext(c, dpr, cols * cellWidth, rows * cellHeight, transparentBg)
     c
   }
 
