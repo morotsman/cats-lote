@@ -89,10 +89,8 @@ import cats.Monad
 object ThreeJsTerminal {
 
   /** Width of a single character cell in CSS pixels. */
-  
 
   /** Height of a single character cell in CSS pixels. */
-  
 
   /** CSS font-family stack used for monospace text rendering on the offscreen canvases. */
   private val FontFamily = "'Courier New', Courier, monospace"
@@ -154,16 +152,17 @@ object ThreeJsTerminal {
 
         // ---- Scene setup ----
         val glScene = new WebGLScene(container, CellWidth, CellHeight, config)
+        val sceneBackend = new WebGLSceneBackend(glScene)
 
         // ---- Camera animator ----
-        val cameraAnimator = new CameraAnimator(glScene, config)
+        val cameraAnimator = new CameraAnimator(sceneBackend, config)
 
         // ---- Spatial state ----
         // Manages slide layers, the slide-to-layer mapping, the active
         // layer index, and the shared Scene3DRef.  All mutable state
         // that was previously captured by closures as bare vars now
         // lives in this single, testable object.
-        val spatialState = new SpatialState(glScene, cameraAnimator, CellWidth, CellHeight)
+        val spatialState = new SpatialState(glScene, sceneBackend, cameraAnimator, CellWidth, CellHeight)
 
         // ---- Effect renderer ----
         val effectRenderer = new WebGLEffectRenderer(

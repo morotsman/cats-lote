@@ -80,11 +80,7 @@ private[nconsole] class WebGLEffectRenderer(
 
     dissolveParticles.foreach { p =>
       val ud = p.userData.asInstanceOf[DissolveParticleData]
-      // Each character starts fading at a different time (fadeDelay)
-      // and fades out at its own speed
-      val t = Math.max(0.0, (progress - ud.fadeDelay) / (1.0 - ud.fadeDelay))
-      val opacity = Math.max(0.0, 1.0 - t * ud.fadeSpeed)
-      p.material.opacity = opacity
+      p.material.opacity = EffectMath.dissolveOpacity(progress, ud.fadeDelay, ud.fadeSpeed)
     }
     glScene.render()
   }
@@ -107,34 +103,34 @@ private[nconsole] class WebGLEffectRenderer(
     // array-copy overhead during spawning at the cost of sequential traversal here.
     smokeParticles.foreach { p =>
       val ud = p.userData.asInstanceOf[SmokeParticleData]
-
-      val t = Math.max(0.0, (progress - ud.fadeDelay) / (1.0 - ud.fadeDelay))
-      val eased = 1.0 - Math.pow(1.0 - t, 2.0)
-
-      p.position.x = ud.startX + ud.driftX * eased
-      p.position.y = ud.startY + ud.driftY * eased
-      p.rotation.z = ud.rotSpeed * eased
-      p.material.opacity = Math.max(0.0, 1.0 - t * 1.3)
-      val s = Math.max(0.0, 1.0 - t * ud.shrinkRate)
-      p.scale.set(s, s, 1.0)
+      val frame = EffectMath.smokeFrame(
+        progress,
+        ud.startX,
+        ud.startY,
+        ud.driftX,
+        ud.driftY,
+        ud.rotSpeed,
+        ud.fadeDelay,
+        ud.shrinkRate
+      )
+      p.position.x = frame.x
+      p.position.y = frame.y
+      p.rotation.z = frame.rotZ
+      p.material.opacity = frame.opacity
+      p.scale.set(frame.scale, frame.scale, 1.0)
     }
     glScene.render()
   }
 
   private def glow(color: String, intensity: Double): Unit = {
-    val r = java.lang.Integer.parseInt(color.stripPrefix("#").substring(0, 2), 16)
-    val g = java.lang.Integer.parseInt(color.stripPrefix("#").substring(2, 4), 16)
-    val b = java.lang.Integer.parseInt(color.stripPrefix("#").substring(4, 6), 16)
-    val glowR = (r * intensity / 255.0).min(1.0)
-    val glowG = (g * intensity / 255.0).min(1.0)
-    val glowB = (b * intensity / 255.0).min(1.0)
+    val (glowR, glowG, glowB) = EffectMath.glowColor(color, intensity)
     glScene.scene.background = new ThreeColor(s"rgb($glowR, $glowG, $glowB)")
     glScene.render()
   }
 
   private def fade(opacity: Double): Unit = {
     withActiveMesh { (_, mat) =>
-      mat.opacity = Math.max(0.0, Math.min(1.0, opacity))
+      mat.opacity = EffectMath.clampOpacity(opacity)
       mat.needsUpdate = true
     }
     glScene.render()

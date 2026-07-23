@@ -1,12 +1,15 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
-import org.scalajs.dom
-import org.scalajs.dom.{CanvasRenderingContext2D, HTMLCanvasElement}
-
 /** A single slide's rendering surface in spatial mode.
   *
-  * Each `SlideLayer` owns an offscreen canvas (for ANSI text rendering), a Three.js texture, and a mesh positioned at
-  * the slide's world-space coordinates.
+  * Each `SlideLayer` owns an offscreen canvas (for ANSI text rendering) and a mesh positioned at the slide's
+  * world-space coordinates. Mesh creation and canvas creation are delegated to the provided abstractions, allowing full
+  * unit testing without DOM or Three.js.
+  *
+  * @param canvasFactory
+  *   abstraction over DOM canvas creation; in production uses [[DomCanvasFactory]], in tests [[StubCanvasFactory]]
+  * @param backend
+  *   abstraction over the Three.js scene graph; in production uses [[WebGLSceneBackend]], in tests [[StubSceneBackend]]
   */
 private[nconsole] class SlideLayer(
     val index: Int,
@@ -20,7 +23,9 @@ private[nconsole] class SlideLayer(
     viewportHeight: Int,
     cellWidth: Int,
     cellHeight: Int,
-    val transparentBg: Boolean = false
+    val transparentBg: Boolean = false,
+    canvasFactory: CanvasFactory = DomCanvasFactory,
+    backend: SceneBackend = null
 ) {
 
   val cols: Int = viewportWidth / cellWidth
@@ -28,50 +33,95 @@ private[nconsole] class SlideLayer(
 
   // Offscreen canvas for text rendering — scaled by devicePixelRatio for crisp
   // rendering on HiDPI displays.
-  private val dpr: Double = dom.window.devicePixelRatio.max(1.0)
-  val offscreen: HTMLCanvasElement =
-    dom.document.createElement("canvas").asInstanceOf[HTMLCanvasElement]
-  offscreen.width = (cols * cellWidth * dpr).toInt
-  offscreen.height = (rows * cellHeight * dpr).toInt
+  private val dpr: Double = canvasFactory.devicePixelRatio.max(1.0)
 
-  val ctx: CanvasRenderingContext2D =
-    offscreen.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
-  ctx.scale(dpr, dpr)
+  private val canvasWidth: Int = (cols * cellWidth * dpr).toInt
+  private val canvasHeight: Int = (rows * cellHeight * dpr).toInt
 
-  // Clear initially — transparent or black
-  if (transparentBg) {
-    ctx.clearRect(0, 0, cols * cellWidth, rows * cellHeight)
-  } else {
-    ctx.fillStyle = "#000000"
-    ctx.fillRect(0, 0, cols * cellWidth, rows * cellHeight)
+  /** The offscreen canvas reference. Type depends on the CanvasFactory in use: `HTMLCanvasElement` in production, `Int`
+    * in test stubs.
+    */
+  private val _offscreenRef: Any = canvasFactory.createCanvas(canvasWidth, canvasHeight)
+
+  /** The 2D rendering context reference. */
+  private val _ctxRef: Any = {
+    val c = canvasFactory.getContext2D(_offscreenRef.asInstanceOf[canvasFactory.CanvasRef])
+    // Apply DPR scaling so all drawing operations use CSS-pixel coordinates
+    // while rendering at the full physical resolution.
+    val ctx2d = c.asInstanceOf[org.scalajs.dom.CanvasRenderingContext2D]
+    ctx2d.scale(dpr, dpr)
+    // Initial clear — transparent or black background
+    if (transparentBg) {
+      ctx2d.clearRect(0, 0, cols * cellWidth, rows * cellHeight)
+    } else {
+      ctx2d.fillStyle = "#000000"
+      ctx2d.fillRect(0, 0, cols * cellWidth, rows * cellHeight)
+    }
+    c
   }
 
-  // Three.js texture and mesh
-  val texture = new ThreeCanvasTexture(offscreen)
-  texture.minFilter = ThreeLinearFilter
-  texture.magFilter = ThreeNearestFilter
+  // ---- Backward-compatible accessors for production code that still needs DOM types ----
+  // These casts are safe in production (where CanvasRef = HTMLCanvasElement).
 
-  private val geo = new ThreePlaneGeometry(viewportWidth, viewportHeight)
-  private val mat = new ThreeMeshBasicMaterial(
-    ThreeMaterialOptions(map = texture, transparent = true, side = 2)
-  )
-  // Transparent-background slides must not write to the depth buffer,
-  // otherwise their invisible plane occludes 3D geometry behind them.
-  if (transparentBg) {
-    mat.depthWrite = false
-  }
-  val mesh = new ThreeMesh(geo, mat)
+  /** Returns the offscreen canvas as an HTMLCanvasElement. Only safe in production (DomCanvasFactory). */
+  def offscreen: org.scalajs.dom.HTMLCanvasElement =
+    _offscreenRef.asInstanceOf[org.scalajs.dom.HTMLCanvasElement]
 
-  // Position the mesh at world coordinates
-  mesh.position.set(
-    worldX + viewportWidth / 2.0,
-    worldY + viewportHeight / 2.0,
-    worldZ
-  )
+  /** Returns the 2D context as CanvasRenderingContext2D. Only safe in production (DomCanvasFactory). */
+  def ctx: org.scalajs.dom.CanvasRenderingContext2D =
+    _ctxRef.asInstanceOf[org.scalajs.dom.CanvasRenderingContext2D]
 
-  // Apply rotation (convert degrees to radians)
+  // ---- Mesh creation via SceneBackend ----
+
+  /** The computed mesh X position (world coordinates). */
+  val meshX: Double = worldX + viewportWidth / 2.0
+
+  /** The computed mesh Y position (world coordinates). */
+  val meshY: Double = worldY + viewportHeight / 2.0
+
+  /** The computed mesh Z position (world coordinates). */
+  val meshZ: Double = worldZ
+
+  /** The computed mesh rotation in radians. */
   private val Deg2Rad = Math.PI / 180.0
-  mesh.rotation.set(rotXDeg * Deg2Rad, rotYDeg * Deg2Rad, rotZDeg * Deg2Rad)
+  val meshRotX: Double = rotXDeg * Deg2Rad
+  val meshRotY: Double = rotYDeg * Deg2Rad
+  val meshRotZ: Double = rotZDeg * Deg2Rad
+
+  /** The mesh reference. When `backend` is provided, this is a `backend.MeshRef` created through the abstraction. When
+    * `backend` is null (legacy usage), falls back to direct Three.js construction.
+    */
+  val meshRef: Any = if (backend != null) {
+    val m = backend.createPlaneMesh(viewportWidth, viewportHeight, _offscreenRef)
+    backend.setMeshPosition(m, meshX, meshY, meshZ)
+    backend.setMeshRotation(m, meshRotX, meshRotY, meshRotZ)
+    if (transparentBg) {
+      backend.setMeshDepthWrite(m, false)
+    }
+    m
+  } else {
+    // Legacy path: direct Three.js construction (for backward compat during migration)
+    val texture = new ThreeCanvasTexture(offscreen)
+    texture.minFilter = ThreeLinearFilter
+    texture.magFilter = ThreeNearestFilter
+    val geo = new ThreePlaneGeometry(viewportWidth, viewportHeight)
+    val mat = new ThreeMeshBasicMaterial(
+      ThreeMaterialOptions(map = texture, transparent = true, side = 2)
+    )
+    if (transparentBg) {
+      mat.depthWrite = false
+    }
+    val m = new ThreeMesh(geo, mat)
+    m.position.set(meshX, meshY, meshZ)
+    m.rotation.set(meshRotX, meshRotY, meshRotZ)
+    m
+  }
+
+  /** Returns the mesh as a ThreeMesh (only safe in production). */
+  def mesh: ThreeMesh = meshRef.asInstanceOf[ThreeMesh]
+
+  /** Returns the mesh's texture (only safe in production, where mesh is a ThreeMesh). */
+  def texture: ThreeCanvasTexture = mesh.material.map.asInstanceOf[ThreeCanvasTexture]
 
   // Frame state for dirty tracking
   var previousFrame: Vector[String] = Vector.empty
@@ -86,8 +136,13 @@ private[nconsole] class SlideLayer(
   var fixedRows: Set[Int] = Set.empty
 
   def dispose(): Unit = {
-    texture.dispose()
-    mat.dispose()
-    geo.dispose()
+    if (backend != null) {
+      backend.disposeMesh(meshRef.asInstanceOf[backend.MeshRef])
+    } else {
+      val m = mesh
+      m.material.map.asInstanceOf[ThreeCanvasTexture].dispose()
+      m.material.dispose()
+      m.geometry.dispose()
+    }
   }
 }

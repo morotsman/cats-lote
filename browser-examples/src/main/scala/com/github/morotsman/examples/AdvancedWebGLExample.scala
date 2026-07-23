@@ -2,28 +2,18 @@ package com.github.morotsman.examples
 
 import cats.effect._
 import com.github.morotsman.examples.landscape.Landscape3DSlide
-import com.github.morotsman.lote.api.TerminalPlatform
-import com.github.morotsman.lote.internal.interpreter.ticker.RafTickerInterpreter
-import org.scalajs.dom
+import com.github.morotsman.lote.api.LoteApp
 
 /** The same full-featured presentation as AdvancedExample, rendered via Three.js / WebGL.
   *
   * Uses `SharedAdvancedPresentation` for all common slides and injects the 3D landscape slide which requires a browser
-  * environment. A `RafTickerInterpreter` is used instead of the default sleep-based ticker so that all rendering is
-  * driven by `requestAnimationFrame` (~60 fps, vsync-aligned).
+  * environment. The `LoteApp` base class automatically configures a `requestAnimationFrame`-based ticker (~60 fps,
+  * vsync-aligned).
   */
-object AdvancedWebGLExample extends IOApp.Simple {
+object AdvancedWebGLExample extends LoteApp {
 
-  override def run: IO[Unit] = {
-    val container = dom.document
-      .getElementById("terminal")
-      .asInstanceOf[dom.HTMLElement]
+  def presentation =
+    SharedAdvancedPresentation
+      .build[IO](landscape3DSlide = Some(Landscape3DSlide.contextual[IO]()))
 
-    TerminalPlatform.threeJsTerminal[IO](container).use { implicit terminal =>
-      SharedAdvancedPresentation
-        .build[IO](landscape3DSlide = Some(Landscape3DSlide.contextual[IO]()))
-        .withCustomTicker(RafTickerInterpreter.make[IO]) // TODO maybe it should be picked automatically?
-        .run()
-    }
-  }
 }

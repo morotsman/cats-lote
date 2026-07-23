@@ -20,9 +20,11 @@ import org.scalajs.dom.HTMLCanvasElement
   */
 private[nconsole] class SpatialState(
     private val glScene: WebGLScene,
+    private val backend: SceneBackend,
     private val cameraAnimator: CameraAnimator,
     private val cellWidth: Int,
-    private val cellHeight: Int
+    private val cellHeight: Int,
+    private val canvasFactory: CanvasFactory = DomCanvasFactory
 ) {
 
   /** All unique slide layers (one per distinct 3-D position). Empty before [[init]]. */
@@ -87,8 +89,9 @@ private[nconsole] class SpatialState(
     // Keep the Scene3DRef's center in sync with the active layer's mesh position
     _sharedSceneRef.foreach { ref =>
       if (layerIdx >= 0 && layerIdx < _slideLayers.length) {
-        val pos = _slideLayers(layerIdx).mesh.position
-        ref.updateCenter(pos.x, pos.y, pos.z)
+        val layer = _slideLayers(layerIdx)
+        val (px, py, pz) = backend.getMeshPosition(layer.meshRef.asInstanceOf[backend.MeshRef])
+        ref.updateCenter(px, py, pz)
       }
     }
   }
@@ -119,34 +122,11 @@ private[nconsole] class SpatialState(
   def init(positions: Vector[Option[SlidePosition]]): Unit = {
 
     // ---- Step 1: Resolve positions ----
-    var lastPos = SlidePosition(0, 0, 0)
-    val resolvedPositions: Vector[SlidePosition] = positions.map {
-      case Some(pos) =>
-        lastPos = pos
-        pos
-      case None =>
-        lastPos
-    }
+    val resolvedPositions = SpatialMath.resolvePositions(positions)
 
     // ---- Step 2: Deduplicate by position ----
-    val posToLayerIndex =
-      scala.collection.mutable.LinkedHashMap.empty[(Double, Double, Double, Double, Double, Double), Int]
-    val layerPositions = scala.collection.mutable.ArrayBuffer.empty[SlidePosition]
-    val mapping = scala.collection.mutable.ArrayBuffer.empty[Int]
-
-    resolvedPositions.foreach { pos =>
-      val key = (pos.x, pos.y, pos.z, pos.rotX, pos.rotY, pos.rotZ)
-      val layerIdx = posToLayerIndex.getOrElseUpdate(
-        key, {
-          val idx = layerPositions.length
-          layerPositions += pos
-          idx
-        }
-      )
-      mapping += layerIdx
-    }
-
-    _slideToLayerIndex = mapping.toVector
+    val (layerPositions, slideToLayer) = SpatialMath.deduplicatePositions(resolvedPositions)
+    _slideToLayerIndex = slideToLayer
 
     // ---- Step 3: Create SlideLayer instances ----
     _slideLayers = layerPositions.zipWithIndex.map { case (pos, idx) =>
@@ -158,35 +138,41 @@ private[nconsole] class SpatialState(
         rotXDeg = pos.rotX,
         rotYDeg = pos.rotY,
         rotZDeg = pos.rotZ,
-        viewportWidth = glScene.viewportWidth,
-        viewportHeight = glScene.viewportHeight,
+        viewportWidth = backend.viewportWidth,
+        viewportHeight = backend.viewportHeight,
         cellWidth = cellWidth,
         cellHeight = cellHeight,
-        transparentBg = pos.transparentBackground
+        transparentBg = pos.transparentBackground,
+        canvasFactory = canvasFactory,
+        backend = backend
       )
-      glScene.scene.add(layer.mesh)
+      backend.addToScene(layer.meshRef.asInstanceOf[backend.MeshRef])
       layer
     }.toVector
 
     // ---- Step 4: Configure the perspective camera ----
     cameraAnimator.initSpatialMode(
-      glScene.viewportWidth,
-      glScene.viewportHeight
+      backend.viewportWidth,
+      backend.viewportHeight
     )
 
     // ---- Step 5: Create Scene3DRef ----
-    _sharedSceneRef = Some(
-      new Scene3DRef(
-        threeScene = glScene.scene.asInstanceOf[scalajs.js.Dynamic],
-        _render = () => glScene.render(),
-        perspectiveCamera = cameraAnimator.perspCameraRef.asInstanceOf[scalajs.js.Dynamic],
-        _centerX = 0,
-        _centerY = 0,
-        _centerZ = 0,
-        viewportWidth = glScene.viewportWidth,
-        viewportHeight = glScene.viewportHeight
+    _sharedSceneRef = if (glScene != null) {
+      Some(
+        new Scene3DRef(
+          threeScene = glScene.scene.asInstanceOf[scalajs.js.Dynamic],
+          _render = () => glScene.render(),
+          perspectiveCamera = cameraAnimator.cameraRef.asInstanceOf[scalajs.js.Dynamic],
+          _centerX = 0,
+          _centerY = 0,
+          _centerZ = 0,
+          viewportWidth = backend.viewportWidth,
+          viewportHeight = backend.viewportHeight
+        )
       )
-    )
+    } else {
+      None
+    }
   }
 
   /** Disposes all slide layers. Should be called during terminal cleanup. */

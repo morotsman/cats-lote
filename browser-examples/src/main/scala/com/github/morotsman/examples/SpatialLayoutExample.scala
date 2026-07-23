@@ -1,7 +1,7 @@
 package com.github.morotsman.examples
 
 import cats.effect._
-import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Layout, SlidePosition, VerticalAlignment}
+import com.github.morotsman.lote.api.{Alignment, HorizontalAlignment, Layout, LoteApp, SlidePosition, VerticalAlignment}
 import com.github.morotsman.lote.api.builders.SessionBuilder
 
 /** Demonstrates spatial layout of slides in 3D space (WebGL).
@@ -23,25 +23,11 @@ import com.github.morotsman.lote.api.builders.SessionBuilder
   * }}}
   * Open http://127.0.0.1:8080/spatial-layouts.html
   */
-object SpatialLayoutExample extends IOApp.Simple {
+object SpatialLayoutExample extends LoteApp {
 
-  import com.github.morotsman.lote.api.TerminalPlatform
-  import com.github.morotsman.lote.internal.interpreter.ticker.RafTickerInterpreter
-  import org.scalajs.dom
+  def presentation = slides[IO]()
 
-  override def run: IO[Unit] = {
-    val container = dom.document
-      .getElementById("terminal")
-      .asInstanceOf[dom.HTMLElement]
-
-    TerminalPlatform.threeJsTerminal[IO](container).use { implicit terminal =>
-      presentation[IO]
-        .withCustomTicker(RafTickerInterpreter.make[IO])
-        .run()
-    }
-  }
-
-  def presentation[F[_]: Async: Ref.Make](): SessionBuilder[F] =
+  def slides[F[_]: Async: Ref.Make](): SessionBuilder[F] =
     SessionBuilder[F]()
       .withFrameRate(60)
       .withAnimationFrameRate(30)

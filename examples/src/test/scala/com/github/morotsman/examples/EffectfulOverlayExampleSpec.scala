@@ -23,7 +23,7 @@ class EffectfulOverlayExampleSpec extends CatsEffectSuite {
   private val readDelay = 1.millis
 
   /** Reuse the real example session builder so we test the actual production configuration. */
-  private def buildSession: SessionBuilder[IO] = EffectfulOverlayExample.session
+  private def buildSession: SessionBuilder[IO] = EffectfulOverlayExample.presentation
 
   test("session starts and exits on Esc") {
     for {

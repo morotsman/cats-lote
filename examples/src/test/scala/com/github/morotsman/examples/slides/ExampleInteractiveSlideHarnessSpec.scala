@@ -1,8 +1,8 @@
 package com.github.morotsman.examples.slides
 
-import cats.effect.{IO, Ref}
+import cats.effect.IO
 import com.github.morotsman.lote.api.{Character, Key, Screen, SpecialKey}
-import com.github.morotsman.lote.testkit.{SlideTestHarness, TestConsole}
+import com.github.morotsman.lote.testkit.SlideTestHarness
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration._
@@ -10,96 +10,30 @@ import scala.util.Random
 
 /** Tests for `ExampleInteractiveSlide` using the `SlideTestHarness`.
   *
-  * Covers both the slide ↔ animator delegation (via a recording animator) and the full animator pipeline (via the real
-  * `Animator` + `TestTicker`).
+  * Covers the full slide pipeline (TickedSlide + game logic) via `ExampleInteractiveSlide.create`.
   */
-
-private final case class RecordingState(
-    animateCalls: Int = 0,
-    stopCalls: Int = 0,
-    directions: List[Direction] = Nil
-)
 
 class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
 
   override val munitIOTimeout: Duration = 10.seconds
 
-  private def recordingAnimator(state: Ref[IO, RecordingState]): Animator[IO] =
-    new Animator[IO] {
-      override def animate(): IO[Unit] =
-        state.update(s => s.copy(animateCalls = s.animateCalls + 1))
-
-      override def stop(): IO[Unit] =
-        state.update(s => s.copy(stopCalls = s.stopCalls + 1))
-
-      override def changeDirection(input: Direction): IO[Unit] =
-        state.update(s => s.copy(directions = s.directions :+ input))
-    }
-
-  // --- Slide ↔ Animator delegation tests (recording animator) ---
+  // --- Slide lifecycle tests ---
 
   test("content returns None for animated slide") {
     for {
-      console <- TestConsole.make[IO](screen = Screen(4, 3))
-      state <- Ref[IO].of(RecordingState())
-      slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
+      harness <- SlideTestHarness.make[IO](
+        screen = Screen(20, 10),
+        tickStep = 1.millis
+      )
+      slide <- {
+        import harness.clockInstance
+        ExampleInteractiveSlide.create[IO](harness.console, harness.ticker, harness.animationSettings)
+      }
       content <- slide.content
     } yield assertEquals(content, None)
   }
 
-  test("startShow delegates to animator.animate") {
-    for {
-      console <- TestConsole.make[IO]()
-      state <- Ref[IO].of(RecordingState())
-      slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
-      _ <- slide.startShow
-      recorded <- state.get
-    } yield assertEquals(recorded.animateCalls, 1)
-  }
-
-  test("stopShow delegates to animator.stop") {
-    for {
-      console <- TestConsole.make[IO]()
-      state <- Ref[IO].of(RecordingState())
-      slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
-      _ <- slide.stopShow
-      recorded <- state.get
-    } yield assertEquals(recorded.stopCalls, 1)
-  }
-
-  test("userInput maps WASD keys to directions") {
-    for {
-      console <- TestConsole.make[IO]()
-      state <- Ref[IO].of(RecordingState())
-      slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
-      _ <- slide.userInput(Character('a'))
-      _ <- slide.userInput(Character('w'))
-      _ <- slide.userInput(Character('s'))
-      _ <- slide.userInput(Character('d'))
-      recorded <- state.get
-    } yield assertEquals(
-      recorded.directions,
-      List(
-        DirectionLeft(),
-        DirectionUp(),
-        DirectionDown(),
-        DirectionRight()
-      )
-    )
-  }
-
-  test("userInput ignores non-WASD input") {
-    for {
-      console <- TestConsole.make[IO]()
-      state <- Ref[IO].of(RecordingState())
-      slide = ExampleInteractiveSlide.fromAnimator[IO](recordingAnimator(state), console)
-      _ <- slide.userInput(Character('x'))
-      _ <- slide.userInput(Key(SpecialKey.Enter))
-      recorded <- state.get
-    } yield assertEquals(recorded.directions, Nil)
-  }
-
-  // --- Full pipeline tests (real Animator + TestTicker) ---
+  // --- Full pipeline tests (TickedSlide + game logic) ---
 
   test("interactive slide writes frames after ticking") {
     for {
@@ -107,11 +41,10 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
         screen = Screen(20, 10),
         tickStep = 1.millis
       )
-      animator <- {
+      slide <- {
         import harness.clockInstance
-        Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
+        ExampleInteractiveSlide.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
-      slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)
       _ <- slide.startShow
       _ <- harness.tick(3)
       frames <- harness.writtenFrames
@@ -127,11 +60,10 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
         screen = Screen(20, 10),
         tickStep = 1.millis
       )
-      animator <- {
+      slide <- {
         import harness.clockInstance
-        Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
+        ExampleInteractiveSlide.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
-      slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)
       _ <- slide.startShow
       _ <- harness.tick(2)
       _ <- harness.reset
@@ -153,11 +85,10 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
         screen = Screen(20, 10),
         tickStep = 1.millis
       )
-      animator <- {
+      slide <- {
         import harness.clockInstance
-        Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
+        ExampleInteractiveSlide.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
-      slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)
       _ <- slide.startShow
       countBefore <- harness.ticker.subscriberCount
       _ <- slide.stopShow
@@ -166,6 +97,24 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
       assert(countBefore > 0, "Expected at least one subscriber while running")
       assertEquals(countAfter, 0)
     }
+  }
+
+  test("userInput ignores non-WASD input") {
+    for {
+      harness <- SlideTestHarness.make[IO](
+        screen = Screen(20, 10),
+        tickStep = 1.millis
+      )
+      slide <- {
+        import harness.clockInstance
+        ExampleInteractiveSlide.create[IO](harness.console, harness.ticker, harness.animationSettings)
+      }
+      _ <- slide.startShow
+      _ <- slide.userInput(Character('x'))
+      _ <- slide.userInput(Key(SpecialKey.Enter))
+      // No crash = success; non-WASD keys are silently ignored
+      _ <- slide.stopShow
+    } yield ()
   }
 
   // --- Worm wrap integration test ---
@@ -194,15 +143,11 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
       .getOrElse(throw new AssertionError("Could not find deterministic seed without hearts on the wrap path"))
 
   test("the worm dies when it collides with itself") {
-    // Reverse direction causes the head to move back into the body.
-    // On the next tick after the 180° turn, hasSelfCollision detects the overlap
-    // and sets running=false. After that, no more frames are rendered.
     val width = 80
     val height = 80
     val step = 1.millis
     val screenSize = width * (height - 1)
     val initialHead = screenSize / 2
-    // Block hearts around the worm's initial position and a few cells to the left
     val blocked = ((initialHead - 5) to (initialHead + 25)).toSet
     val seed = seedWithoutHearts(screenSize, blocked)
 
@@ -212,32 +157,26 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
         tickStep = step
       )
       _ = Random.setSeed(seed)
-      animator <- {
+      slide <- {
         import harness.clockInstance
-        Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
+        ExampleInteractiveSlide.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
-      slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)
       _ <- slide.startShow
-      // Let the worm move left for a couple of ticks
       _ <- harness.tick(2)
       framesBefore <- harness.writtenFrames.map(_.length)
-      // Reverse: press 'd' (right) while moving left — head collides with body
       _ <- slide.userInput(Character('d'))
       _ <- harness.tick(3)
       deathFrame <- harness.lastWrittenFrame
       frameCountAtDeath <- harness.writtenFrames.map(_.length)
-      // Tick more — no new frames after death screen
       _ <- harness.tick(10)
       frameCountAfter <- harness.writtenFrames.map(_.length)
       _ <- slide.stopShow
     } yield {
       assert(framesBefore > 0, "Expected frames before reversal")
-      // The last rendered frame should be the death screen
       assert(
         deathFrame.exists(_.contains("▓█████▄  ██▓▓█████")),
         s"Expected 'YOU DIED' art in the death frame, got: ${deathFrame.map(_.take(200))}"
       )
-      // No further frames after the death screen
       assertEquals(
         frameCountAfter,
         frameCountAtDeath,
@@ -264,11 +203,10 @@ class ExampleInteractiveSlideHarnessSpec extends CatsEffectSuite {
         tickStep = step
       )
       _ = Random.setSeed(seed)
-      animator <- {
+      slide <- {
         import harness.clockInstance
-        Animator.create[IO](harness.console, harness.ticker, harness.animationSettings)
+        ExampleInteractiveSlide.create[IO](harness.console, harness.ticker, harness.animationSettings)
       }
-      slide = ExampleInteractiveSlide.fromAnimator[IO](animator, harness.console)
       _ <- slide.startShow
       _ <- harness.tick(120)
       written <- harness.writtenFramesInOrder

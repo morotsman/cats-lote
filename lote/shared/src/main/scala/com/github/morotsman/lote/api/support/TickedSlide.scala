@@ -218,7 +218,39 @@ object TickedSlide {
         onTick: (Int, GlideLayer.Overlay[F]) => F[Unit],
         onInput: UserInput => F[Unit],
         onStart: F[Unit],
-        onStop: Option[F[Unit]] = None
+        onStop: Option[F[Unit]] = None,
+        contentF: Option[F[Option[ScreenAdjusted]]] = None
+    )(implicit F: Monad[F], refMake: Ref.Make[F], clock: AnimationClock[F]): F[Slide[F]] =
+      buildWithGlideProgress(
+        onTick = (steps, _, glide) => onTick(steps, glide),
+        onInput = onInput,
+        onStart = onStart,
+        onStop = onStop,
+        contentF = contentF
+      )
+
+    /** Build a slide with FixedStep, GlideLayer, and sub-step progress.
+      *
+      * Like `buildWithGlide` but the `onTick` callback also receives the fractional `progress` (0.0–1.0) toward the
+      * next simulation step. This is useful for smooth interpolation (e.g. camera scrolling) between discrete steps.
+      *
+      * @param onTick
+      *   called every ticker tick with `(steps, progress, glideLayer)`
+      * @param onInput
+      *   called on user input
+      * @param onStart
+      *   called when the slide starts (reset custom state here)
+      * @param onStop
+      *   optional extra cleanup (GlideLayer.clear is automatic)
+      * @param contentF
+      *   optional custom content provider (defaults to `None`)
+      */
+    def buildWithGlideProgress(
+        onTick: (Int, Double, GlideLayer.Overlay[F]) => F[Unit],
+        onInput: UserInput => F[Unit],
+        onStart: F[Unit],
+        onStop: Option[F[Unit]] = None,
+        contentF: Option[F[Option[ScreenAdjusted]]] = None
     )(implicit F: Monad[F], refMake: Ref.Make[F], clock: AnimationClock[F]): F[Slide[F]] = {
       val gc = glideConfig.getOrElse(GlideConfig())
       val glideStep = gc.step.getOrElse(animationSettings.step)
@@ -228,11 +260,11 @@ object TickedSlide {
         glide <- GlideLayer.make[F](console, glideStep, gc.wrapThreshold)
       } yield new Slide[F] {
         private val tickerCallback: F[Unit] =
-          FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap { case (steps, _) =>
-            onTick(steps, glide)
+          FixedStep.consumeSteps(stepperRef, animationSettings.step).flatMap { case (steps, progress) =>
+            onTick(steps, progress, glide)
           }
 
-        override def content: F[Option[ScreenAdjusted]] = F.pure(None)
+        override def content: F[Option[ScreenAdjusted]] = contentF.getOrElse(F.pure(None))
 
         override def startShow: F[Unit] =
           for {
