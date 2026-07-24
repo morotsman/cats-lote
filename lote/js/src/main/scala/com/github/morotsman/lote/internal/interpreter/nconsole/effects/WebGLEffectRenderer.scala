@@ -1,6 +1,10 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.effects
 
 import com.github.morotsman.lote.api.RenderEffect
+import com.github.morotsman.lote.internal.interpreter.nconsole.{AnsiParser, EffectMath}
+import com.github.morotsman.lote.internal.interpreter.nconsole.camera.CameraAnimator
+import com.github.morotsman.lote.internal.interpreter.nconsole.facade._
+import com.github.morotsman.lote.internal.interpreter.nconsole.scene.WebGLScene
 import org.scalajs.dom
 import org.scalajs.dom.{CanvasRenderingContext2D, HTMLCanvasElement}
 

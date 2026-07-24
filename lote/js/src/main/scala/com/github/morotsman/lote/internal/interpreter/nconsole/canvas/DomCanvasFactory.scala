@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.canvas
 
 import org.scalajs.dom
 import org.scalajs.dom.{CanvasRenderingContext2D, HTMLCanvasElement}

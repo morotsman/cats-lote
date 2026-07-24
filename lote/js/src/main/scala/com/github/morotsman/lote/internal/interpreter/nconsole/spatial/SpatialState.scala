@@ -1,6 +1,11 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.spatial
 
 import com.github.morotsman.lote.api.{Scene3DRef, SlidePosition}
+import com.github.morotsman.lote.internal.interpreter.nconsole.SpatialMath
+import com.github.morotsman.lote.internal.interpreter.nconsole.camera.CameraAnimator
+import com.github.morotsman.lote.internal.interpreter.nconsole.canvas.{CanvasFactory, DomCanvasFactory}
+import com.github.morotsman.lote.internal.interpreter.nconsole.facade.ThreeMesh
+import com.github.morotsman.lote.internal.interpreter.nconsole.scene.{SceneBackend, WebGLScene}
 import org.scalajs.dom.HTMLCanvasElement
 
 /** Manages the mutable spatial-mode state for [[ThreeJsTerminal]].

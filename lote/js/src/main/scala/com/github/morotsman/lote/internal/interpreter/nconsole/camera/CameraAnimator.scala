@@ -1,6 +1,7 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.camera
 
 import com.github.morotsman.lote.api.{SlidePosition, WebGLConfig}
+import com.github.morotsman.lote.internal.interpreter.nconsole.scene.{AnimationScheduler, DomAnimationScheduler, SceneBackend}
 import org.scalajs.dom
 
 /** Animates a perspective camera between slide positions in 3-D space.

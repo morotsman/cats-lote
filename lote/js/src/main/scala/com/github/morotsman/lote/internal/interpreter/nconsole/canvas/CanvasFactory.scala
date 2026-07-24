@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.canvas
 
 /** Abstracts over DOM canvas creation to decouple rendering components from browser APIs.
   *

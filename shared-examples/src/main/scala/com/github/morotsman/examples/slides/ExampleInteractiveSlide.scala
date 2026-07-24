@@ -39,11 +39,11 @@ object ExampleInteractiveSlide {
               maybeState <- stateRef.get
               _ <- maybeState.traverse_ { s =>
                 if (!s.running) Monad[F].unit
-                else if (hasSelfCollision(s.worm)) {
+                else if (hasSelfCollision(s.worm) || hasBlockCollision(s.worm, s.blockIndexes)) {
                   for {
                     screen <- console.context
                     _ <- glide.clear()
-                    _ <- console.writeString(renderDeathScreen(screen.screenWidth, screen.screenHeight))
+                    _ <- console.writeString(renderDeathScreen(screen.screenWidth, screen.screenHeight, s.score))
                     _ <- stateRef.update(_.map(_.copy(running = false)))
                   } yield ()
                 } else if (nrOfSteps <= 0) {
@@ -54,7 +54,7 @@ object ExampleInteractiveSlide {
                     updatedState <- (0 until nrOfSteps).toList.foldLeftM(s) {
                       case (currentState, _) if !currentState.running =>
                         Monad[F].pure(currentState)
-                      case (currentState, _) if hasSelfCollision(currentState.worm) =>
+                      case (currentState, _) if hasSelfCollision(currentState.worm) || hasBlockCollision(currentState.worm, currentState.blockIndexes) =>
                         Monad[F].pure(currentState.copy(running = false))
                       case (currentState, _) =>
                         queue.tryTake.map { maybeUserInput =>
@@ -67,7 +67,12 @@ object ExampleInteractiveSlide {
                         glide
                           .renderOnto(bg, wormToSmoothChars(updatedState.worm, screen.screenWidth))
                           .flatMap(console.writeString)
-                      } else Monad[F].unit
+                      } else {
+                        for {
+                          _ <- glide.clear()
+                          _ <- console.writeString(renderDeathScreen(screen.screenWidth, screen.screenHeight, updatedState.score))
+                        } yield ()
+                      }
                     _ <- stateRef.set(Some(updatedState))
                   } yield ()
                 }
@@ -86,17 +91,22 @@ object ExampleInteractiveSlide {
             screenSize = screen.screenWidth * (screen.screenHeight - 1)
             emptyScreen = Vector.fill(screenSize)(' ')
             heartIndexes = List.fill(500)(Random.nextInt(screenSize)).toSet
+            blockIndexes = List.fill(50)(Random.nextInt(screenSize)).toSet -- heartIndexes
             message = "WASD is your friend"
             initialWorm = Worm(message.zipWithIndex.map { case (c, index) =>
               WormSegment(screenSize / 2 + index, DirectionLeft(), c)
             }.toVector)
+            wormPositions = initialWorm.segments.map(_.index).toSet
+            safeBlockIndexes = blockIndexes -- wormPositions
             _ <- stateRef.set(
               Some(
                 AnimatorState(
                   emptyScreen,
                   initialWorm,
                   heartIndexes,
+                  safeBlockIndexes,
                   screen.screenWidth,
+                  score = 0,
                   running = true
                 )
               )
@@ -123,7 +133,7 @@ object ExampleInteractiveSlide {
             case DirectionDown()  => last.index - screenWidth
             case NoDirection()    => last.index
           },
-          symbol = '?'
+          symbol = '♥'
         )
       )
     } else {
@@ -184,6 +194,7 @@ object ExampleInteractiveSlide {
     val collisions =
       s.worm.segments.map(_.index).toSet.intersect(s.heartIndexes)
     val updatedHeartIndexes = s.heartIndexes.removedAll(collisions)
+    val updatedScore = s.score + collisions.size
     val wormWithHearts = growWorm(s.worm, collisions, screenWidth)
     val headDirection = maybeUserInput.orElse(
       wormWithHearts.segments.headOption.map(_.direction)
@@ -191,11 +202,18 @@ object ExampleInteractiveSlide {
     val updatedWorm = headDirection.fold(wormWithHearts) { dir =>
       moveWorm(wormWithHearts, dir, screenWidth, s.emptyScreen.length)
     }
-    s.copy(worm = updatedWorm, heartIndexes = updatedHeartIndexes)
+    val hitBlock = updatedWorm.segments.headOption.exists(seg => s.blockIndexes.contains(seg.index))
+    if (hitBlock)
+      s.copy(worm = updatedWorm, heartIndexes = updatedHeartIndexes, score = updatedScore, running = false)
+    else
+      s.copy(worm = updatedWorm, heartIndexes = updatedHeartIndexes, score = updatedScore)
   }
 
   private def hasSelfCollision(worm: Worm): Boolean =
     worm.segments.map(_.index).size != worm.segments.map(_.index).toSet.size
+
+  private def hasBlockCollision(worm: Worm, blockIndexes: Set[Int]): Boolean =
+    worm.segments.headOption.exists(seg => blockIndexes.contains(seg.index))
 
   // ── Rendering ────────────────────────────────────────────────────
 
@@ -218,9 +236,12 @@ object ExampleInteractiveSlide {
 
   private def renderDeathScreen(
       screenWidth: Int,
-      screenHeight: Int
+      screenHeight: Int,
+      score: Int
   ): ScreenAdjusted = {
-    val artLines = youDiedArt.split("\n", -1).toVector
+    val scoreText = s"Score: $score"
+    val artWithScore = youDiedArt + "\n" + scoreText
+    val artLines = artWithScore.split("\n", -1).toVector
     val artHeight = artLines.length
     val artWidth = artLines.map(_.length).maxOption.getOrElse(0)
     val topPad = math.max(0, (screenHeight - artHeight) / 2)
@@ -240,15 +261,25 @@ object ExampleInteractiveSlide {
     ScreenAdjusted(lines.take(screenHeight).mkString("\n"))
   }
 
+  private val AnsiRed = "\u001b[31m"
+  private val AnsiReset = "\u001b[0m"
+
   private def renderBackground(
       s: AnimatorState,
       screenWidth: Int
   ): ScreenAdjusted = {
-    val finalScreen = s.heartIndexes.foldRight(s.emptyScreen) { case (index, screen) =>
-      screen.updated(index, '?')
+    val scoreLabel = s"Score: ${s.score}"
+    val scoreLabelIndexes = scoreLabel.indices.toSet
+
+    val rendered = s.emptyScreen.indices.map { index =>
+      if (scoreLabelIndexes.contains(index)) scoreLabel(index).toString
+      else if (s.blockIndexes.contains(index)) s"${AnsiRed}█${AnsiReset}"
+      else if (s.heartIndexes.contains(index)) "♥"
+      else " "
     }
+
     ScreenAdjusted(
-      finalScreen.grouped(screenWidth).map(_.mkString).mkString("\n")
+      rendered.grouped(screenWidth).map(_.mkString).mkString("\n")
     )
   }
 
@@ -266,6 +297,8 @@ case class AnimatorState(
     emptyScreen: Vector[Char],
     worm: Worm,
     heartIndexes: Set[Int],
+    blockIndexes: Set[Int],
     screenWidth: Int,
+    score: Int,
     running: Boolean
 )

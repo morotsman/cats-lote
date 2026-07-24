@@ -1,5 +1,6 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.canvas
 
+import com.github.morotsman.lote.internal.interpreter.nconsole.AnsiParser
 import org.scalajs.dom.CanvasRenderingContext2D
 
 /** Renders ANSI-styled terminal lines onto a Canvas2D context.

@@ -1,6 +1,7 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.scene
 
 import com.github.morotsman.lote.api.WebGLConfig
+import com.github.morotsman.lote.internal.interpreter.nconsole.facade._
 import org.scalajs.dom
 import org.scalajs.dom.HTMLElement
 

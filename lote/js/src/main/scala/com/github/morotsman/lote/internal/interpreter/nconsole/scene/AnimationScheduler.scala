@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.scene
 
 /** Abstracts over `requestAnimationFrame`, `cancelAnimationFrame`, and `performance.now` to make animation-loop code
   * testable without a browser environment.

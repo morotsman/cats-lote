@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.scene
 
 import org.scalajs.dom
 

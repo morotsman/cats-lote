@@ -1,5 +1,6 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
+import com.github.morotsman.lote.internal.interpreter.nconsole.spatial.SlideLayerMath
 import munit.FunSuite
 
 /** Unit tests for [[SlideLayerMath]] — pure mesh positioning, rotation, and grid dimension calculations.

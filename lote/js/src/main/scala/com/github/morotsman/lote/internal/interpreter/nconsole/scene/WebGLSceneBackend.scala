@@ -1,4 +1,6 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.scene
+
+import com.github.morotsman.lote.internal.interpreter.nconsole.facade._
 
 /** Production implementation of [[SceneBackend]] backed by a real [[WebGLScene]] and Three.js types.
   *

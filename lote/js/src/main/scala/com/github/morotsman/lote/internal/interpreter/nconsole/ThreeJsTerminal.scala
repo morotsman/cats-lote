@@ -4,6 +4,13 @@ import cats.effect.std.{Dispatcher, Queue}
 import cats.effect.{Async, Resource, Sync, Temporal}
 import com.github.morotsman.lote.api.{PlatformCapability, RenderEffect, Screen, WebGLConfig}
 import com.github.morotsman.lote.api.spi.{EffectfulTerminal, Terminal => TerminalAlgebra}
+import com.github.morotsman.lote.internal.interpreter.nconsole.camera.CameraAnimator
+import com.github.morotsman.lote.internal.interpreter.nconsole.canvas.WebGLCanvasRenderer
+import com.github.morotsman.lote.internal.interpreter.nconsole.effects.WebGLEffectRenderer
+import com.github.morotsman.lote.internal.interpreter.nconsole.facade._
+import com.github.morotsman.lote.internal.interpreter.nconsole.input.WebGLInputHandler
+import com.github.morotsman.lote.internal.interpreter.nconsole.scene.{WebGLScene, WebGLSceneBackend}
+import com.github.morotsman.lote.internal.interpreter.nconsole.spatial.{SlideLayer, SpatialState}
 import org.scalajs.dom
 import org.scalajs.dom.HTMLElement
 
@@ -159,9 +166,7 @@ object ThreeJsTerminal {
 
         // ---- Spatial state ----
         // Manages slide layers, the slide-to-layer mapping, the active
-        // layer index, and the shared Scene3DRef.  All mutable state
-        // that was previously captured by closures as bare vars now
-        // lives in this single, testable object.
+        // layer index, and the shared Scene3DRef.
         val spatialState = new SpatialState(glScene, sceneBackend, cameraAnimator, CellWidth, CellHeight)
 
         // ---- Effect renderer ----

@@ -1,6 +1,7 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.input
 
 import cats.effect.std.{Dispatcher, Queue}
+import com.github.morotsman.lote.internal.interpreter.nconsole.KeyMapper
 import org.scalajs.dom.{ClipboardEvent, Event, HTMLCanvasElement, KeyboardEvent, MouseEvent}
 
 /** Bridges DOM input events (keyboard, mouse, paste) into an effectful `Queue[F, Int]`.
