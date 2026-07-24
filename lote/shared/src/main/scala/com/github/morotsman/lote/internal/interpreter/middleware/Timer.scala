@@ -25,9 +25,11 @@ private[lote] object Timer {
         timeLeft = allocatedTime.minus(
           FiniteDuration(time.toMillis - startTime, TimeUnit.MILLISECONDS)
         )
-        seconds = timeLeft.toSeconds % (timeLeft.toMinutes * 60)
-        output =
+        seconds = if (timeLeft.toMinutes > 0) timeLeft.toSeconds % (timeLeft.toMinutes * 60) else timeLeft.toSeconds
+        output = if (timeLeft.toMinutes > 0 || timeLeft.toSeconds > 0)
           s"${timeLeft.toMinutes}:${if (seconds < 10) "0" + seconds else seconds}"
+        else
+          "0:00"
         result = screenAdjusted.copy(content = output + screenAdjusted.content.drop(output.length))
       } yield result
 
