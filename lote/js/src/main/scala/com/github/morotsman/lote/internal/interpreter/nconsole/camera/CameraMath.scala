@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.camera
 
 import com.github.morotsman.lote.api.SlidePosition
 

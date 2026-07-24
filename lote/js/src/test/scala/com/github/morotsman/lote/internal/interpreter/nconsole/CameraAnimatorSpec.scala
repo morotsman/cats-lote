@@ -1,6 +1,7 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
 import com.github.morotsman.lote.api.{SlidePosition, WebGLConfig}
+import com.github.morotsman.lote.internal.interpreter.nconsole.camera.{CameraAnimator, CameraMath}
 import munit.FunSuite
 
 /** Unit tests for [[CameraAnimator]] using [[StubSceneBackend]] and [[ManualScheduler]].

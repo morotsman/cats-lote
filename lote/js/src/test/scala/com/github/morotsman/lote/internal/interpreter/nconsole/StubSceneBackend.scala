@@ -1,5 +1,7 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
+import com.github.morotsman.lote.internal.interpreter.nconsole.scene.SceneBackend
+
 /** Sealed trait for recording scene graph operations performed against a [[SceneBackend]]. */
 sealed trait SceneOp
 

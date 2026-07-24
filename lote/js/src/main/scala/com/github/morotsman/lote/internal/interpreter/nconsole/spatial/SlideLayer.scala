@@ -1,4 +1,8 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.spatial
+
+import com.github.morotsman.lote.internal.interpreter.nconsole.canvas.{CanvasFactory, DomCanvasFactory}
+import com.github.morotsman.lote.internal.interpreter.nconsole.facade._
+import com.github.morotsman.lote.internal.interpreter.nconsole.scene.SceneBackend
 
 /** A single slide's rendering surface in spatial mode.
   *

@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.facade
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobal

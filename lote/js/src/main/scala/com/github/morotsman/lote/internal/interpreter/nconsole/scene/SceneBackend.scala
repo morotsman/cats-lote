@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.scene
 
 /** Abstracts over the Three.js scene graph to decouple rendering logic from the browser environment.
   *

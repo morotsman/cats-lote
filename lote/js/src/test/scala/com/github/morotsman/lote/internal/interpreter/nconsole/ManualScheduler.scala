@@ -1,5 +1,7 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
+import com.github.morotsman.lote.internal.interpreter.nconsole.scene.AnimationScheduler
+
 /** Test stub for [[AnimationScheduler]] that allows manual control of time and frame callbacks.
   *
   * Pending callbacks are collected and can be fired deterministically via [[tick]]. Time is advanced manually via

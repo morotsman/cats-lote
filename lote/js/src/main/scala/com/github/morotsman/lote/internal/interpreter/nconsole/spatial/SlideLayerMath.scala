@@ -1,4 +1,4 @@
-package com.github.morotsman.lote.internal.interpreter.nconsole
+package com.github.morotsman.lote.internal.interpreter.nconsole.spatial
 
 /** Pure mathematical computations for [[SlideLayer]] construction.
   *

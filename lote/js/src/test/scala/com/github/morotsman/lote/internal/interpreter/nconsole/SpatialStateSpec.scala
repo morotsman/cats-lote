@@ -1,6 +1,8 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
 import com.github.morotsman.lote.api.{SlidePosition, WebGLConfig}
+import com.github.morotsman.lote.internal.interpreter.nconsole.camera.CameraAnimator
+import com.github.morotsman.lote.internal.interpreter.nconsole.spatial.SpatialState
 import munit.FunSuite
 
 /** Unit tests for [[SpatialState]] — init, layer creation, activation, and dispose lifecycle using

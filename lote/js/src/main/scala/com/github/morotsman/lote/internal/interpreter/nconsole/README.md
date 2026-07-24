@@ -6,6 +6,55 @@ camera and animated fly-through transitions between slides.
 
 ---
 
+## Package Structure
+
+```
+nconsole/
+├── ThreeJsTerminal.scala              ← top-level aggregator (Terminal algebra impl)
+│
+├── facade/
+│   └── ThreeJsFacade.scala            ← Three.js Scala.js type definitions
+│
+├── scene/
+│   ├── SceneBackend.scala             ← abstract trait over the scene graph
+│   ├── WebGLScene.scala               ← Three.js scene + renderer management
+│   ├── WebGLSceneBackend.scala        ← production SceneBackend impl
+│   ├── AnimationScheduler.scala       ← abstract animation frame scheduling
+│   └── DomAnimationScheduler.scala    ← production impl (requestAnimationFrame)
+│
+├── camera/
+│   ├── CameraAnimator.scala           ← animates camera between slide positions
+│   └── CameraMath.scala               ← pure math for camera positioning
+│
+├── canvas/
+│   ├── CanvasFactory.scala            ← abstract canvas creation trait
+│   ├── DomCanvasFactory.scala         ← production impl (HTMLCanvasElement)
+│   └── WebGLCanvasRenderer.scala      ← renders ANSI-styled text to 2D canvas
+│
+├── spatial/
+│   ├── SlideLayer.scala               ← single slide's rendering surface
+│   ├── SlideLayerMath.scala           ← pure math for slide grid layout
+│   └── SpatialState.scala             ← mutable spatial-mode state management
+│
+├── effects/
+│   └── WebGLEffectRenderer.scala      ← GPU visual effects (dissolve, smoke, glow, fade)
+│
+└── input/
+    └── WebGLInputHandler.scala        ← bridges DOM events into effect queue
+```
+
+| Sub-package | Cohesion principle |
+|---|---|
+| **facade** | Isolates raw JS interop types — changes only when Three.js API changes |
+| **scene** | Scene graph infrastructure + animation scheduling (render-loop plumbing) |
+| **camera** | Self-contained camera math & animation — used by spatial + effects |
+| **canvas** | 2D canvas abstraction & text rendering — orthogonal to 3D scene |
+| **spatial** | Slide positioning/layout in 3D space — a distinct domain concept |
+| **effects** | Visual transition effects |
+| **input** | DOM event handling |
+
+---
+
 ## Architecture Overview
 
 ```
@@ -15,19 +64,21 @@ camera and animated fly-through transitions between slides.
 └───────┬──────────┬──────────────┬───────────────┬──────────────┘
         │          │              │               │
         ▼          ▼              ▼               ▼
-  WebGLScene   CameraAnimator  WebGLEffect   WebGLInput
-                               Renderer      Handler
+  scene/        camera/       effects/        input/
+  WebGLScene    CameraAnimator  WebGLEffect   WebGLInput
+  SceneBackend  CameraMath      Renderer      Handler
         │          │              │
         ▼          ▼              ▼
   ┌──────────────────────────────────────┐
-  │           Three.js (via facades)     │
-  │    ThreeJsFacade.scala               │
+  │       facade/ThreeJsFacade.scala     │
+  │       (Three.js Scala.js bindings)  │
   └──────────────────────────────────────┘
         │
         ▼
   ┌──────────────────────────────────────┐
-  │  SlideLayer / WebGLCanvasRenderer    │
-  │  (per-slide canvas + ANSI text)      │
+  │  spatial/SlideLayer                  │
+  │  canvas/WebGLCanvasRenderer          │
+  │  (per-slide canvas + ANSI text)     │
   └──────────────────────────────────────┘
 ```
 
@@ -38,79 +89,87 @@ camera and animated fly-through transitions between slides.
 ### `ThreeJsTerminal.scala` – Main Orchestrator
 
 The entry point that implements the `Terminal` algebra (from the public API).
-It assembles all other components. Responsibilities:
+It assembles all sub-package components. Responsibilities:
 
 - Bootstraps the WebGL renderer and DOM canvas.
-- Delegates frame rendering to `WebGLCanvasRenderer`.
+- Delegates frame rendering to `canvas/WebGLCanvasRenderer`.
 - On `InitSpatialLayout`, creates positioned `SlideLayer` meshes and hands
-  camera control to `CameraAnimator`.
-- Coordinates transitions and effects through `CameraAnimator` and
-  `WebGLEffectRenderer`.
+  camera control to `camera/CameraAnimator`.
+- Coordinates transitions and effects through `camera/CameraAnimator` and
+  `effects/WebGLEffectRenderer`.
 
-### `WebGLScene.scala` – Core Scene Graph
+### `scene/` – Scene Graph Infrastructure
 
-Central state container for the Three.js scene graph. Owns:
+- **`SceneBackend`** — Abstract trait over the Three.js scene graph. Decouples
+  rendering logic from the browser environment. In production, backed by
+  `WebGLSceneBackend`; in tests, by `StubSceneBackend`.
+- **`WebGLScene`** — Central state container owning the `THREE.Scene`,
+  `THREE.WebGLRenderer`, viewport dimensions, and resize handling.
+- **`WebGLSceneBackend`** — Production `SceneBackend` impl delegating to
+  real Three.js objects.
+- **`AnimationScheduler`** — Abstract trait over `requestAnimationFrame` /
+  `cancelAnimationFrame` / `performance.now()` for testability.
+- **`DomAnimationScheduler`** — Production impl delegating to real DOM APIs.
 
-- The `THREE.Scene` instance.
-- The `THREE.WebGLRenderer` attached to the DOM.
+### `camera/` – 3-D Camera Control
 
-The perspective camera is managed by `CameraAnimator` and set via the
-`activeCamera` field. All other components reference `WebGLScene` to access
-the scene, trigger renders, or query viewport dimensions.
+- **`CameraAnimator`** — Manages the perspective camera: computes the camera
+  distance that frames each slide, animates fly-throughs using ease-in-out
+  interpolation, and handles interactive zoom (`+`/`-`/`0`) via FOV adjustment.
+- **`CameraMath`** — Pure math utilities (rotation matrix, interpolation,
+  easing, transition duration) extracted for unit testing without DOM/Three.js.
 
-### `CameraAnimator.scala` – 3-D Camera Control
+### `canvas/` – 2D Canvas Abstraction & Text Rendering
 
-Manages the perspective camera:
+- **`CanvasFactory`** — Abstract trait over DOM canvas creation. Decouples
+  `SlideLayer` from `document.createElement("canvas")`.
+- **`DomCanvasFactory`** — Production impl creating real `<canvas>` elements.
+- **`WebGLCanvasRenderer`** — Stateless Canvas2D renderer that converts
+  ANSI-styled terminal content into styled text. Handles 256-color and
+  true-color foreground/background, bold, italic, underline, and reset.
 
-- Computes the camera distance that frames each slide exactly.
-- Animates fly-throughs between slide positions using ease-in-out
-  interpolation of position, look-at target, and up vector.
-- Handles interactive zoom (keyboard `+`/`-`/`0`) via FOV adjustment.
+### `spatial/` – Slide Layout in 3D Space
 
-### `SlideLayer.scala` – Individual Slide Representation
+- **`SlideLayer`** — Each slide's rendering surface: owns an offscreen canvas,
+  a `THREE.Texture` backed by it, and a `THREE.Mesh` positioned/rotated in
+  world space.
+- **`SlideLayerMath`** — Pure math for grid dimensions and mesh positioning.
+- **`SpatialState`** — Manages mutable spatial-mode state: slide layers,
+  slide-to-layer mapping, active layer index, and the shared `Scene3DRef`.
 
-Each slide is an instance of `SlideLayer`, which bundles:
+### `effects/WebGLEffectRenderer.scala` – Visual Effects
 
-- Its own offscreen `<canvas>` for text rendering.
-- A `THREE.Texture` backed by that canvas.
-- A `THREE.Mesh` (plane geometry) positioned and rotated in world space
-  according to the slide's `SlidePosition`.
+Applies GPU-accelerated transition effects to the active slide layer:
+dissolve, smoke particles, glow, and fade. Operates on the active layer's
+mesh and material directly.
 
-### `WebGLCanvasRenderer.scala` – ANSI Text Rendering
-
-A pure Canvas2D renderer that converts ANSI escape-sequence-styled terminal
-content into styled text on a canvas context. Handles:
-
-- 256-color and true-color foreground/background.
-- Bold, italic, underline, and reset attributes.
-- Character-cell grid layout (monospace font metrics).
-
-Used to render to each `SlideLayer`'s offscreen canvas.
-
-### `WebGLInputHandler.scala` – Input Bridge
+### `input/WebGLInputHandler.scala` – Input Bridge
 
 Captures DOM events (keyboard, mouse, paste) from the renderer's `<canvas>`
 element and translates them into JLine/xterm-compatible character sequences.
-This provides a uniform input stream regardless of browser differences.
 
-### `WebGLEffectRenderer.scala` – Visual Effects
-
-Applies GPU-accelerated transition effects to the active slide layer:
-
-- Dissolve (noise-based alpha threshold)
-- Smoke / particle effects
-- Glow (bloom post-processing)
-- Fade (opacity lerp)
-
-Operates on the active layer's mesh and material directly.
-
-### `ThreeJsFacade.scala` – Three.js Scala.js Bindings
+### `facade/ThreeJsFacade.scala` – Three.js Scala.js Bindings
 
 Low-level `@js.native` facades exposing Three.js types to Scala.js:
+`THREE.Scene`, `THREE.PerspectiveCamera`, `THREE.Mesh`, `THREE.PlaneGeometry`,
+`THREE.MeshBasicMaterial`, `THREE.Texture`, `THREE.WebGLRenderer`,
+`THREE.Vector3`, `THREE.Color`, and typed particle user data.
 
-- `THREE.Scene`, `THREE.PerspectiveCamera`
-- `THREE.Mesh`, `THREE.PlaneGeometry`, `THREE.MeshBasicMaterial`
-- `THREE.Texture`, `THREE.WebGLRenderer`, `THREE.Vector3`, `THREE.Color`
+---
+
+## Testability
+
+The package uses trait-based abstractions to enable unit testing without
+DOM or Three.js:
+
+| Abstraction | Production | Test stub |
+|---|---|---|
+| `scene/SceneBackend` | `scene/WebGLSceneBackend` | `StubSceneBackend` |
+| `canvas/CanvasFactory` | `canvas/DomCanvasFactory` | `StubCanvasFactory` |
+| `scene/AnimationScheduler` | `scene/DomAnimationScheduler` | `ManualScheduler` |
+
+Test stubs record operations in observable logs, allowing assertions on
+the exact sequence of scene graph manipulations without GPU or browser.
 
 ---
 
@@ -350,10 +409,14 @@ AdvancedWebGLExample.run()
 | `SpatialPlatformStrategy.scala` (shared) | WebGL implementation: spatial layout init, layer activation, camera navigation |
 | `TerminalPlatformStrategy.scala` (shared) | Terminal implementation: all no-ops |
 | `PresentationExecutorInterpreter.scala` (shared) | Platform-agnostic executor that delegates to `PlatformStrategy` |
-| `ThreeJsTerminal.scala` | Handles `InitSpatialLayout` / `ActivateLayer` / `MoveCameraTo` effects; contains `initSpatialMode()` and `write()` |
-| `SlideLayer.scala` | Per-position rendering surface: offscreen canvas, texture, and mesh |
-| `WebGLScene.scala` | Owns the Three.js scene, renderer, and `render()` method |
-| `WebGLCanvasRenderer.scala` | Paints ANSI-styled text onto a `SlideLayer`'s offscreen canvas |
+| `ThreeJsTerminal.scala` | Handles `InitSpatialLayout` / `ActivateLayer` / `MoveCameraTo` effects; contains `write()` |
+| `spatial/SlideLayer.scala` | Per-position rendering surface: offscreen canvas, texture, and mesh |
+| `spatial/SpatialState.scala` | Manages slide layers, deduplication, active layer, and Scene3DRef |
+| `scene/WebGLScene.scala` | Owns the Three.js scene, renderer, and `render()` method |
+| `canvas/WebGLCanvasRenderer.scala` | Paints ANSI-styled text onto a `SlideLayer`'s offscreen canvas |
+| `camera/CameraAnimator.scala` | Perspective camera animation and zoom control |
+| `effects/WebGLEffectRenderer.scala` | GPU-accelerated dissolve, smoke, glow, fade effects |
+| `input/WebGLInputHandler.scala` | DOM event capture and JLine-compatible encoding |
 
 ---
 

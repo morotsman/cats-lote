@@ -1,5 +1,7 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
+import com.github.morotsman.lote.internal.interpreter.nconsole.canvas.CanvasFactory
+
 /** Sealed trait for recording canvas factory operations. */
 sealed trait CanvasOp
 

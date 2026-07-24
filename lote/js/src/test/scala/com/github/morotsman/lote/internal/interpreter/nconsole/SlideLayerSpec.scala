@@ -1,5 +1,6 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
+import com.github.morotsman.lote.internal.interpreter.nconsole.spatial.SlideLayer
 import munit.FunSuite
 
 /** Unit tests for [[SlideLayer]] — full construction, mesh lifecycle, and dispose behavior using [[StubSceneBackend]]

@@ -1,6 +1,7 @@
 package com.github.morotsman.lote.internal.interpreter.nconsole
 
 import com.github.morotsman.lote.api.SlidePosition
+import com.github.morotsman.lote.internal.interpreter.nconsole.camera.CameraMath
 import munit.FunSuite
 
 /** Unit tests for the pure camera math utilities extracted from CameraAnimator.
